@@ -7,7 +7,7 @@ import { z } from "zod";
  */
 export const serverSchema = z.object({
   NODE_ENV: z.enum(["development", "test", "production"]),
-  FIREBASE_API_KEY: z.string(),
+  FIREBASE_API_KEY: z.string().optional(),
   FIREBASE_AUTH_DOMAIN: z.string(),
   FIREBASE_PROJECT_ID: z.string(),
   FIREBASE_STORAGE_BUCKET: z.string(),

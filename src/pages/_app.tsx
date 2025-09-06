@@ -1,29 +1,24 @@
-import { Session } from "next-auth";
-import { SessionProvider } from "next-auth/react";
 import { AppProps } from "next/app";
 import Shield from "../Components/Shield";
 import { Analytics } from "@vercel/analytics/react";
 import { GoogleAnalytics } from "nextjs-google-analytics";
+import { AuthProvider } from "../utils/Context/AuthContext/Context";
 import "../styles/globals.css";
 import { trpc } from "../utils/trpc";
 
-interface CustomPageProps {
-  session: Session;
-}
-
 const MyApp = ({
   Component,
-  pageProps: { session, ...pageProps },
-}: AppProps<CustomPageProps>) => {
+  pageProps,
+}: AppProps) => {
   return (
     <>
       <GoogleAnalytics trackPageViews />
-      <SessionProvider session={session}>
+      <AuthProvider>
         <Shield>
           <Component {...pageProps} />
         </Shield>
         <Analytics />
-      </SessionProvider>
+      </AuthProvider>
     </>
   );
 };
