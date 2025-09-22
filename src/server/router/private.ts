@@ -5,7 +5,8 @@ import {
 } from "@/utils/apis/notion/database";
 import { publicProcedure, router } from "../trpc";
 import { z } from "zod";
-import { fetchNotionUser } from "@/utils/apis/firebase/userNotion";
+// Use mock implementation for development to avoid Firebase setup
+import { fetchNotionUser } from "@/utils/apis/firebase/mockUserNotion";
 
 export const privateRouter = router({
   getDatabases: publicProcedure
@@ -46,6 +47,21 @@ export const privateRouter = router({
         console.log("❌ API call failed:", error.message);
         console.log("❌ Error status:", error.response?.status);
         console.log("❌ Error data:", error.response?.data);
+        
+        // Handle specific error types with user-friendly messages
+        if (error.name === "ConnectionError" || error.message?.includes("Connection to Notion was interrupted")) {
+          throw new Error("Connection to Notion was interrupted. Please check your internet connection and try again.");
+        }
+        
+        if (error.name === "TimeoutError" || error.message?.includes("timed out")) {
+          throw new Error("Request to Notion timed out. Please check your connection and try again.");
+        }
+        
+        // Handle socket hang up errors that might not be caught by the client
+        if (error.message?.includes("socket hang up")) {
+          throw new Error("Connection to Notion was lost. Please try connecting again.");
+        }
+        
         throw error;
       }
     }),

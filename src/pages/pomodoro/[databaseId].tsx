@@ -31,7 +31,8 @@ import { actionTypes as userActiontype } from "../../utils/Context/UserContext/r
 import { actionTypes as projActiontype } from "../../utils/Context/ProjectContext/reducer";
 import { usePomoState } from "../../utils/Context/PomoContext/Context";
 import { notEmpty } from "../../types/notEmpty";
-import { fetchNotionUser } from "../../utils/apis/firebase/userNotion";
+// Use mock implementation for development to avoid Firebase setup
+import { fetchNotionUser } from "../../utils/apis/firebase/mockUserNotion";
 import { useUserState } from "../../utils/Context/UserContext/Context";
 import { useProjectState } from "@/utils/Context/ProjectContext/Context";
 import { TabsOptions } from "../../Components/Views/utils";

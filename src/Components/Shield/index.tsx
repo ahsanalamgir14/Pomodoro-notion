@@ -1,5 +1,5 @@
 import Head from "next/head";
-import React, { useEffect } from "react";
+import React from "react";
 import { PomoStateProvider } from "../../utils/Context/PomoContext/Context";
 import reducer, { initialState } from "../../utils/Context/PomoContext/reducer";
 import ureducer, {
@@ -12,32 +12,14 @@ import { UserStateProvider } from "../../utils/Context/UserContext/Context";
 import { ProjectStateProvider } from "../../utils/Context/ProjectContext/Context";
 import { ToastContainer } from "react-toastify";
 import "react-toastify/dist/ReactToastify.css";
-import { useAuth } from "../../utils/Context/AuthContext/Context";
-import Router from "next/router";
 import NextProgress from "nextjs-progressbar";
-import { shouldIgnore } from "@/utils/routes";
 
 interface Props {
   children: JSX.Element | React.ReactNode;
 }
 
 export default function Shield({ children }: Props) {
-  const { user, isLoading } = useAuth();
-
-  useEffect(() => {
-    if (!user && !isLoading && !shouldIgnore(Router.pathname)) {
-      Router.push("/login");
-    }
-  }, [user, isLoading]);
-
-  // Show loading while checking auth
-  if (isLoading) {
-    return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Loading...</div>
-      </div>
-    );
-  }
+  // Removed authentication enforcement - app now works directly with Notion connection
 
   return (
     <ProjectStateProvider reducer={preducer} initialState={projInitial}>

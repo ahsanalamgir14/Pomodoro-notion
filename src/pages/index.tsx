@@ -6,12 +6,10 @@ import Footer from "../Components/Footer";
 import Header from "../Components/Header";
 import NotionConnectModal from "../Components/NotionConnectModal";
 import ContentLoader from "react-content-loader";
-import { useAuth } from "../utils/Context/AuthContext/Context";
 
 function Home() {
   const [showModal, setModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const { user } = useAuth();
   const router = useRouter();
 
   // Handle error messages from OAuth callback
@@ -23,8 +21,8 @@ function Home() {
     }
   }, [router]);
 
-  // Try to get databases with user email if available, otherwise try with a default identifier
-  const userIdentifier = user?.email || "anonymous-user";
+  // Use a simple identifier for Notion connection - no user accounts needed
+  const userIdentifier = "notion-user";
   
   const { data, isFetching, error } = trpc.private.getDatabases.useQuery(
     { email: userIdentifier },
@@ -35,9 +33,22 @@ function Home() {
     }
   );
 
-  // Check if error is 401 (unauthorized) - should show connection modal
-  const isUnauthorized = error?.data?.httpStatus === 500 && 
-    error?.message?.includes("Request failed with status code 401");
+  // Check for connection errors that should be displayed to user
+  const connectionError = error && (
+    error.message?.includes("Connection to Notion was interrupted") ||
+    error.message?.includes("Request to Notion timed out") ||
+    error.message?.includes("Connection to Notion was lost") ||
+    error.message?.includes("socket hang up")
+  );
+
+  // Check if user needs to connect to Notion
+  const isUnauthorized = 
+    // Case 1: TRPC error (401 from Notion API)
+    (error?.message?.includes("Request failed with status code 401")) ||
+    // Case 2: Successful response but no user data/token
+    (data?.error && data.error.includes("User not found or not connected to Notion")) ||
+    // Case 3: No data and no specific error (initial state)
+    (!data && !error && !isFetching);
 
   return (
     <>
@@ -65,7 +76,7 @@ function Home() {
         {!isFetching && (isUnauthorized || !data) && (
           <>
             <Header imgSrc={null} />
-            {errorMessage && (
+            {(errorMessage || connectionError) && (
               <div className="mt-4 w-full max-w-md rounded-md bg-red-50 p-4 border border-red-200">
                 <div className="flex">
                   <div className="ml-3">
@@ -73,15 +84,21 @@ function Home() {
                       Connection Error
                     </h3>
                     <div className="mt-2 text-sm text-red-700">
-                      {errorMessage}
+                      {errorMessage || (connectionError ? error?.message : "")}
                     </div>
                   </div>
                 </div>
                 <button
-                  onClick={() => setErrorMessage(null)}
+                  onClick={() => {
+                    setErrorMessage(null);
+                    // For connection errors, we can suggest retrying
+                    if (connectionError) {
+                      window.location.reload();
+                    }
+                  }}
                   className="mt-2 text-sm text-red-600 hover:text-red-500"
                 >
-                  Dismiss
+                  {connectionError ? "Retry" : "Dismiss"}
                 </button>
               </div>
             )}
