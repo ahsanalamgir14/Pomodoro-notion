@@ -5,7 +5,7 @@ export interface IAppState {
 }
 
 export const initialState: IAppState = {
-  userId: "",
+  userId: "anonymous-user", // Default user for no-auth mode
   startDate: Math.floor(new Date().getTime() / 1000),
   endDate: Math.floor(new Date().getTime() / 1000),
 };

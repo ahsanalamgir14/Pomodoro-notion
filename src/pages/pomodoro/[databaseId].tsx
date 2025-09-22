@@ -31,8 +31,7 @@ import { actionTypes as userActiontype } from "../../utils/Context/UserContext/r
 import { actionTypes as projActiontype } from "../../utils/Context/ProjectContext/reducer";
 import { usePomoState } from "../../utils/Context/PomoContext/Context";
 import { notEmpty } from "../../types/notEmpty";
-// Use mock implementation for development to avoid Firebase setup
-import { fetchNotionUser } from "../../utils/apis/firebase/mockUserNotion";
+// No authentication required - using mock data directly
 import { useUserState } from "../../utils/Context/UserContext/Context";
 import { useProjectState } from "@/utils/Context/ProjectContext/Context";
 import { TabsOptions } from "../../Components/Views/utils";
@@ -45,45 +44,18 @@ export const getServerSideProps = async ({
     const databaseId = query.databaseId as string;
     const tab = query.tab as string;
     
-    // Use mock user for development - no authentication required
-    const mockUserId = "demo-user-123";
+    // No authentication required - use mock data directly
+    console.log("Using mock data for database access (no authentication)");
     
-    // Try to fetch the database and its pages
-    // For development, we'll use mock data if real API fails
-    let database = null;
-    let db = null;
-    let error = null;
+    // Import mock data directly
+    const { mockDatabaseQuery, mockDatabaseDetail } = await import("../../utils/apis/notion/mockDatabase");
     
-    try {
-      // Try to get real Notion data first
-      const notionUser = await fetchNotionUser("demo@example.com");
-      
-      if (notionUser?.accessToken) {
-        console.log("Using real Notion token for database access");
-        database = await queryDatabase(databaseId, true, notionUser.accessToken);
-        db = await retrieveDatabase(databaseId, true, notionUser.accessToken);
-      } else {
-        console.log("No valid Notion token, using mock data");
-        // Import mock data
-        const { mockDatabaseQuery, mockDatabaseDetail } = await import("../../utils/apis/notion/mockDatabase");
-        database = mockDatabaseQuery;
-        db = mockDatabaseDetail;
-      }
-    } catch (apiError) {
-      console.log("API error, falling back to mock data:", apiError);
-      // Import mock data as fallback
-      const { mockDatabaseQuery, mockDatabaseDetail } = await import("../../utils/apis/notion/mockDatabase");
-      database = mockDatabaseQuery;
-      db = mockDatabaseDetail;
-    }
-
     return {
       props: {
-        userId: mockUserId,
-        database: database || null,
-        db: db || null,
+        database: mockDatabaseQuery,
+        db: mockDatabaseDetail,
         tab: tab || null,
-        error: error,
+        error: null,
         databaseId: databaseId,
       },
     };
@@ -98,7 +70,6 @@ export const getServerSideProps = async ({
     
     return {
       props: {
-        userId: "demo-user-123",
         database: null,
         db: null,
         tab: null,
@@ -110,7 +81,6 @@ export const getServerSideProps = async ({
 };
 
 export default function Pages({
-  userId,
   database,
   db,
   tab,
@@ -147,14 +117,7 @@ export default function Pages({
     );
   }, [activeTab]);
 
-  useEffect(
-    () =>
-      userDispatch({
-        type: userActiontype.SET_USERID,
-        payload: userId,
-      }),
-    [userId]
-  );
+  // No user authentication required - removed userId dependency
 
   useEffect(() => {
     if (databaseId)
