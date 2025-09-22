@@ -42,36 +42,69 @@ export const getServerSideProps = async ({
   req,
 }: GetServerSidePropsContext) => {
   try {
-    // For now, redirect to login since we don't have session management
-    // In a real implementation, you'd implement proper session handling
+    const databaseId = query.databaseId as string;
+    const tab = query.tab as string;
+    
+    // Use mock user for development - no authentication required
+    const mockUserId = "demo-user-123";
+    
+    // Try to fetch the database and its pages
+    // For development, we'll use mock data if real API fails
+    let database = null;
+    let db = null;
+    let error = null;
+    
+    try {
+      // Try to get real Notion data first
+      const notionUser = await fetchNotionUser("demo@example.com");
+      
+      if (notionUser?.accessToken) {
+        console.log("Using real Notion token for database access");
+        database = await queryDatabase(databaseId, true, notionUser.accessToken);
+        db = await retrieveDatabase(databaseId, true, notionUser.accessToken);
+      } else {
+        console.log("No valid Notion token, using mock data");
+        // Import mock data
+        const { mockDatabaseQuery, mockDatabaseDetail } = await import("../../utils/apis/notion/mockDatabase");
+        database = mockDatabaseQuery;
+        db = mockDatabaseDetail;
+      }
+    } catch (apiError) {
+      console.log("API error, falling back to mock data:", apiError);
+      // Import mock data as fallback
+      const { mockDatabaseQuery, mockDatabaseDetail } = await import("../../utils/apis/notion/mockDatabase");
+      database = mockDatabaseQuery;
+      db = mockDatabaseDetail;
+    }
+
     return {
-      redirect: {
-        permanent: false,
-        destination: "/login",
+      props: {
+        userId: mockUserId,
+        database: database || null,
+        db: db || null,
+        tab: tab || null,
+        error: error,
+        databaseId: databaseId,
       },
-      props: {},
     };
   } catch (error) {
-    console.log(error);
+    console.log("Server-side error:", error);
     const err = error as AxiosError;
-    if (process.env.NODE_ENV === "development") {
-      // Ensure we return a serializable error object
-      const errorMessage = err.response?.data 
-        ? JSON.stringify(err.response.data)
-        : err.message || "An error occurred";
-      
-      return {
-        props: {
-          error: errorMessage,
-        },
-      };
-    }
+    
+    // Return error props instead of redirecting
+    const errorMessage = err.response?.data 
+      ? JSON.stringify(err.response.data)
+      : err.message || "An error occurred";
+    
     return {
-      redirect: {
-        permanent: false,
-        destination: "/login",
+      props: {
+        userId: "demo-user-123",
+        database: null,
+        db: null,
+        tab: null,
+        error: errorMessage,
+        databaseId: query.databaseId as string,
       },
-      props: {},
     };
   }
 };

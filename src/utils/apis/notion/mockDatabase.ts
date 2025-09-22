@@ -333,3 +333,6 @@ export const listDatabases = async (
   await new Promise(resolve => setTimeout(resolve, 100));
   return mockDatabaseList;
 };
+
+// Export mock data for direct use
+export { mockDatabaseList, mockDatabaseQuery, mockDatabaseDetail };
