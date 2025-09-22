@@ -1,15 +1,20 @@
 import React from "react";
 import Image from "next/image";
-import { signIn } from "next-auth/react";
 
 export default function GoogleButton() {
+  const handleGoogleSignIn = () => {
+    // Google sign-in functionality removed
+    console.log("Google sign-in not available");
+  };
+
   return (
     <button
-      onClick={() => signIn("google")}
+      onClick={handleGoogleSignIn}
       className="mt-3 
     rounded-sm
-      bg-blue-500 
-       font-semibold text-white shadow-xl hover:bg-blue-600 "
+      bg-gray-400 
+       font-semibold text-white shadow-xl cursor-not-allowed opacity-50"
+      disabled
     >
       <div className="flex items-center ">
         <div className="m-[1px] flex items-center justify-center rounded-sm bg-slate-50 p-[10px]">
@@ -22,7 +27,7 @@ export default function GoogleButton() {
           />
         </div>
         <div className="flex items-center self-stretch   px-3 text-sm text-white">
-          Sign in with google
+          Google Sign-in Disabled
         </div>
       </div>
     </button>

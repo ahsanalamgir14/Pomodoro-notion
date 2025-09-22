@@ -4,7 +4,7 @@ import { GetServerSidePropsContext, InferGetServerSidePropsType } from "next";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { getSession } from "next-auth/react";
+// import { getSession } from "next-auth/react"; // Removed next-auth dependency
 import { useEffect, useMemo, useState } from "react";
 import Line from "../../Components/Line";
 import NotionTags from "../../Components/NotionTags";
@@ -41,32 +41,30 @@ export const getServerSideProps = async ({
   req,
 }: GetServerSidePropsContext) => {
   try {
-    const session = await getSession({ req });
-    if (!session?.user?.email) throw new Error("Session not found");
-    const user = await fetchNotionUser(session?.user?.email);
-    if (!user) throw new Error("User not found");
-    const [database, db] = await Promise.all([
-      queryDatabase(query.databaseId as string, true, user.accessToken),
-      retrieveDatabase(query.databaseId as string, true, user.accessToken),
-    ]);
+    // For now, redirect to login since we don't have session management
+    // In a real implementation, you'd implement proper session handling
     return {
-      props: {
-        userId: user.id,
-        database,
-        db,
-        tab: (query?.tab as string) || null,
-        databaseId: query.databaseId as string,
+      redirect: {
+        permanent: false,
+        destination: "/login",
       },
+      props: {},
     };
   } catch (error) {
     console.log(error);
     const err = error as AxiosError;
-    if (process.env.NODE_ENV === "development")
+    if (process.env.NODE_ENV === "development") {
+      // Ensure we return a serializable error object
+      const errorMessage = err.response?.data 
+        ? JSON.stringify(err.response.data)
+        : err.message || "An error occurred";
+      
       return {
         props: {
-          error: err.response?.data,
+          error: errorMessage,
         },
       };
+    }
     return {
       redirect: {
         permanent: false,
