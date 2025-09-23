@@ -66,7 +66,15 @@ export default async function handler(
           workspace: workspaceData,
         });
         console.log("Notion user created successfully");
-        res.redirect("/");
+        
+        // Redirect with success and cache data in client
+        const cacheData = encodeURIComponent(JSON.stringify({
+          accessToken: access_token,
+          workspace: workspaceData,
+          email: userEmail,
+          connectedAt: new Date().toISOString(),
+        }));
+        res.redirect(`/?notion_connected=true&cache_data=${cacheData}`);
       } catch (firebaseError) {
         console.error("Firebase user creation failed:", firebaseError);
         // Still redirect to home but with a warning

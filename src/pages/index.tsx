@@ -1,35 +1,87 @@
-import { trpc } from "@/utils/trpc";
-import Link from "next/link";
-import { useState, useEffect } from "react";
+import { trpc } from "../utils/trpc";
 import { useRouter } from "next/router";
+import { useEffect, useState } from "react";
+import ContentLoader from "react-content-loader";
+import DatabaseCard from "../Components/DatabaseCard";
 import Footer from "../Components/Footer";
 import Header from "../Components/Header";
 import NotionConnectModal from "../Components/NotionConnectModal";
-import ContentLoader from "react-content-loader";
+import { NotionCache } from "../utils/notionCache";
 
 function Home() {
   const [showModal, setModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [cachedData, setCachedData] = useState<any>(null);
+  const [isConnected, setIsConnected] = useState(false);
   const router = useRouter();
 
-  // Handle error messages from OAuth callback
+  // Handle OAuth callback and cache data
   useEffect(() => {
     if (router.query.error) {
       setErrorMessage(decodeURIComponent(router.query.error as string));
-      // Clear the error from URL
       router.replace("/", undefined, { shallow: true });
+      return;
     }
-  }, [router]);
+    
+    // Handle successful OAuth callback
+    if (router.query.notion_connected && router.query.cache_data) {
+      try {
+        const userData = JSON.parse(decodeURIComponent(router.query.cache_data as string));
+        NotionCache.saveUserData(userData);
+        setIsConnected(true);
+        
+        // Immediately check for cached database list after saving user data
+        const cached = NotionCache.getCachedDatabaseList();
+        if (cached) {
+          setCachedData({
+            databases: cached.databases,
+            workspace: cached.workspace,
+          });
+          console.log('✅ Using cached database list after OAuth');
+        }
+        
+        console.log('✅ Notion connection cached successfully');
+        router.replace("/", undefined, { shallow: true });
+      } catch (error) {
+        console.error('❌ Failed to cache OAuth data:', error);
+      }
+      return;
+    }
+    
+    // Check for existing cached connection on normal page load
+    const connectionStatus = NotionCache.getConnectionStatus();
+    setIsConnected(connectionStatus.isConnected);
+    
+    // Try to use cached database list first
+    const cached = NotionCache.getCachedDatabaseList();
+    if (cached) {
+      setCachedData({
+        databases: cached.databases,
+        workspace: cached.workspace,
+      });
+      console.log('✅ Using cached database list');
+    }
+  }, [router.query, router.isReady]);
 
   // Use a simple identifier for Notion connection - no user accounts needed
   const userIdentifier = "notion-user";
+  
+  // Only fetch from API if we don't have cached data and user is connected
+  const shouldFetch = isConnected && !cachedData;
   
   const { data, isFetching, error } = trpc.private.getDatabases.useQuery(
     { email: userIdentifier },
     {
       refetchOnWindowFocus: false,
       retry: false, // Don't retry on error
-      enabled: true, // Always try to fetch
+      enabled: shouldFetch, // Only fetch when needed
+      onSuccess: (data) => {
+        // Cache the fresh data
+        if (data?.databases && data?.workspace) {
+          NotionCache.saveDatabaseList(data.databases, data.workspace);
+          console.log('✅ Fresh database list cached');
+        }
+      },
     }
   );
 
@@ -42,13 +94,13 @@ function Home() {
   );
 
   // Check if user needs to connect to Notion
-  const isUnauthorized = 
-    // Case 1: TRPC error (401 from Notion API)
-    (error?.message?.includes("Request failed with status code 401")) ||
-    // Case 2: Successful response but no user data/token
-    (data?.error && data.error.includes("User not found or not connected to Notion")) ||
-    // Case 3: No data and no specific error (initial state)
-    (!data && !error && !isFetching);
+  const isUnauthorized = !isConnected;
+  
+  // Use cached data if available, otherwise use fresh API data
+  const displayData = cachedData || data;
+  
+  // Determine if we should show the databases (either we have data or we're connected and fetching)
+  const shouldShowDatabases = isConnected && (displayData || isFetching);
 
   return (
     <>
@@ -73,7 +125,7 @@ function Home() {
             </ContentLoader>
           </div>
         )}
-        {!isFetching && (isUnauthorized || !data) && (
+        {!shouldShowDatabases && (
           <>
             <Header imgSrc={null} />
             {(errorMessage || connectionError) && (
@@ -120,13 +172,49 @@ function Home() {
             {showModal && <NotionConnectModal setModal={setModal} />}
           </>
         )}
-        {!isFetching && data && !isUnauthorized && (
+        {shouldShowDatabases && (
           <>
-            <Header imgSrc={data?.workspace?.workspace_icon} />
+            <Header imgSrc={displayData?.workspace?.workspace_icon} />
+            
+            {/* Show loading state if we're connected but still fetching */}
+            {isFetching && !displayData && (
+              <div className="mt-8 text-center">
+                <div className="text-lg text-gray-600 mb-4">Loading your databases...</div>
+                <ContentLoader
+                  className="mx-auto"
+                  height={100}
+                  width={160}
+                  viewBox="0 0 160 100"
+                >
+                  <rect x="0" y="0" rx="5" ry="5" width="160" height="100" />
+                </ContentLoader>
+              </div>
+            )}
+            
+            {/* Cache status and refresh button */}
+            {displayData && (
+              <div className="mt-4 flex items-center justify-center gap-4">
+                {cachedData && (
+                  <span className="text-sm text-green-600">
+                    ✅ Using cached data (faster loading)
+                  </span>
+                )}
+                <button
+                  onClick={() => {
+                    NotionCache.clearDatabaseCache();
+                    setCachedData(null);
+                    console.log('🔄 Cache cleared, will fetch fresh data');
+                  }}
+                  className="text-sm text-blue-600 hover:text-blue-800 underline"
+                >
+                  🔄 Refresh databases
+                </button>
+              </div>
+            )}
 
-            {data?.databases?.results && data?.databases.results.length > 0 ? (
+            {displayData?.databases?.results && displayData?.databases.results.length > 0 ? (
               <div className="mt-3 grid gap-3 pt-3 text-center md:grid-cols-3 lg:w-2/3">
-                {data.databases.results.map((d) => (
+                {displayData.databases.results.map((d) => (
                   <DatabaseCard
                     key={d.id}
                     title={(d.title && d?.title[0]?.text?.content) || "Unkown"}
@@ -166,31 +254,3 @@ function Home() {
 }
 
 export default Home;
-
-type DatabaseProps = {
-  title: string;
-  description: string;
-  databasehref: string;
-  pomodorohref: string;
-};
-
-const DatabaseCard = ({
-  title,
-  description,
-  databasehref,
-  pomodorohref,
-}: DatabaseProps) => {
-  return (
-    <Link href={pomodorohref}>
-      <section className="flex cursor-pointer flex-col justify-center rounded-md border-2 border-gray-500 p-6 shadow-xl duration-500 motion-safe:hover:scale-105">
-        <h2 className="text-lg text-gray-700">{title}</h2>
-        <p className="text-sm text-gray-600">{description}</p>
-        <Link href={pomodorohref}>
-          <button className="mt-5 rounded-md bg-gray-600 py-2 px-4 text-gray-200  hover:bg-gray-700">
-            Pomodoro
-          </button>
-        </Link>
-      </section>
-    </Link>
-  );
-};
