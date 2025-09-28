@@ -23,6 +23,8 @@ export default function Views({
   databaseId,
   selectedTags = [],
   availableDatabases = [],
+  projects = [],
+  availableTags = [],
 }: {
   activeTab: string;
   pieData: PieData[];
@@ -37,6 +39,15 @@ export default function Views({
     id: string;
     title: string;
     icon?: string;
+  }>;
+  projects?: Array<{
+    label: string;
+    value: string;
+  }>;
+  availableTags?: Array<{
+    label: string;
+    value: string;
+    color: string;
   }>;
 }) {
   return (
@@ -56,9 +67,11 @@ export default function Views({
       >
         <Timer 
           projectName={projectName}
-          databaseId={databaseId}
+          currentDatabaseId={databaseId}
           selectedTags={selectedTags}
           availableDatabases={availableDatabases}
+          projects={projects}
+          availableTags={availableTags}
         />
       </div>
       <div

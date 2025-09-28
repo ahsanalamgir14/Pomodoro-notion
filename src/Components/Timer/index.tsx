@@ -12,15 +12,14 @@ import OutsideClickHandler from "react-outside-click-handler";
 import useSyncPomo from "../../hooks/useSyncPomo";
 import useWindowActive from "../../hooks/useWindowActive";
 import { usePomoState } from "../../utils/Context/PomoContext/Context";
-import { usePomoSessionConfig } from "../../hooks/usePomoSessionConfig";
 import Break from "../Break";
 import Controls from "../Controls";
 import SoundLevel from "../Noises/NoiseCard/SoundLevel";
 import Session from "../Session";
 import Switch from "../Switch";
 import WakeLockNote from "./WakeLockNote";
-import Clock from "../Clock";
 import PomoSessionConfig from "../PomoSessionConfig";
+import { usePomoSessionConfig } from "../../hooks/usePomoSessionConfig";
 
 type Props = {
   projectName: string;
@@ -28,14 +27,16 @@ type Props = {
   availableTags?: Array<{ label: string; value: string; color: string }>;
   selectedTags?: Array<{ label: string; value: string; color: string }>;
   currentDatabaseId?: string;
+  availableDatabases?: Array<{ id: string; title: string; icon?: string }>;
 };
 
 export default function Timer({ 
-  projectName, 
-  projects = [], 
-  availableTags = [], 
-  selectedTags = [], 
-  currentDatabaseId 
+  projectName,
+  projects = [],
+  availableTags = [],
+  selectedTags = [],
+  currentDatabaseId,
+  availableDatabases = []
 }: Props) {
   const timerScreen = useFullScreenHandle();
 
@@ -58,6 +59,7 @@ export default function Timer({
     availableTags,
     selectedTags,
     currentDatabaseId,
+    availableDatabases,
   });
 
   // Handle session completion and save to Notion if configured
@@ -83,7 +85,7 @@ export default function Timer({
   }, [sessionConfig.isReadyToSave, sessionConfig.saveSessionToNotion]);
 
   const { clockifiedValue, togglePlayPause, resetTimer, restartPomo } =
-    useSyncPomo();
+    useSyncPomo(handleSessionComplete);
 
   // prevent screen lock when timer is in focus
   const wakeLock = useRef<WakeLockSentinel>();
@@ -174,25 +176,27 @@ export default function Timer({
               timerScreen.active ? "hidden" : "flex"
             } flex-col items-center gap-5`}
           >
-            {/* Session Configuration */}
-            <PomoSessionConfig
-              projects={projects}
-              availableTags={availableTags}
-              selectedTags={selectedTags}
-              selectedProject={sessionConfig.selectedProject}
-              selectedDatabase={sessionConfig.selectedDatabase}
-              onProjectSelect={sessionConfig.setSelectedProject}
-              onTagsSelect={sessionConfig.setSelectedTags}
-              onDatabaseSelect={sessionConfig.setSelectedDatabase}
-              isExpanded={sessionConfig.isExpanded}
-              onToggleExpanded={sessionConfig.toggleExpanded}
-              disabled={disableControls}
-              isSaving={sessionConfig.isSaving}
-            />
+            {/* Single Card Design */}
+            <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg">
+              {/* Project Title */}
+              <h2 className="mb-6 text-center text-xl font-semibold text-gray-800">
+                {projectName}
+              </h2>
 
-            <Container title={timerLabel}>
-              <div className="flex flex-col items-center gap-5">
-                <Clock />
+              {/* Circular Timer Display */}
+              <div className="mb-8 flex justify-center">
+                <div className="relative h-48 w-48 rounded-full bg-gray-800 flex items-center justify-center">
+                  <div className="text-center text-white">
+                    <div className="text-sm font-medium mb-2">{timerLabel}</div>
+                    <div className="text-4xl font-mono font-bold">
+                      {clockifiedValue}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Control Buttons */}
+              <div className="mb-8 flex justify-center">
                 <Controls
                   disableControls={disableControls}
                   handlePlayPause={togglePlayPause}
@@ -200,47 +204,72 @@ export default function Timer({
                   handleRestart={restartPomo}
                 />
               </div>
-            </Container>
 
-            <Container title="Session Length">
-              <Session />
-            </Container>
-
-            <Container title="Break Length">
-              <Break />
-            </Container>
-
-            <Container title="Volume">
-              <div className="flex items-center gap-3">
-                <OutsideClickHandler
-                  onOutsideClick={() => {
-                    setPopover(false);
-                  }}
-                >
-                  <div className="relative">
-                    <SpeakerWaveIcon
-                      onClick={() => setPopover(!showPopover)}
-                      className="h-6 w-6 cursor-pointer text-gray-700"
-                    />
-                    <PopOver visible={showPopover} />
+              {/* Session and Break Length Controls */}
+              <div className="mb-6 flex justify-between">
+                <div className="flex flex-col items-center">
+                  <h3 className="mb-2 text-sm font-medium text-gray-600">Break Length</h3>
+                  <div className="flex items-center gap-2">
+                    <Break />
                   </div>
-                </OutsideClickHandler>
-                <Switch
-                  checked={shouldTickSound}
-                  onChange={handleTickChange}
-                  label="Tick Sound"
-                />
+                </div>
+                <div className="flex flex-col items-center">
+                  <h3 className="mb-2 text-sm font-medium text-gray-600">Session Length</h3>
+                  <div className="flex items-center gap-2">
+                    <Session />
+                  </div>
+                </div>
               </div>
-            </Container>
 
-            <div className="flex items-center gap-3">
-              <button
-                onClick={timerScreen.enter}
-                className="flex items-center gap-2 rounded bg-purple-600 px-4 py-2 text-white hover:bg-purple-700"
-              >
-                <ArrowsPointingOutIcon className="h-4 w-4" />
-                Fullscreen
-              </button>
+              {/* Bottom Controls */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Switch
+                    checked={shouldTickSound}
+                    onChange={handleTickChange}
+                    label="Ticking"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <OutsideClickHandler
+                    onOutsideClick={() => {
+                      setPopover(false);
+                    }}
+                  >
+                    <div className="relative">
+                      <SpeakerWaveIcon
+                        onClick={() => setPopover(!showPopover)}
+                        className="h-5 w-5 cursor-pointer text-gray-600"
+                      />
+                      <PopOver visible={showPopover} />
+                    </div>
+                  </OutsideClickHandler>
+                  <button
+                    onClick={timerScreen.enter}
+                    className="flex items-center gap-1 rounded-lg bg-purple-600 px-3 py-2 text-white hover:bg-purple-700"
+                  >
+                    <ArrowsPointingOutIcon className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Session Configuration */}
+            <div className="w-full max-w-md">
+              <PomoSessionConfig
+                projects={projects}
+                availableTags={availableTags}
+                selectedTags={selectedTags}
+                selectedProject={sessionConfig.config.selectedProject}
+                selectedDatabase={sessionConfig.config.selectedDatabase}
+                availableDatabases={sessionConfig.availableDatabases}
+                onProjectSelect={sessionConfig.setSelectedProject}
+                onTagsSelect={sessionConfig.setSelectedTags}
+                onDatabaseSelect={sessionConfig.setSelectedDatabase}
+                isExpanded={sessionConfig.config.isExpanded}
+                onToggleExpanded={sessionConfig.setIsExpanded}
+                disabled={disableControls}
+              />
             </div>
           </div>
 
@@ -259,20 +288,6 @@ export default function Timer({
   );
 }
 
-function Container({
-  children,
-  title,
-}: {
-  title: string;
-  children: JSX.Element | React.ReactNode;
-}) {
-  return (
-    <div className="flex w-full flex-col items-center gap-3 rounded-lg border border-gray-200 p-4">
-      <h3 className="text-lg font-semibold text-gray-700">{title}</h3>
-      {children}
-    </div>
-  );
-}
 
 function PopOver({ visible } = { visible: false }) {
   return (

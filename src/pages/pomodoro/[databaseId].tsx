@@ -25,6 +25,7 @@ import {
   queryDatabase,
   retrieveDatabase,
 } from "../../utils/apis/notion/database";
+import { fetchNotionUser } from "../../utils/apis/firebase/mockUserNotion";
 import { getProjectId, getProjectTitle } from "../../utils/notionutils";
 import { actionTypes } from "../../utils/Context/PomoContext/reducer";
 import { actionTypes as userActiontype } from "../../utils/Context/UserContext/reducer";
@@ -44,10 +45,56 @@ export const getServerSideProps = async ({
     const databaseId = query.databaseId as string;
     const tab = query.tab as string;
     
-    // No authentication required - use mock data directly
-    console.log("Using mock data for database access (no authentication)");
+    console.log("Fetching real Notion database data for:", databaseId);
     
-    // Import mock data directly
+    // Get the user's access token from Firebase
+    const userEmail = "notion-user"; // Use the same identifier as the OAuth flow
+    console.log("🔍 Fetching user data for email:", userEmail);
+    const userData = await fetchNotionUser(userEmail);
+    
+    if (!userData || !userData.accessToken) {
+      console.log("❌ No user data or access token found, falling back to mock data");
+      console.log("User data:", userData);
+      const { mockDatabaseQuery, mockDatabaseDetail } = await import("../../utils/apis/notion/mockDatabase");
+      
+      return {
+        props: {
+          database: mockDatabaseQuery,
+          db: mockDatabaseDetail,
+          tab: tab || null,
+          error: null,
+          databaseId: databaseId,
+        },
+      };
+    }
+    
+    console.log("🔑 Access token found:", userData.accessToken.substring(0, 20) + "...");
+    console.log("📡 Making real Notion API calls for database:", databaseId);
+    
+    // Use real Notion API calls with the user's access token
+    const [database, db] = await Promise.all([
+      queryDatabase(databaseId, true, userData.accessToken),
+      retrieveDatabase(databaseId, true, userData.accessToken)
+    ]);
+    
+    console.log("✅ Successfully fetched real Notion data");
+    console.log("Database results count:", database.results?.length || 0);
+    console.log("Database properties:", Object.keys(db.properties || {}));
+    
+    return {
+      props: {
+        database,
+        db,
+        tab: tab || null,
+        error: null,
+        databaseId: databaseId,
+      },
+    };
+  } catch (error) {
+    console.log("❌ Error fetching real Notion data:", error);
+    
+    // Fallback to mock data if real API fails
+    console.log("🔄 Falling back to mock data");
     const { mockDatabaseQuery, mockDatabaseDetail } = await import("../../utils/apis/notion/mockDatabase");
     
     return {
@@ -56,24 +103,6 @@ export const getServerSideProps = async ({
         db: mockDatabaseDetail,
         tab: tab || null,
         error: null,
-        databaseId: databaseId,
-      },
-    };
-  } catch (error) {
-    console.log("Server-side error:", error);
-    const err = error as AxiosError;
-    
-    // Return error props instead of redirecting
-    const errorMessage = err.response?.data 
-      ? JSON.stringify(err.response.data)
-      : err.message || "An error occurred";
-    
-    return {
-      props: {
-        database: null,
-        db: null,
-        tab: null,
-        error: errorMessage,
         databaseId: query.databaseId as string,
       },
     };
@@ -256,6 +285,8 @@ export default function Pages({
               databaseId={databaseId}
               selectedTags={selectedProperties}
               availableDatabases={[]}
+              projects={projects}
+              availableTags={properties}
             />
           </>
         ) : (

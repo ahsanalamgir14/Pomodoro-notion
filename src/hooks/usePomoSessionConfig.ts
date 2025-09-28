@@ -47,11 +47,13 @@ export const usePomoSessionConfig = ({
   availableTags,
   selectedTags,
   currentDatabaseId,
+  availableDatabases = [],
 }: {
   projects: ProjectOption[];
   availableTags: TagOption[];
   selectedTags: TagOption[];
   currentDatabaseId?: string;
+  availableDatabases?: Array<{ id: string; title: string; icon?: string }>;
 }): UsePomoSessionConfigReturn => {
   const [config, setConfig] = useState<PomoSessionConfig>({
     selectedProject: null,
@@ -60,9 +62,13 @@ export const usePomoSessionConfig = ({
     isExpanded: false,
   });
 
-  // Use the passed availableTags as available databases for now
-  // In a real implementation, this would come from the parent component
-  const availableDatabases: DatabaseOption[] = [];
+  // Convert availableDatabases to the expected format
+  const convertedDatabases: DatabaseOption[] = availableDatabases.map(db => ({
+    label: db.title,
+    value: db.id,
+    icon: db.icon,
+  }));
+
   const isLoadingDatabases = false;
 
   const setSelectedProject = useCallback((project: ProjectOption | null) => {
@@ -114,7 +120,7 @@ export const usePomoSessionConfig = ({
 
   return {
     config,
-    availableDatabases,
+    availableDatabases: convertedDatabases,
     isLoadingDatabases,
     setSelectedProject,
     setSelectedTags,

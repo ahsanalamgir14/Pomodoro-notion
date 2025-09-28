@@ -24,19 +24,13 @@ export default function useSyncPomo(onSessionComplete?: (sessionData: {
     { project, databaseId, startTime, timerValue, sessionValue },
     pomoDispatch,
   ] = usePomoState();
-  const pomoDoroResult = usePomoDoro({
-    onEnd,
-    onPomoPause,
-    onStart,
-    onReset,
-  });
-  
-  console.log("useSyncPomo - pomoDoroResult:", pomoDoroResult);
-  
-  const { clockifiedValue, handlePlayPause, resetTimer, restartPomo } = pomoDoroResult;
-  
-  // Debug logging
-  console.log("useSyncPomo - handlePlayPause:", typeof handlePlayPause, handlePlayPause);
+  const { clockifiedValue, handlePlayPause, resetTimer, restartPomo } =
+    usePomoDoro({
+      onEnd,
+      onPomoPause,
+      onStart,
+      onReset,
+    });
 
   const [refetch, addTimesheet] = usePomoClient();
 
@@ -51,20 +45,7 @@ export default function useSyncPomo(onSessionComplete?: (sessionData: {
   const elapsedTime = useRef(0);
 
   function togglePlayPause() {
-    console.log("togglePlayPause called, handlePlayPause:", typeof handlePlayPause);
-    if (typeof handlePlayPause === 'function') {
-      handlePlayPause();
-    } else {
-      console.error("handlePlayPause is not a function:", handlePlayPause);
-      // Fallback: try to get the function from the result again
-      const { handlePlayPause: fallbackHandlePlayPause } = pomoDoroResult;
-      if (typeof fallbackHandlePlayPause === 'function') {
-        console.log("Using fallback handlePlayPause");
-        fallbackHandlePlayPause();
-      } else {
-        console.error("Fallback handlePlayPause also not a function:", fallbackHandlePlayPause);
-      }
-    }
+    handlePlayPause();
   }
 
   function onPomoPause(type: TimerLabelType) {
