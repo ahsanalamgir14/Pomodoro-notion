@@ -105,18 +105,21 @@ interface Props {
   options: ColourOption[];
   disabled?: boolean;
   handleSelect: (e: any) => void;
+  selectedOptions?: ColourOption[];
 }
 
 export default function MultiSelect({
   options,
   disabled = false,
   handleSelect,
+  selectedOptions,
 }: Props) {
   return (
     <Select
       closeMenuOnSelect={false}
       isMulti
       options={options}
+      value={selectedOptions}
       styles={colourStyles}
       isDisabled={disabled}
       id="notion-tags-select"

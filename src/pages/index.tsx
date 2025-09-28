@@ -50,16 +50,25 @@ function Home() {
     
     // Check for existing cached connection on normal page load
     const connectionStatus = NotionCache.getConnectionStatus();
-    setIsConnected(connectionStatus.isConnected);
+    console.log('🔍 Connection status check:', connectionStatus);
     
-    // Try to use cached database list first
-    const cached = NotionCache.getCachedDatabaseList();
-    if (cached) {
-      setCachedData({
-        databases: cached.databases,
-        workspace: cached.workspace,
-      });
-      console.log('✅ Using cached database list');
+    if (connectionStatus.isConnected) {
+      setIsConnected(true);
+      
+      // Try to use cached database list first
+      const cached = NotionCache.getCachedDatabaseList();
+      if (cached) {
+        setCachedData({
+          databases: cached.databases,
+          workspace: cached.workspace,
+        });
+        console.log('✅ Using cached database list - no re-authentication needed');
+      } else {
+        console.log('⚠️ Connected but no cached database list - will fetch fresh data');
+      }
+    } else {
+      console.log('❌ No cached connection found - user needs to connect');
+      setIsConnected(false);
     }
   }, [router.query, router.isReady]);
 
@@ -208,6 +217,17 @@ function Home() {
                   className="text-sm text-blue-600 hover:text-blue-800 underline"
                 >
                   🔄 Refresh databases
+                </button>
+                <button
+                  onClick={() => {
+                    NotionCache.clearUserData();
+                    setIsConnected(false);
+                    setCachedData(null);
+                    console.log('🚪 Disconnected from Notion');
+                  }}
+                  className="text-sm text-red-600 hover:text-red-800 underline"
+                >
+                  🚪 Disconnect
                 </button>
               </div>
             )}

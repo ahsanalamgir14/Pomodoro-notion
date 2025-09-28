@@ -14,18 +14,29 @@ import useNotificationSound from "../Sound/useNotificationSound";
 import { usePomoClient } from "../Storage/usePomoClient";
 import useNotification from "../useNotification";
 
-export default function useSyncPomo() {
+export default function useSyncPomo(onSessionComplete?: (sessionData: {
+  timerValue: number;
+  startTime: number;
+  endTime: number;
+  sessionType: "work" | "break";
+}) => void) {
   const [
     { project, databaseId, startTime, timerValue, sessionValue },
     pomoDispatch,
   ] = usePomoState();
-  const { clockifiedValue, handlePlayPause, resetTimer, restartPomo } =
-    usePomoDoro({
-      onEnd,
-      onPomoPause,
-      onStart,
-      onReset,
-    });
+  const pomoDoroResult = usePomoDoro({
+    onEnd,
+    onPomoPause,
+    onStart,
+    onReset,
+  });
+  
+  console.log("useSyncPomo - pomoDoroResult:", pomoDoroResult);
+  
+  const { clockifiedValue, handlePlayPause, resetTimer, restartPomo } = pomoDoroResult;
+  
+  // Debug logging
+  console.log("useSyncPomo - handlePlayPause:", typeof handlePlayPause, handlePlayPause);
 
   const [refetch, addTimesheet] = usePomoClient();
 
@@ -40,7 +51,20 @@ export default function useSyncPomo() {
   const elapsedTime = useRef(0);
 
   function togglePlayPause() {
-    handlePlayPause();
+    console.log("togglePlayPause called, handlePlayPause:", typeof handlePlayPause);
+    if (typeof handlePlayPause === 'function') {
+      handlePlayPause();
+    } else {
+      console.error("handlePlayPause is not a function:", handlePlayPause);
+      // Fallback: try to get the function from the result again
+      const { handlePlayPause: fallbackHandlePlayPause } = pomoDoroResult;
+      if (typeof fallbackHandlePlayPause === 'function') {
+        console.log("Using fallback handlePlayPause");
+        fallbackHandlePlayPause();
+      } else {
+        console.error("Fallback handlePlayPause also not a function:", fallbackHandlePlayPause);
+      }
+    }
   }
 
   function onPomoPause(type: TimerLabelType) {
@@ -57,6 +81,19 @@ export default function useSyncPomo() {
     showNotification(`${type} Completed`, "Pomo Complete");
     if (type == "Session") {
       saveProjectTime();
+      
+      // Call session completion callback if provided
+      if (onSessionComplete) {
+        const endTime = Math.floor(new Date().getTime() / 1000);
+        const sessionDuration = getSessionInSecond() - timerValue - elapsedTime.current;
+        onSessionComplete({
+          timerValue: sessionDuration,
+          startTime: startTime,
+          endTime: endTime,
+          sessionType: "work"
+        });
+      }
+      
       //when session ends save session time
       bellRingPlay();
     } else {

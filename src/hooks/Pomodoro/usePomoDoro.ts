@@ -45,6 +45,7 @@ export default function usePomoDoro({
   const clockifiedValue = useClockified();
 
   function handlePlayPause() {
+    console.log("handlePlayPause called, isRunning:", isRunning, "busyIndicator:", busyIndicator);
     toggleTimer(!isRunning);
     dispatch({
       type: actionTypes.TOGGLE_ISBUSY_INDICATOR,
@@ -149,6 +150,13 @@ export default function usePomoDoro({
       }
     }
   }
+
+  console.log("usePomoDoro returning:", {
+    clockifiedValue: typeof clockifiedValue,
+    handlePlayPause: typeof handlePlayPause,
+    resetTimer: typeof resetTimer,
+    restartPomo: typeof restartPomo
+  });
 
   return { clockifiedValue, handlePlayPause, resetTimer, restartPomo };
 }

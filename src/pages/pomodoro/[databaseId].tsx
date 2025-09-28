@@ -253,6 +253,9 @@ export default function Pages({
                 database?.results.find((pr) => pr.id == String(project?.value)),
                 "Please select project"
               )}
+              databaseId={databaseId}
+              selectedTags={selectedProperties}
+              availableDatabases={[]}
             />
           </>
         ) : (

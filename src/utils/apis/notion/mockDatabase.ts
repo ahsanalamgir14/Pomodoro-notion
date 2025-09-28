@@ -186,9 +186,187 @@ const mockDatabaseQuery: DatabaseQuery = {
             name: "High",
             color: "red"
           }
+        },
+        "Tags": {
+          id: "tags",
+          type: "multi_select",
+          multi_select: [
+            {
+              id: "tag1",
+              name: "Work",
+              color: "blue"
+            },
+            {
+              id: "tag3",
+              name: "Urgent",
+              color: "red"
+            }
+          ]
         }
       },
       url: "https://notion.so/demo-page-1"
+    },
+    {
+      object: "page",
+      id: "demo-page-2",
+      created_time: "2024-01-02T00:00:00.000Z",
+      last_edited_time: "2024-01-02T00:00:00.000Z",
+      created_by: {
+        object: "user",
+        id: "demo-user-123"
+      },
+      last_edited_by: {
+        object: "user",
+        id: "demo-user-123"
+      },
+      cover: null,
+      icon: null,
+      parent: {
+        type: "database_id",
+        database_id: "demo-database-123"
+      },
+      archived: false,
+      properties: {
+        "Name": {
+          id: "title",
+          type: "title",
+          title: [
+            {
+              type: "text",
+              text: {
+                content: "Personal Project",
+                link: null
+              },
+              annotations: {
+                bold: false,
+                italic: false,
+                strikethrough: false,
+                underline: false,
+                code: false,
+                color: "default"
+              },
+              plain_text: "Personal Project",
+              href: null
+            }
+          ]
+        },
+        "Status": {
+          id: "status",
+          type: "select",
+          select: {
+            id: "1",
+            name: "Not started",
+            color: "default"
+          }
+        },
+        "Priority": {
+          id: "priority",
+          type: "select",
+          select: {
+            id: "1",
+            name: "Low",
+            color: "gray"
+          }
+        },
+        "Tags": {
+          id: "tags",
+          type: "multi_select",
+          multi_select: [
+            {
+              id: "tag2",
+              name: "Personal",
+              color: "green"
+            },
+            {
+              id: "tag4",
+              name: "Low Priority",
+              color: "gray"
+            }
+          ]
+        }
+      },
+      url: "https://notion.so/demo-page-2"
+    },
+    {
+      object: "page",
+      id: "demo-page-3",
+      created_time: "2024-01-03T00:00:00.000Z",
+      last_edited_time: "2024-01-03T00:00:00.000Z",
+      created_by: {
+        object: "user",
+        id: "demo-user-123"
+      },
+      last_edited_by: {
+        object: "user",
+        id: "demo-user-123"
+      },
+      cover: null,
+      icon: null,
+      parent: {
+        type: "database_id",
+        database_id: "demo-database-123"
+      },
+      archived: false,
+      properties: {
+        "Name": {
+          id: "title",
+          type: "title",
+          title: [
+            {
+              type: "text",
+              text: {
+                content: "Team Meeting",
+                link: null
+              },
+              annotations: {
+                bold: false,
+                italic: false,
+                strikethrough: false,
+                underline: false,
+                code: false,
+                color: "default"
+              },
+              plain_text: "Team Meeting",
+              href: null
+            }
+          ]
+        },
+        "Status": {
+          id: "status",
+          type: "select",
+          select: {
+            id: "2",
+            name: "In progress",
+            color: "blue"
+          }
+        },
+        "Priority": {
+          id: "priority",
+          type: "select",
+          select: {
+            id: "2",
+            name: "Medium",
+            color: "yellow"
+          }
+        },
+        "Tags": {
+          id: "tags",
+          type: "multi_select",
+          multi_select: [
+            {
+              id: "tag1",
+              name: "Work",
+              color: "blue"
+            },
+            {
+              id: "tag5",
+              name: "Meeting",
+              color: "purple"
+            }
+          ]
+        }
+      },
+      url: "https://notion.so/demo-page-3"
     }
   ],
   next_cursor: null,
@@ -286,6 +464,40 @@ const mockDatabaseDetail: DatabaseDetail = {
             id: "3",
             name: "High",
             color: "red"
+          }
+        ]
+      }
+    },
+    "Tags": {
+      id: "tags",
+      name: "Tags",
+      type: "multi_select",
+      multi_select: {
+        options: [
+          {
+            id: "tag1",
+            name: "Work",
+            color: "blue"
+          },
+          {
+            id: "tag2",
+            name: "Personal",
+            color: "green"
+          },
+          {
+            id: "tag3",
+            name: "Urgent",
+            color: "red"
+          },
+          {
+            id: "tag4",
+            name: "Low Priority",
+            color: "gray"
+          },
+          {
+            id: "tag5",
+            name: "Meeting",
+            color: "purple"
           }
         ]
       }

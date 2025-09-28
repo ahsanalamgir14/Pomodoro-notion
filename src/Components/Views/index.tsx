@@ -20,10 +20,24 @@ export default function Views({
   activeTab,
   pieData,
   projectName = "Please select project",
+  databaseId,
+  selectedTags = [],
+  availableDatabases = [],
 }: {
   activeTab: string;
   pieData: PieData[];
   projectName?: string;
+  databaseId?: string;
+  selectedTags?: Array<{
+    label: string;
+    value: string;
+    color: string;
+  }>;
+  availableDatabases?: Array<{
+    id: string;
+    title: string;
+    icon?: string;
+  }>;
 }) {
   return (
     <div className="relative w-full">
@@ -40,7 +54,12 @@ export default function Views({
           activeTab === "timer" ? "flex" : "hidden"
         } absolute w-full items-center justify-center`}
       >
-        <Timer projectName={projectName} />
+        <Timer 
+          projectName={projectName}
+          databaseId={databaseId}
+          selectedTags={selectedTags}
+          availableDatabases={availableDatabases}
+        />
       </div>
       <div
         className={`${

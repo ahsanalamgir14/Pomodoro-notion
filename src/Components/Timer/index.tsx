@@ -5,12 +5,14 @@ import {
   SpeakerWaveIcon,
 } from "@heroicons/react/24/outline";
 import Head from "next/head";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { FullScreen, useFullScreenHandle } from "react-full-screen";
+import { toast } from "react-toastify";
 import OutsideClickHandler from "react-outside-click-handler";
 import useSyncPomo from "../../hooks/useSyncPomo";
 import useWindowActive from "../../hooks/useWindowActive";
 import { usePomoState } from "../../utils/Context/PomoContext/Context";
+import { usePomoSessionConfig } from "../../hooks/usePomoSessionConfig";
 import Break from "../Break";
 import Controls from "../Controls";
 import SoundLevel from "../Noises/NoiseCard/SoundLevel";
@@ -18,18 +20,28 @@ import Session from "../Session";
 import Switch from "../Switch";
 import WakeLockNote from "./WakeLockNote";
 import Clock from "../Clock";
+import PomoSessionConfig from "../PomoSessionConfig";
 
 type Props = {
   projectName: string;
+  projects?: Array<{ label: string; value: string }>;
+  availableTags?: Array<{ label: string; value: string; color: string }>;
+  selectedTags?: Array<{ label: string; value: string; color: string }>;
+  currentDatabaseId?: string;
 };
 
-export default function Timer({ projectName }: Props) {
+export default function Timer({ 
+  projectName, 
+  projects = [], 
+  availableTags = [], 
+  selectedTags = [], 
+  currentDatabaseId 
+}: Props) {
   const timerScreen = useFullScreenHandle();
 
   const [{ timerLabel, project, shouldTickSound }, dispatch] = usePomoState();
 
-  const { clockifiedValue, togglePlayPause, resetTimer, restartPomo } =
-    useSyncPomo();
+
 
   const isWindowActive = useWindowActive();
 
@@ -39,6 +51,39 @@ export default function Timer({ projectName }: Props) {
   const [showNote, setNote] = useState<
     null | "success" | "error" | "warning"
   >();
+
+  // Initialize session configuration hook
+  const sessionConfig = usePomoSessionConfig({
+    projects,
+    availableTags,
+    selectedTags,
+    currentDatabaseId,
+  });
+
+  // Handle session completion and save to Notion if configured
+  const handleSessionComplete = useCallback(async (sessionData: {
+    timerValue: number;
+    startTime: number;
+    endTime: number;
+    sessionType: "work" | "break";
+  }) => {
+    if (sessionConfig.isReadyToSave) {
+      try {
+        await sessionConfig.saveSessionToNotion(sessionData);
+        toast.success("Session saved to Notion database!", {
+          autoClose: 3000,
+        });
+      } catch (error) {
+        console.error("Failed to save session to Notion:", error);
+        toast.error("Failed to save session to Notion database", {
+          autoClose: 5000,
+        });
+      }
+    }
+  }, [sessionConfig.isReadyToSave, sessionConfig.saveSessionToNotion]);
+
+  const { clockifiedValue, togglePlayPause, resetTimer, restartPomo } =
+    useSyncPomo();
 
   // prevent screen lock when timer is in focus
   const wakeLock = useRef<WakeLockSentinel>();
@@ -96,116 +141,118 @@ export default function Timer({ projectName }: Props) {
       className="
       flex
       min-w-[350px] flex-col items-center justify-items-center 
-      rounded-[50px]
-      bg-white
-      p-9 text-gray-700 shadow-lg"
+      gap-5 p-5 text-center
+      "
     >
-      {clockifiedValue && (
-        <Head>
-          <title>{`${clockifiedValue} - ${timerLabel}`}</title>
-          <link rel="icon" href="/favicon.ico" />
-        </Head>
-      )}
-      <h2 className="mt-[0.5em] mb-[1.5em] text-2xl">{projectName}</h2>
-      <h3
-        id="timer-label"
-        className="relative z-30 mb-[15px] mt-5 text-xl font-medium text-gray-300"
-      >
-        {timerLabel}
-      </h3>
-      <h1
-        id="time-left"
-        className="font-quicksand relative z-10
-        m-0
-        mb-3 
-        text-5xl
-        font-extralight
-        text-gray-500
-        after:absolute
-        after:top-1/2
-        after:left-1/2
-        after:-z-10
-        after:block 
-        after:h-[180px]
-        after:w-[180px]
-        after:-translate-x-1/2
-        after:-translate-y-1/2
-        after:rounded-full 
-        after:bg-bgColor-10
-        after:shadow-md
-        after:shadow-gray-400
-        "
-      >
-        {clockifiedValue}
-      </h1>
-      <Controls
-        disableControls={disableControls}
-        handleReset={resetTimer}
-        handlePlayPause={togglePlayPause}
-        handleRestart={restartPomo}
-      />
-      <div className="flex w-full items-center justify-between gap-5">
-        <Container title="Break Length">
-          <Break />
-        </Container>
-        <Container title=" Session Length">
-          <Session />
-        </Container>
-      </div>
+      <Head>
+        <title>
+          {clockifiedValue} - {projectName}
+        </title>
+      </Head>
 
-      <div className="mt-2 flex items-center">
-        <Switch
-          checked={shouldTickSound}
-          onChange={handleTickChange}
-          text="Ticking"
-        />
-        <OutsideClickHandler onOutsideClick={() => setPopover(false)}>
-          <div className="relative mx-3 flex items-center ">
-            <button
-              onClick={() => setPopover((prev) => !prev)}
-              data-popover-target="popover-default"
-              type="button"
-              className="cursor-pointer text-center text-sm font-medium focus:outline-none"
-            >
-              <SpeakerWaveIcon className=" h-6 w-6 text-slate-700 hover:text-slate-400 active:text-slate-900" />
-            </button>
-            <PopOver visible={showPopover} />
-          </div>
-        </OutsideClickHandler>
-        <button onClick={timerScreen.enter} className="mx-2">
-          <ArrowsPointingOutIcon className="h-5 w-5" />
-        </button>
-      </div>
-      {/* disabled wakelock not now since it is no longer needed */}
-      {/* {showNote && (
-        <WakeLockNote onCloseClick={() => setNote(null)} type={showNote} />
-      )} */}
+      <WakeLockNote showNote={showNote} />
+
       <FullScreen handle={timerScreen}>
-        <div className={`${timerScreen.active ? "block" : "hidden"} `}>
-          <div className="flex h-screen w-screen flex-col items-center justify-center">
-            <h3 className="text-xl">{projectName}</h3>
-            <h4 className="my-5 text-4xl">
-              <div className="flex items-baseline gap-3">
-                {timerLabel}
-                <button className="h-6 w-6" onClick={timerScreen.exit}>
-                  <ArrowsPointingInIcon className="h-6 w-6" />
-                </button>
+        <div
+          className={`${
+            timerScreen.active
+              ? "flex h-screen w-screen flex-col items-center justify-center bg-gray-900 text-white"
+              : ""
+          }`}
+        >
+          {timerScreen.active && (
+            <div className="mb-8 text-center">
+              <h1 className="text-2xl font-bold">{projectName}</h1>
+              <div className="mt-4 text-6xl font-mono">
+                {clockifiedValue}
               </div>
-            </h4>
-            <h1
-              id="time-left"
-              className="font-quicksand relative z-10
-              m-0
-            mb-3 
-            text-9xl
-            font-extralight
-            text-gray-500
-        "
-            >
-              {clockifiedValue}
-            </h1>
-            <Clock />
+            </div>
+          )}
+
+          <div
+            className={`${
+              timerScreen.active ? "hidden" : "flex"
+            } flex-col items-center gap-5`}
+          >
+            {/* Session Configuration */}
+            <PomoSessionConfig
+              projects={projects}
+              availableTags={availableTags}
+              selectedTags={selectedTags}
+              selectedProject={sessionConfig.selectedProject}
+              selectedDatabase={sessionConfig.selectedDatabase}
+              onProjectSelect={sessionConfig.setSelectedProject}
+              onTagsSelect={sessionConfig.setSelectedTags}
+              onDatabaseSelect={sessionConfig.setSelectedDatabase}
+              isExpanded={sessionConfig.isExpanded}
+              onToggleExpanded={sessionConfig.toggleExpanded}
+              disabled={disableControls}
+              isSaving={sessionConfig.isSaving}
+            />
+
+            <Container title={timerLabel}>
+              <div className="flex flex-col items-center gap-5">
+                <Clock />
+                <Controls
+                  disableControls={disableControls}
+                  handlePlayPause={togglePlayPause}
+                  handleReset={resetTimer}
+                  handleRestart={restartPomo}
+                />
+              </div>
+            </Container>
+
+            <Container title="Session Length">
+              <Session />
+            </Container>
+
+            <Container title="Break Length">
+              <Break />
+            </Container>
+
+            <Container title="Volume">
+              <div className="flex items-center gap-3">
+                <OutsideClickHandler
+                  onOutsideClick={() => {
+                    setPopover(false);
+                  }}
+                >
+                  <div className="relative">
+                    <SpeakerWaveIcon
+                      onClick={() => setPopover(!showPopover)}
+                      className="h-6 w-6 cursor-pointer text-gray-700"
+                    />
+                    <PopOver visible={showPopover} />
+                  </div>
+                </OutsideClickHandler>
+                <Switch
+                  checked={shouldTickSound}
+                  onChange={handleTickChange}
+                  label="Tick Sound"
+                />
+              </div>
+            </Container>
+
+            <div className="flex items-center gap-3">
+              <button
+                onClick={timerScreen.enter}
+                className="flex items-center gap-2 rounded bg-purple-600 px-4 py-2 text-white hover:bg-purple-700"
+              >
+                <ArrowsPointingOutIcon className="h-4 w-4" />
+                Fullscreen
+              </button>
+            </div>
           </div>
+
+          {timerScreen.active && (
+            <button
+              onClick={timerScreen.exit}
+              className="mt-8 flex items-center gap-2 rounded bg-purple-600 px-4 py-2 text-white hover:bg-purple-700"
+            >
+              <ArrowsPointingInIcon className="h-4 w-4" />
+              Exit Fullscreen
+            </button>
+          )}
         </div>
       </FullScreen>
     </div>
@@ -220,53 +267,21 @@ function Container({
   children: JSX.Element | React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col items-center">
-      <span id="break-label" className="text-md">
-        {title}
-      </span>
-      <div className="flex items-center justify-between gap-2	text-center">
-        {children}
-      </div>
+    <div className="flex w-full flex-col items-center gap-3 rounded-lg border border-gray-200 p-4">
+      <h3 className="text-lg font-semibold text-gray-700">{title}</h3>
+      {children}
     </div>
   );
 }
 
 function PopOver({ visible } = { visible: false }) {
-  const [{ tickVolume }, dispatch] = usePomoState();
-
-  const [volume, setVolume] = useState(tickVolume);
-
-  useEffect(() => {
-    // reason for this is context is slow i guess slow update to dom
-    dispatch({
-      type: actionTypes.CHANGE_TICK_VOLUME,
-      payload: volume,
-    });
-  }, [dispatch, volume]);
-
   return (
     <div
-      id="volumebar-popover"
       className={`${
-        visible
-          ? "scale-100 transform opacity-100"
-          : "pointer-events-none scale-95 transform opacity-0"
-      } absolute -left-20 top-8 w-52 rounded-lg border border-slate-300 bg-white p-1 text-sm font-light text-slate-500 shadow-2xl transition duration-75 ease-in`}
+        visible ? "block" : "hidden"
+      } absolute bottom-8 left-1/2 z-10 w-48 -translate-x-1/2 transform rounded-lg border border-gray-200 bg-white p-3 shadow-lg`}
     >
-      <div className="relative">
-        <div
-          className="absolute -top-[9px] left-[41%] z-0 h-2 w-2 rotate-45 rounded-tl-sm border-t border-l
-         border-slate-300  bg-white"
-        ></div>
-      </div>
-      <div className="flex items-center gap-3   bg-white px-2 py-1">
-        <div className="w-6">{Math.floor(volume * 100)}</div>
-        <SoundLevel
-          defaultValue={volume * 100}
-          value="Tickvolume"
-          handleChange={setVolume}
-        />
-      </div>
+      <SoundLevel />
     </div>
   );
 }
