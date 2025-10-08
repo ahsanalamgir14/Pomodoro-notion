@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
+import { usePomoState } from "../utils/Context/PomoContext/Context";
 import { getAvailableDatabases, savePomoSessionToNotion } from "../utils/apis/notion/client";
 
 export interface ProjectOption {
@@ -55,6 +56,7 @@ export const usePomoSessionConfig = ({
   currentDatabaseId?: string;
   availableDatabases?: Array<{ id: string; title: string; icon?: string }>;
 }): UsePomoSessionConfigReturn => {
+  const [{ project }] = usePomoState();
   const [config, setConfig] = useState<PomoSessionConfig>({
     selectedProject: null,
     selectedTags: [],
@@ -87,6 +89,20 @@ export const usePomoSessionConfig = ({
     setConfig(prev => ({ ...prev, isExpanded: expanded }));
   }, []);
 
+  // Sync selected project from global Pomo context
+  useEffect(() => {
+    if (project && (!config.selectedProject || config.selectedProject.value !== project.value)) {
+      setConfig(prev => ({ ...prev, selectedProject: project as ProjectOption }));
+    }
+  }, [project]);
+
+  // Initialize/sync selected tags from upstream props (page-level selection)
+  useEffect(() => {
+    if (selectedTags && selectedTags.length >= 0) {
+      setConfig(prev => ({ ...prev, selectedTags }));
+    }
+  }, [selectedTags]);
+
   const saveSessionToNotion = useCallback(async (sessionData: {
     timerValue: number;
     startTime: number;
@@ -105,9 +121,9 @@ export const usePomoSessionConfig = ({
       timerValue: sessionData.timerValue,
       startTime: sessionData.startTime,
       endTime: sessionData.endTime,
-      selectedTags: config.selectedTags,
       targetDatabaseId: currentDatabaseId || "",
-      sessionType: sessionData.sessionType,
+      status: "Completed",
+      notes: "",
     };
 
     await savePomoSessionToNotion(saveParams);

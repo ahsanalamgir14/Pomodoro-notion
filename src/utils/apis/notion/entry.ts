@@ -12,12 +12,8 @@ export interface CreateNotionEntryParams {
   timerValue: number; // in seconds
   startTime: number; // timestamp
   endTime?: number; // timestamp
-  selectedTags: Array<{
-    id: string;
-    name: string;
-    color: string;
-  }>;
-  sessionType: "work" | "break";
+  status?: string; // e.g., "Completed"
+  notes?: string; // optional notes content
 }
 
 export const createNotionEntry = async ({
@@ -27,8 +23,8 @@ export const createNotionEntry = async ({
   timerValue,
   startTime,
   endTime,
-  selectedTags,
-  sessionType
+  status,
+  notes,
 }: CreateNotionEntryParams) => {
   try {
     // Convert timer value to minutes for better readability
@@ -40,63 +36,71 @@ export const createNotionEntry = async ({
     
     // Prepare properties for the Notion page
     const properties: any = {
-      // Title/Name property (assuming the database has a title property)
+      // Name — title
       Name: {
         title: [
           {
             text: {
-              content: `${projectTitle} - ${sessionType === "work" ? "Work" : "Break"} Session`
-            }
-          }
-        ]
+              content: `${projectTitle} Session`,
+            },
+          },
+        ],
       },
-      
-      // Project property
-      Project: {
+
+      // Quest — text (use project title as quest)
+      Quest: {
         rich_text: [
           {
             text: {
-              content: projectTitle
-            }
-          }
-        ]
+              content: projectTitle,
+            },
+          },
+        ],
       },
-      
-      // Duration in minutes
-      Duration: {
-        number: timerMinutes
+
+      // Duration (minutes) — number
+      "Duration (minutes)": {
+        number: timerMinutes,
       },
-      
-      // Session type
-      Type: {
-        select: {
-          name: sessionType === "work" ? "Work" : "Break"
-        }
-      },
-      
-      // Start time
+
+      // Start Time — date
       "Start Time": {
         date: {
-          start: startDate.toISOString()
-        }
+          start: startDate.toISOString(),
+        },
       },
-      
-      // End time
+
+      // End Time — date
       "End Time": {
         date: {
-          start: endDate.toISOString()
-        }
-      }
+          start: endDate.toISOString(),
+        },
+      },
     };
 
-    // Add tags if provided and if the database has a Tags property
-    if (selectedTags && selectedTags.length > 0) {
-      properties.Tags = {
-        multi_select: selectedTags.map(tag => ({
-          name: tag.name
-        }))
+    // Status — status (optional, default to Completed)
+    if (status || true) {
+      properties.Status = {
+        status: {
+          name: status || "Completed",
+        },
       };
     }
+
+    // Notes — text (optional)
+    if (notes && notes.trim().length > 0) {
+      properties.Notes = {
+        rich_text: [
+          {
+            text: {
+              content: notes.trim(),
+            },
+          },
+        ],
+      };
+    }
+
+    // Removed tag mapping; user doesn't need Tags in Notion
 
     // Create the page in Notion
     const response = await notion.pages.create({

@@ -8,13 +8,9 @@ export interface SaveToNotionParams {
   timerValue: number;
   startTime: number;
   endTime?: number;
-  selectedTags: Array<{
-    id: string;
-    name: string;
-    color: string;
-  }>;
   targetDatabaseId: string;
-  sessionType: "work" | "break";
+  status?: string;
+  notes?: string;
 }
 
 export const savePomoSessionToNotion = async (params: SaveToNotionParams) => {

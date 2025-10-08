@@ -17,21 +17,42 @@ export const pushTimesheet = async ({
   startTime: number;
   endTime: number;
 }) => {
-  await PomodoroClient.post(
-    POMO_TSH_APIS.TIMESHEET,
-    {
+  console.log("📡 Making timesheet API call:", {
+    url: POMO_TSH_APIS.TIMESHEET,
+    body: {
       projectId,
       databaseId,
       timerValue,
       startTime,
       endTime,
     },
-    {
-      params: {
-        userId,
-      },
+    params: {
+      userId,
     }
-  );
+  });
+
+  try {
+    const response = await PomodoroClient.post(
+      POMO_TSH_APIS.TIMESHEET,
+      {
+        projectId,
+        databaseId,
+        timerValue,
+        startTime,
+        endTime,
+      },
+      {
+        params: {
+          userId,
+        },
+      }
+    );
+    console.log("✅ Timesheet API response:", response.data);
+    return response;
+  } catch (error) {
+    console.error("❌ Timesheet API error:", error);
+    throw error;
+  }
 };
 
 // get all timesheets for current user

@@ -51,11 +51,11 @@ export default function Views({
   }>;
 }) {
   return (
-    <div className="relative w-full">
+    <div className="w-full min-h-screen">
       <div
         className={`${
           activeTab === "analytics" ? "block" : "hidden"
-        } absolute w-[100%]`}
+        } w-[100%]`}
       >
         <Analytics pieData={pieData} />
       </div>
@@ -63,7 +63,7 @@ export default function Views({
       <div
         className={`${
           activeTab === "timer" ? "flex" : "hidden"
-        } absolute w-full items-center justify-center`}
+        } w-full items-center justify-center`}
       >
         <Timer 
           projectName={projectName}
@@ -77,7 +77,7 @@ export default function Views({
       <div
         className={`${
           activeTab === "noise" ? "flex" : "hidden"
-        } absolute  w-full items-center justify-center `}
+        } w-full items-center justify-center `}
       >
         <div className="w-full">
           <Noises />
@@ -86,7 +86,7 @@ export default function Views({
       <div
         className={`${
           activeTab === "notes" ? "flex" : "hidden"
-        } absolute  w-full items-center justify-center `}
+        } w-full items-center justify-center `}
       >
         <div className="w-full">
           <Notes />

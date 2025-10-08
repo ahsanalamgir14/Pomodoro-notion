@@ -106,27 +106,51 @@ export default function useSyncPomo(onSessionComplete?: (sessionData: {
   function saveProjectTime() {
     // persist project timer
     if (project?.value) {
+      // If Firebase timesheet saving is disabled via env, skip writing to Firestore
+      if (process.env.NEXT_PUBLIC_DISABLE_FIREBASE === "true") {
+        console.log("⚙️ Firebase timesheet saving disabled; skipping Firestore write.");
+        return;
+      }
+
+      const timeSpent = getSessionInSecond() - timerValue - elapsedTime.current;
+      const endTime = Math.floor(new Date().getTime() / 1000);
+      
+      console.log("💾 Saving timesheet:", {
+        projectId: project.value,
+        projectLabel: project.label,
+        databaseId: databaseId,
+        timeSpent: timeSpent,
+        startTime: startTime,
+        endTime: endTime,
+        timerValue: timerValue,
+        elapsedTime: elapsedTime.current
+      });
+      
       addTimesheet(
         project.value,
         databaseId as string,
-        getSessionInSecond() - timerValue - elapsedTime.current,
+        timeSpent,
         startTime,
-        Math.floor(new Date().getTime() / 1000)
+        endTime
       )
         .then(() => {
+          console.log("✅ Timesheet saved successfully");
           toast.success(`Timesheet added ${project.label}`, {
             autoClose: false,
           });
           setTimeout(refetch, 3000); //refetch after 3 sec
         })
-        .catch(() =>
+        .catch((error) => {
+          console.error("❌ Timesheet save error:", error);
           toast.error(`Timesheet upload error ${project.label}`, {
             autoClose: false,
-          })
-        );
+          });
+        });
       // even if api fails reset elapsed timer
       elapsedTime.current =
         timerValue == 0 ? 0 : getSessionInSecond() - timerValue; //if timer value is having some value then delete session time from there
+    } else {
+      console.log("⚠️ No project selected, skipping timesheet save");
     }
   }
 

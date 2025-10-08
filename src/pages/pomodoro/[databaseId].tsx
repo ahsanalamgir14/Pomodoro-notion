@@ -41,9 +41,9 @@ export const getServerSideProps = async ({
   query,
   req,
 }: GetServerSidePropsContext) => {
+  const databaseId = query.databaseId as string;
+  const tab = query.tab as string;
   try {
-    const databaseId = query.databaseId as string;
-    const tab = query.tab as string;
     
     console.log("Fetching real Notion database data for:", databaseId);
     

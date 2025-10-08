@@ -18,9 +18,9 @@ export default async function handler(
         timerValue, 
         startTime, 
         endTime,
-        selectedTags,
         targetDatabaseId,
-        sessionType // "work" or "break"
+        status,
+        notes
       } = req.body;
 
       // Validate required fields
@@ -56,8 +56,8 @@ export default async function handler(
           timerValue,
           startTime,
           endTime,
-          selectedTags: selectedTags || [],
-          sessionType: sessionType || "work"
+          status: status || "Completed",
+          notes: notes || ""
         });
 
         res.status(200).json({
