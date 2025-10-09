@@ -1,6 +1,8 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { showError } from "../../../../utils/apis";
 import { createNotionEntry } from "../../../../utils/apis/notion/entry";
+// Use mock implementation for development to avoid Firebase setup
+import { fetchNotionUser } from "../../../../utils/apis/firebase/mockUserNotion";
 
 export default async function handler(
   req: NextApiRequest,
@@ -48,6 +50,15 @@ export default async function handler(
       }
 
       try {
+        // Fetch the user's Notion OAuth token (stored locally via mock or Firebase)
+        const userData = await fetchNotionUser(userId);
+        if (!userData || !userData.accessToken) {
+          return res.status(401).json({
+            error: "Failed to create Notion entry",
+            details: "User is not connected to Notion or token missing.",
+          });
+        }
+
         // Create entry in the selected Notion database
         const notionEntryId = await createNotionEntry({
           databaseId: targetDatabaseId,
@@ -57,7 +68,8 @@ export default async function handler(
           startTime,
           endTime,
           status: status || "Completed",
-          notes: notes || ""
+          notes: notes || "",
+          accessToken: userData.accessToken,
         });
 
         res.status(200).json({

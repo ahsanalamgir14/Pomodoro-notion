@@ -13,6 +13,7 @@ export default async function handler(
 ) {
   try {
     const { method } = req;
+    const firebaseDisabled = process.env.DISABLE_FIREBASE === "true";
     const userId = req.query.userId as string;
     const startDate = Math.floor(
       Number(
@@ -24,6 +25,19 @@ export default async function handler(
       Number((req.query.endDate as string) ?? new Date().getTime() / 1000)
     );
     if (!userId) throw new Error("UserId not found");
+
+    // If Firebase is disabled, short-circuit API responses to avoid 500s
+    if (firebaseDisabled) {
+      if (method === "GET") {
+        return res.status(200).json([]);
+      }
+      if (method === "POST") {
+        return res.status(200).json({ message: "Timesheet saving disabled", id: null, disabled: true });
+      }
+      if (method === "DELETE") {
+        return res.status(200).json({ message: "Timesheet deletion disabled", id: null, disabled: true });
+      }
+    }
     if (method == "GET") {
       res.status(200).json(
         await getTimesheets(userId, {

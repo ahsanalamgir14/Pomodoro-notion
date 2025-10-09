@@ -1,9 +1,11 @@
 import { Client } from "@notionhq/client";
 
-// Initialize Notion client (you'll need to set up proper authentication)
-const notion = new Client({
-  auth: process.env.NOTION_TOKEN,
-});
+// Create a Notion client using either a provided access token (OAuth)
+// or fall back to the environment integration token.
+const getNotionClient = (accessToken?: string) =>
+  new Client({
+    auth: accessToken || process.env.NOTION_TOKEN,
+  });
 
 export interface CreateNotionEntryParams {
   databaseId: string;
@@ -14,6 +16,7 @@ export interface CreateNotionEntryParams {
   endTime?: number; // timestamp
   status?: string; // e.g., "Completed"
   notes?: string; // optional notes content
+  accessToken?: string; // optional OAuth token to use for this request
 }
 
 export const createNotionEntry = async ({
@@ -25,8 +28,10 @@ export const createNotionEntry = async ({
   endTime,
   status,
   notes,
+  accessToken,
 }: CreateNotionEntryParams) => {
   try {
+    const notion = getNotionClient(accessToken);
     // Convert timer value to minutes for better readability
     const timerMinutes = Math.round(timerValue / 60);
     
@@ -120,6 +125,7 @@ export const createNotionEntry = async ({
 // Function to get database properties to understand the schema
 export const getDatabaseProperties = async (databaseId: string) => {
   try {
+    const notion = getNotionClient();
     const database = await notion.databases.retrieve({
       database_id: databaseId
     });
