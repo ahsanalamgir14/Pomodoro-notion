@@ -38,71 +38,101 @@ export const createNotionEntry = async ({
     // Format start and end times
     const startDate = new Date(startTime * 1000);
     const endDate = endTime ? new Date(endTime * 1000) : new Date();
+
+    // Retrieve database schema to align property types
+    const db = await notion.databases.retrieve({ database_id: databaseId });
+    const dbProps: Record<string, any> = (db as any)?.properties || {};
+    // Determine the title property name (fallback to "Name")
+    let titlePropName = "Name";
+    try {
+      for (const [key, prop] of Object.entries(dbProps)) {
+        if ((prop as any)?.type === "title") {
+          titlePropName = key;
+          break;
+        }
+      }
+    } catch (_) {
+      // If properties are not enumerable, keep default 'Name'
+    }
+    // If title property is not detectable, proceed with default 'Name'.
+    // Notion will return a clear error if the property does not exist.
     
-    // Prepare properties for the Notion page
-    const properties: any = {
-      // Name — title
-      Name: {
-        title: [
-          {
-            text: {
-              content: `${projectTitle} Session`,
-            },
+    // Prepare properties for the Notion page (aligned to Quests schema)
+    const properties: any = {};
+
+    // Name — title (using detected title property)
+    properties[titlePropName] = {
+      title: [
+        {
+          text: {
+            content: `${projectTitle} Session`,
           },
-        ],
-      },
-
-      // Quest — text (use project title as quest)
-      Quest: {
-        rich_text: [
-          {
-            text: {
-              content: projectTitle,
-            },
-          },
-        ],
-      },
-
-      // Duration (minutes) — number
-      "Duration (minutes)": {
-        number: timerMinutes,
-      },
-
-      // Start Time — date
-      "Start Time": {
-        date: {
-          start: startDate.toISOString(),
         },
-      },
-
-      // End Time — date
-      "End Time": {
-        date: {
-          start: endDate.toISOString(),
-        },
-      },
+      ],
     };
 
-    // Status — status (optional, default to Completed)
-    if (status || true) {
-      properties.Status = {
-        status: {
-          name: status || "Completed",
+    // Adventure — prefer relation; fallback to rich_text
+    if (dbProps["Adventure"]) {
+      if (dbProps["Adventure"].type === "relation" && projectId) {
+        properties["Adventure"] = {
+          relation: [{ id: projectId }],
+        };
+      } else {
+        properties["Adventure"] = {
+          rich_text: [
+            {
+              text: {
+                content: notes?.trim() || projectTitle,
+              },
+            },
+          ],
+        };
+      }
+    }
+
+    // Start Date — date
+    if (dbProps["Start Date"]) {
+      properties["Start Date"] = {
+        date: {
+          start: startDate.toISOString(),
         },
       };
     }
 
-    // Notes — text (optional)
-    if (notes && notes.trim().length > 0) {
-      properties.Notes = {
+    // Due Date — date
+    if (dbProps["Due Date"]) {
+      properties["Due Date"] = {
+        date: {
+          start: endDate.toISOString(),
+        },
+      };
+    }
+
+    // Time Logs — rich_text (store a concise summary)
+    if (dbProps["Time Logs"]) {
+      properties["Time Logs"] = {
         rich_text: [
           {
             text: {
-              content: notes.trim(),
+              content: `Duration: ${timerMinutes} min | Start: ${startDate.toLocaleString()} | End: ${endDate.toLocaleString()}`,
             },
           },
         ],
       };
+    }
+
+    // Status — detect type: status or select (optional, default to Completed)
+    if (dbProps["Status"]) {
+      const defaultStatus = status || "Completed";
+      if (dbProps["Status"].type === "status") {
+        properties["Status"] = {
+          status: { name: defaultStatus },
+        };
+      } else if (dbProps["Status"].type === "select") {
+        properties["Status"] = {
+          select: { name: defaultStatus },
+        };
+      }
     }
 
     // Removed tag mapping; user doesn't need Tags in Notion
