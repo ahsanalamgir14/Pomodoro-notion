@@ -56,3 +56,14 @@ export const validateDatabaseForPomodoro = async (databaseId: string) => {
     return { valid: false, message: "Unable to validate database" };
   }
 };
+
+export const getCompletedQuests = async (params: { userId: string; databaseId: string; adventurePageId?: string }) => {
+  try {
+    const query = new URLSearchParams({ userId: params.userId, databaseId: params.databaseId, ...(params.adventurePageId ? { adventurePageId: params.adventurePageId } : {}) });
+    const response = await PomodoroClient.get(`/api/pomo/completed-quests?${query.toString()}`);
+    return response.data as { count: number; items: Array<{ id: string; title: string }> };
+  } catch (error) {
+    console.error("Error fetching completed quests:", error);
+    throw error;
+  }
+};

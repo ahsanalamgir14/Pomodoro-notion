@@ -20,6 +20,7 @@ import Switch from "../Switch";
 import WakeLockNote from "./WakeLockNote";
 import PomoSessionConfig from "../PomoSessionConfig";
 import { usePomoSessionConfig } from "../../hooks/usePomoSessionConfig";
+import { getCompletedQuests } from "../../utils/apis/notion/client";
 
 type Props = {
   projectName: string;
@@ -53,6 +54,9 @@ export default function Timer({
     null | "success" | "error" | "warning"
   >();
 
+  const [completedSummary, setCompletedSummary] = useState<{ count: number; items: Array<{ id: string; title: string }> } | null>(null);
+  const [loadingCompleted, setLoadingCompleted] = useState(false);
+
   // Initialize session configuration hook
   const sessionConfig = usePomoSessionConfig({
     projects,
@@ -61,6 +65,26 @@ export default function Timer({
     currentDatabaseId,
     availableDatabases,
   });
+
+  const refreshCompleted = useCallback(async () => {
+    if (!sessionConfig.config.selectedProject?.value || !currentDatabaseId) {
+      setCompletedSummary(null);
+      return;
+    }
+    try {
+      setLoadingCompleted(true);
+      const data = await getCompletedQuests({
+        userId: "notion-user",
+        databaseId: currentDatabaseId!,
+        adventurePageId: sessionConfig.config.selectedProject.value,
+      });
+      setCompletedSummary(data);
+    } catch (e) {
+      setCompletedSummary(null);
+    } finally {
+      setLoadingCompleted(false);
+    }
+  }, [sessionConfig.config.selectedProject?.value, currentDatabaseId]);
 
   // Handle session completion and save to Notion if configured
   const handleSessionComplete = useCallback(async (sessionData: {
@@ -75,6 +99,8 @@ export default function Timer({
         toast.success("Session saved to Notion database!", {
           autoClose: 3000,
         });
+        // Refresh completed quests after a successful save
+        refreshCompleted();
       } catch (error) {
         console.error("Failed to save session to Notion:", error);
         toast.error("Failed to save session to Notion database", {
@@ -82,7 +108,7 @@ export default function Timer({
         });
       }
     }
-  }, [sessionConfig.isReadyToSave, sessionConfig.saveSessionToNotion]);
+  }, [sessionConfig.isReadyToSave, sessionConfig.saveSessionToNotion, refreshCompleted]);
 
   const { clockifiedValue, togglePlayPause, resetTimer, restartPomo } =
     useSyncPomo(handleSessionComplete);
@@ -130,6 +156,11 @@ export default function Timer({
 
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => resetTimer(false), [project?.value]);
+
+  // Fetch completed quests relevant to the selected project and database
+  useEffect(() => {
+    refreshCompleted();
+  }, [refreshCompleted]);
 
   function handleTickChange(e: React.ChangeEvent<HTMLInputElement>) {
     dispatch({
@@ -251,6 +282,32 @@ export default function Timer({
                     <ArrowsPointingOutIcon className="h-4 w-4" />
                   </button>
                 </div>
+              </div>
+
+              {/* Relevant Quests Completed */}
+              <div className="mt-6 border-t pt-4 text-left">
+                <h3 className="text-sm font-medium text-gray-700">Relevant quests completed</h3>
+                {loadingCompleted && (
+                  <p className="mt-2 text-xs text-gray-500">Loading…</p>
+                )}
+                {!loadingCompleted && completedSummary && (
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-600">Total: {completedSummary.count}</p>
+                    {completedSummary.items.length > 0 && (
+                      <ul className="mt-2 list-disc pl-5">
+                        {completedSummary.items.slice(0, 5).map(item => (
+                          <li key={item.id} className="text-sm text-gray-700">{item.title}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {completedSummary.items.length === 0 && (
+                      <p className="text-xs text-gray-500">No completed quests for this adventure yet.</p>
+                    )}
+                  </div>
+                )}
+                {!loadingCompleted && !completedSummary && (
+                  <p className="mt-2 text-xs text-gray-500">Select a project and database to see completed quests.</p>
+                )}
               </div>
             </div>
 
