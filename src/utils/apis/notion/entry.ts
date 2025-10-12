@@ -142,6 +142,21 @@ export const createNotionEntry = async ({
       properties[questRelationPropName] = { relation: [{ id: projectId }] };
     }
 
+    // Quests as text (rich_text) if the database provides it
+    const questsTextPropName = dbProps["Quests"]?.type === "rich_text"
+      ? "Quests"
+      : dbProps["Quest"]?.type === "rich_text"
+        ? "Quest"
+        : undefined;
+
+    if (questsTextPropName) {
+      properties[questsTextPropName] = {
+        rich_text: [
+          { text: { content: projectTitle } }
+        ],
+      };
+    }
+
     // Optional summary in Notes if exists
     if (dbProps["Notes"]?.type === "rich_text") {
       properties["Notes"] = {

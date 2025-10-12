@@ -20,7 +20,7 @@ import Switch from "../Switch";
 import WakeLockNote from "./WakeLockNote";
 import PomoSessionConfig from "../PomoSessionConfig";
 import { usePomoSessionConfig } from "../../hooks/usePomoSessionConfig";
-import { getCompletedQuests, startQuestWork } from "../../utils/apis/notion/client";
+import { getCompletedQuests, startQuestWork, updateQuestStatus } from "../../utils/apis/notion/client";
 
 type Props = {
   projectName: string;
@@ -92,16 +92,25 @@ export default function Timer({
   useEffect(() => {
     const justStarted = busyIndicator && !prevBusy.current;
     if (justStarted) {
-      // Avoid duplicate creation on resume by ensuring startTime changed
-      if (lastStartTimeRef.current === startTime) {
-        prevBusy.current = busyIndicator;
-        return;
-      }
       const adventurePageId = sessionConfig.config.selectedProject?.value;
       const targetDatabaseId = sessionConfig.config.selectedDatabase?.value || currentDatabaseId;
       const projectTitle = sessionConfig.config.selectedProject?.label || projectName;
-      // Treat selected project as Adventure; link the active Quest once identified
       const questPageId = project?.value || adventurePageId; // fallback if UI chooses quest directly
+
+      // If resuming the same session, only update status back to In Progress
+      if (lastStartTimeRef.current === startTime) {
+        if (questPageId) {
+          updateQuestStatus({ userId: "notion-user", status: "In Progress", questPageId, adventurePageId, targetDatabaseId })
+            .catch((e) => {
+              if (process.env.NODE_ENV === "development") {
+                console.warn("Failed to set In Progress on resume:", e);
+              }
+            });
+        }
+        prevBusy.current = busyIndicator;
+        return;
+      }
+
       if (questPageId && targetDatabaseId) {
         startQuestWork({ userId: "notion-user", questPageId, targetDatabaseId, projectTitle, adventurePageId })
           .catch((e) => {
@@ -113,7 +122,7 @@ export default function Timer({
       }
     }
     prevBusy.current = busyIndicator;
-  }, [busyIndicator, startTime, sessionConfig.config.selectedProject?.value, sessionConfig.config.selectedDatabase?.value, sessionConfig.config.selectedProject?.label, projectName, currentDatabaseId]);
+  }, [busyIndicator, startTime, sessionConfig.config.selectedProject?.value, sessionConfig.config.selectedDatabase?.value, sessionConfig.config.selectedProject?.label, projectName, currentDatabaseId, project?.value]);
 
   // Handle session completion and save to Notion if configured
   const handleSessionComplete = useCallback(async (sessionData: {

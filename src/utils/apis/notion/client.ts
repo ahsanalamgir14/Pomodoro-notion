@@ -77,3 +77,13 @@ export const startQuestWork = async (params: { userId: string; questPageId: stri
     throw error;
   }
 };
+
+export const updateQuestStatus = async (params: { userId: string; status: string; questPageId?: string; adventurePageId?: string; targetDatabaseId?: string }) => {
+  try {
+    const response = await PomodoroClient.post("/api/pomo/quest-status", params);
+    return response.data;
+  } catch (error) {
+    console.error("Error updating quest status:", error);
+    throw error;
+  }
+};

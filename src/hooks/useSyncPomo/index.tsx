@@ -14,6 +14,7 @@ import useNotificationSound from "../Sound/useNotificationSound";
 import { usePomoClient } from "../Storage/usePomoClient";
 import useNotification from "../useNotification";
 // Quest start is initiated from Timer component to include proper DB relation
+import { updateQuestStatus } from "../../utils/apis/notion/client";
 
 export default function useSyncPomo(onSessionComplete?: (sessionData: {
   timerValue: number;
@@ -54,6 +55,16 @@ export default function useSyncPomo(onSessionComplete?: (sessionData: {
     if (type == "Session") {
       //when session ends save session time
       saveProjectTime();
+      // Update status to Paused on Quest
+      try {
+        const questPageId = project?.value;
+        const adventurePageId = project?.value; // when selected project is an Adventure, propagate to its quests
+        if (questPageId) {
+          updateQuestStatus({ userId: "notion-user", status: "Paused", questPageId, adventurePageId, targetDatabaseId: (databaseId as string) });
+        }
+      } catch (e) {
+        if (process.env.NODE_ENV === "development") console.warn("Failed to pause quest:", e);
+      }
     }
   }
 
@@ -78,6 +89,16 @@ export default function useSyncPomo(onSessionComplete?: (sessionData: {
       
       //when session ends save session time
       bellRingPlay();
+      // Update status to Completed on Quest
+      try {
+        const questPageId = project?.value;
+        const adventurePageId = project?.value; // when selected project is an Adventure, propagate to its quests
+        if (questPageId) {
+          updateQuestStatus({ userId: "notion-user", status: "Completed", questPageId, adventurePageId, targetDatabaseId: (databaseId as string) });
+        }
+      } catch (e) {
+        if (process.env.NODE_ENV === "development") console.warn("Failed to complete quest:", e);
+      }
     } else {
       alarmWoodPlay();
       //reset start time when noise to session happens
