@@ -42,7 +42,8 @@ export const createNotionEntry = async ({
     // Retrieve database schema to align property types
     const db = await notion.databases.retrieve({ database_id: databaseId });
     const dbProps: Record<string, any> = (db as any)?.properties || {};
-    // Determine the title property name (fallback to "Name")
+    // Determine core property names and types dynamically for a Time Tracker database
+    // Title
     let titlePropName = "Name";
     try {
       for (const [key, prop] of Object.entries(dbProps)) {
@@ -51,16 +52,46 @@ export const createNotionEntry = async ({
           break;
         }
       }
-    } catch (_) {
-      // If properties are not enumerable, keep default 'Name'
-    }
-    // If title property is not detectable, proceed with default 'Name'.
-    // Notion will return a clear error if the property does not exist.
-    
-    // Prepare properties for the Notion page (aligned to Quests schema)
+    } catch (_) {}
+
+    // Status (status or select)
+    const statusPropName = dbProps["Status"]?.type ? "Status" : Object.entries(dbProps).find(([, p]: any) => p?.type === "status" || p?.type === "select")?.[0];
+
+    // Start/End date
+    const startPropName = dbProps["Start Time"]?.type === "date"
+      ? "Start Time"
+      : dbProps["Start Date"]?.type === "date"
+        ? "Start Date"
+        : Object.entries(dbProps).find(([k, p]: any) => (k.toLowerCase().includes("start") || k.toLowerCase().includes("begin")) && p?.type === "date")?.[0];
+
+    const endPropName = dbProps["End Time"]?.type === "date"
+      ? "End Time"
+      : dbProps["End Date"]?.type === "date"
+        ? "End Date"
+        : dbProps["Due Date"]?.type === "date"
+          ? "Due Date"
+          : Object.entries(dbProps).find(([k, p]: any) => (k.toLowerCase().includes("end") || k.toLowerCase().includes("finish") || k.toLowerCase().includes("due")) && p?.type === "date")?.[0];
+
+    // Duration (prefer number; fallback to rich_text)
+    const durationPropName = dbProps["Duration"]?.type
+      ? "Duration"
+      : dbProps["Duration (minutes)"]?.type
+        ? "Duration (minutes)"
+        : dbProps["Time Worked"]?.type
+          ? "Time Worked"
+          : Object.entries(dbProps).find(([k, p]: any) => (k.toLowerCase().includes("duration") || k.toLowerCase().includes("time")) && (p?.type === "number" || p?.type === "rich_text"))?.[0];
+
+    // Quest relation (link entry to quest if DB supports it)
+    const questRelationPropName = dbProps["Quest"]?.type === "relation"
+      ? "Quest"
+      : dbProps["Quests"]?.type === "relation"
+        ? "Quests"
+        : Object.entries(dbProps).find(([k, p]: any) => (k.toLowerCase().includes("quest")) && p?.type === "relation")?.[0];
+
+    // Prepare properties for the Notion page (aligned to Time Tracker schema)
     const properties: any = {};
 
-    // Name — title (using detected title property)
+    // Title
     properties[titlePropName] = {
       title: [
         {
@@ -71,71 +102,58 @@ export const createNotionEntry = async ({
       ],
     };
 
-    // Adventure — prefer relation; fallback to rich_text
-    if (dbProps["Adventure"]) {
-      if (dbProps["Adventure"].type === "relation" && projectId) {
-        properties["Adventure"] = {
-          relation: [{ id: projectId }],
-        };
-      } else {
-        properties["Adventure"] = {
+    // Status
+    if (statusPropName) {
+      const defaultStatus = status || "Completed";
+      const propType = dbProps[statusPropName]?.type;
+      if (propType === "status") {
+        properties[statusPropName] = { status: { name: defaultStatus } };
+      } else if (propType === "select") {
+        properties[statusPropName] = { select: { name: defaultStatus } };
+      }
+    }
+
+    // Start
+    if (startPropName) {
+      properties[startPropName] = { date: { start: startDate.toISOString() } };
+    }
+
+    // End (only set when endTime provided)
+    if (endPropName && endTime) {
+      properties[endPropName] = { date: { start: endDate.toISOString() } };
+    }
+
+    // Duration (only set when endTime provided)
+    if (durationPropName && endTime) {
+      const propType = dbProps[durationPropName]?.type;
+      if (propType === "number") {
+        properties[durationPropName] = { number: timerMinutes };
+      } else if (propType === "rich_text") {
+        properties[durationPropName] = {
           rich_text: [
-            {
-              text: {
-                content: notes?.trim() || projectTitle,
-              },
-            },
+            { text: { content: `${timerMinutes} min` } }
           ],
         };
       }
     }
 
-    // Start Date — date
-    if (dbProps["Start Date"]) {
-      properties["Start Date"] = {
-        date: {
-          start: startDate.toISOString(),
-        },
-      };
+    // Link to Quest via relation if present
+    if (questRelationPropName && projectId) {
+      properties[questRelationPropName] = { relation: [{ id: projectId }] };
     }
 
-    // Due Date — date
-    if (dbProps["Due Date"]) {
-      properties["Due Date"] = {
-        date: {
-          start: endDate.toISOString(),
-        },
-      };
-    }
-
-    // Time Logs — rich_text (store a concise summary)
-    if (dbProps["Time Logs"]) {
-      properties["Time Logs"] = {
+    // Optional summary in Notes if exists
+    if (dbProps["Notes"]?.type === "rich_text") {
+      properties["Notes"] = {
         rich_text: [
           {
             text: {
-              content: `Duration: ${timerMinutes} min | Start: ${startDate.toLocaleString()} | End: ${endDate.toLocaleString()}`,
+              content: `Session: ${timerMinutes} min | Start: ${startDate.toLocaleString()} | End: ${endDate.toLocaleString()}`,
             },
           },
         ],
       };
     }
-
-    // Status — detect type: status or select (optional, default to Completed)
-    if (dbProps["Status"]) {
-      const defaultStatus = status || "Completed";
-      if (dbProps["Status"].type === "status") {
-        properties["Status"] = {
-          status: { name: defaultStatus },
-        };
-      } else if (dbProps["Status"].type === "select") {
-        properties["Status"] = {
-          select: { name: defaultStatus },
-        };
-      }
-    }
-
-    // Removed tag mapping; user doesn't need Tags in Notion
 
     // Create the page in Notion
     const response = await notion.pages.create({

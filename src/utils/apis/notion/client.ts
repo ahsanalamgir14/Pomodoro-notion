@@ -67,3 +67,13 @@ export const getCompletedQuests = async (params: { userId: string; databaseId: s
     throw error;
   }
 };
+
+export const startQuestWork = async (params: { userId: string; questPageId: string; targetDatabaseId?: string; projectTitle?: string; adventurePageId?: string }) => {
+  try {
+    const response = await PomodoroClient.post("/api/pomo/quest-start", params);
+    return response.data;
+  } catch (error) {
+    console.error("Error starting quest work:", error);
+    throw error;
+  }
+};

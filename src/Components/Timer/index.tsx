@@ -20,7 +20,7 @@ import Switch from "../Switch";
 import WakeLockNote from "./WakeLockNote";
 import PomoSessionConfig from "../PomoSessionConfig";
 import { usePomoSessionConfig } from "../../hooks/usePomoSessionConfig";
-import { getCompletedQuests } from "../../utils/apis/notion/client";
+import { getCompletedQuests, startQuestWork } from "../../utils/apis/notion/client";
 
 type Props = {
   projectName: string;
@@ -41,7 +41,7 @@ export default function Timer({
 }: Props) {
   const timerScreen = useFullScreenHandle();
 
-  const [{ timerLabel, project, shouldTickSound }, dispatch] = usePomoState();
+  const [{ timerLabel, project, shouldTickSound, busyIndicator, startTime }, dispatch] = usePomoState();
 
 
 
@@ -85,6 +85,35 @@ export default function Timer({
       setLoadingCompleted(false);
     }
   }, [sessionConfig.config.selectedProject?.value, currentDatabaseId]);
+
+  // When the timer transitions from stopped to started, create a live entry with proper Quest relation
+  const prevBusy = useRef(false);
+  const lastStartTimeRef = useRef<number | null>(null);
+  useEffect(() => {
+    const justStarted = busyIndicator && !prevBusy.current;
+    if (justStarted) {
+      // Avoid duplicate creation on resume by ensuring startTime changed
+      if (lastStartTimeRef.current === startTime) {
+        prevBusy.current = busyIndicator;
+        return;
+      }
+      const adventurePageId = sessionConfig.config.selectedProject?.value;
+      const targetDatabaseId = sessionConfig.config.selectedDatabase?.value || currentDatabaseId;
+      const projectTitle = sessionConfig.config.selectedProject?.label || projectName;
+      // Treat selected project as Adventure; link the active Quest once identified
+      const questPageId = project?.value || adventurePageId; // fallback if UI chooses quest directly
+      if (questPageId && targetDatabaseId) {
+        startQuestWork({ userId: "notion-user", questPageId, targetDatabaseId, projectTitle, adventurePageId })
+          .catch((e) => {
+            if (process.env.NODE_ENV === "development") {
+              console.warn("Failed to create tracker entry on start:", e);
+            }
+          });
+        lastStartTimeRef.current = startTime;
+      }
+    }
+    prevBusy.current = busyIndicator;
+  }, [busyIndicator, startTime, sessionConfig.config.selectedProject?.value, sessionConfig.config.selectedDatabase?.value, sessionConfig.config.selectedProject?.label, projectName, currentDatabaseId]);
 
   // Handle session completion and save to Notion if configured
   const handleSessionComplete = useCallback(async (sessionData: {

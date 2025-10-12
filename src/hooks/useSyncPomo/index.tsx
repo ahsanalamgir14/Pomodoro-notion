@@ -13,6 +13,7 @@ import useClickSound from "../Sound/useClickSound";
 import useNotificationSound from "../Sound/useNotificationSound";
 import { usePomoClient } from "../Storage/usePomoClient";
 import useNotification from "../useNotification";
+// Quest start is initiated from Timer component to include proper DB relation
 
 export default function useSyncPomo(onSessionComplete?: (sessionData: {
   timerValue: number;

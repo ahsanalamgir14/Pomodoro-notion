@@ -1,5 +1,5 @@
 import { generateUUID } from "../utils";
-import IntervalWork from "./worker";
+import type IntervalWork from "./worker";
 
 export interface Work {
   id: string;
@@ -11,7 +11,8 @@ export default class WorkerInterval {
   private readonly worker: Worker;
 
   constructor() {
-    this.worker = new Worker(new URL("./worker.ts", import.meta.url));
+    // Use a public static worker to avoid bundler URL issues in Next.js
+    this.worker = new Worker("/workers/interval-worker.js");
     this.worker.onmessage = (data) => this.onMessage(data);
   }
 

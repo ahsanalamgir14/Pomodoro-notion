@@ -113,15 +113,17 @@ export const usePomoSessionConfig = ({
       throw new Error("Project must be selected");
     }
 
+    // Use user-selected database as the time tracker destination
+    const targetDb = config.selectedDatabase?.value || currentDatabaseId || "";
     const saveParams = {
       projectId: config.selectedProject.value,
       projectTitle: config.selectedProject.label,
-      databaseId: currentDatabaseId || "",
+      databaseId: targetDb,
       userId: "notion-user", // Use the same identifier as the rest of the app
       timerValue: sessionData.timerValue,
       startTime: sessionData.startTime,
       endTime: sessionData.endTime,
-      targetDatabaseId: currentDatabaseId || "",
+      targetDatabaseId: targetDb,
       status: "Completed",
       notes: "",
     };
@@ -131,7 +133,7 @@ export const usePomoSessionConfig = ({
 
   const isReadyToSave = Boolean(
     config.selectedProject &&
-    currentDatabaseId
+    (config.selectedDatabase?.value || currentDatabaseId)
   );
 
   return {
