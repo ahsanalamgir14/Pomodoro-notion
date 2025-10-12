@@ -48,8 +48,10 @@ interface PomoSessionConfigProps {
   
   // Database selection
   selectedDatabase: DatabaseOption | null;
+  selectedTrackingDatabase?: DatabaseOption | null;
   availableDatabases: DatabaseOption[];
   onDatabaseSelect: (database: DatabaseOption | null) => void;
+  onTrackingDatabaseSelect?: (database: DatabaseOption | null) => void;
   
   // General props
   disabled?: boolean;
@@ -65,8 +67,10 @@ export default function PomoSessionConfig({
   availableTags,
   onTagsSelect,
   selectedDatabase,
+  selectedTrackingDatabase,
   availableDatabases,
   onDatabaseSelect,
+  onTrackingDatabaseSelect,
   disabled = false,
   isExpanded = false,
   onToggleExpanded
@@ -91,6 +95,11 @@ export default function PomoSessionConfig({
           {selectedDatabase && (
             <span className="text-xs bg-purple-100 text-purple-700 px-2 py-1 rounded-full">
               {selectedDatabase.label}
+            </span>
+          )}
+          {selectedTrackingDatabase && (
+            <span className="text-xs bg-blue-100 text-blue-700 px-2 py-1 rounded-full">
+              {selectedTrackingDatabase.label}
             </span>
           )}
         </div>
@@ -131,29 +140,31 @@ export default function PomoSessionConfig({
               value={selectedDatabase}
               handleSelect={onDatabaseSelect}
               databases={availableDatabases}
+              placeholder="Select status database (Adventure/Quest)"
             />
           </div>
 
-          {/* Save to Notion Toggle */}
-          <div className="flex items-center justify-between pt-2 border-t border-gray-100">
-            <div className="flex items-center gap-2">
-              <input
-                type="checkbox"
-                id="save-to-notion"
-                checked={!!selectedDatabase}
-                onChange={(e) => {
-                  if (!e.target.checked) {
-                    onDatabaseSelect(null);
-                  }
-                }}
+          {/* Time Tracking Database Selection */}
+          {onTrackingDatabaseSelect && (
+            <div>
+              <DatabaseSelection
                 disabled={disabled}
-                className="h-4 w-4 text-purple-600 focus:ring-purple-500 border-gray-300 rounded"
+                value={selectedTrackingDatabase || null}
+                handleSelect={onTrackingDatabaseSelect}
+                databases={availableDatabases}
+                placeholder="Select Time Tracking database"
               />
-              <label htmlFor="save-to-notion" className="text-sm text-gray-700">
-                Save session to Notion
-              </label>
             </div>
-            {selectedProject && selectedDatabase && (
+          )}
+
+          {/* Status & Tracking DB Summary */}
+          <div className="flex items-center justify-between pt-2 border-t border-gray-100">
+            <div className="flex items-center gap-2 text-xs text-gray-700">
+              <span>Status DB: {selectedDatabase ? selectedDatabase.label : "None"}</span>
+              <span>•</span>
+              <span>Tracking DB: {selectedTrackingDatabase ? selectedTrackingDatabase.label : "None"}</span>
+            </div>
+            {selectedProject && selectedDatabase && selectedTrackingDatabase && (
               <span className="text-xs text-green-600 font-medium">
                 ✓ Ready to save
               </span>
@@ -164,7 +175,7 @@ export default function PomoSessionConfig({
           <div className="text-xs text-gray-500 bg-gray-50 p-2 rounded">
             <p>
               Configure how your Pomodoro sessions will be saved to Notion. 
-              Select a project, add relevant tags, and choose the target database.
+              Select a project, add relevant tags, choose the status database, and pick a Time Tracking database.
             </p>
           </div>
         </div>

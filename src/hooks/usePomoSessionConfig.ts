@@ -23,6 +23,7 @@ export interface PomoSessionConfig {
   selectedProject: ProjectOption | null;
   selectedTags: TagOption[];
   selectedDatabase: DatabaseOption | null;
+  selectedTrackingDatabase: DatabaseOption | null;
   isExpanded: boolean;
 }
 
@@ -33,6 +34,7 @@ export interface UsePomoSessionConfigReturn {
   setSelectedProject: (project: ProjectOption | null) => void;
   setSelectedTags: (tags: TagOption[]) => void;
   setSelectedDatabase: (database: DatabaseOption | null) => void;
+  setSelectedTrackingDatabase: (database: DatabaseOption | null) => void;
   setIsExpanded: (expanded: boolean) => void;
   saveSessionToNotion: (sessionData: {
     timerValue: number;
@@ -61,6 +63,7 @@ export const usePomoSessionConfig = ({
     selectedProject: null,
     selectedTags: [],
     selectedDatabase: null,
+    selectedTrackingDatabase: null,
     isExpanded: false,
   });
 
@@ -83,6 +86,10 @@ export const usePomoSessionConfig = ({
 
   const setSelectedDatabase = useCallback((database: DatabaseOption | null) => {
     setConfig(prev => ({ ...prev, selectedDatabase: database }));
+  }, []);
+
+  const setSelectedTrackingDatabase = useCallback((database: DatabaseOption | null) => {
+    setConfig(prev => ({ ...prev, selectedTrackingDatabase: database }));
   }, []);
 
   const setIsExpanded = useCallback((expanded: boolean) => {
@@ -113,8 +120,8 @@ export const usePomoSessionConfig = ({
       throw new Error("Project must be selected");
     }
 
-    // Use user-selected database as the time tracker destination
-    const targetDb = config.selectedDatabase?.value || currentDatabaseId || "";
+    // Use user-selected tracking database as the time tracker destination
+    const targetDb = config.selectedTrackingDatabase?.value || "";
     const saveParams = {
       projectId: config.selectedProject.value,
       projectTitle: config.selectedProject.label,
@@ -126,6 +133,7 @@ export const usePomoSessionConfig = ({
       targetDatabaseId: targetDb,
       status: "Completed",
       notes: "",
+      tags: (config.selectedTags || []).map(t => t.label),
     };
 
     await savePomoSessionToNotion(saveParams);
@@ -133,7 +141,7 @@ export const usePomoSessionConfig = ({
 
   const isReadyToSave = Boolean(
     config.selectedProject &&
-    (config.selectedDatabase?.value || currentDatabaseId)
+    config.selectedTrackingDatabase?.value
   );
 
   return {
@@ -143,6 +151,7 @@ export const usePomoSessionConfig = ({
     setSelectedProject,
     setSelectedTags,
     setSelectedDatabase,
+    setSelectedTrackingDatabase,
     setIsExpanded,
     saveSessionToNotion,
     isReadyToSave,

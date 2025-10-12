@@ -16,6 +16,7 @@ export interface CreateNotionEntryParams {
   endTime?: number; // timestamp
   status?: string; // e.g., "Completed"
   notes?: string; // optional notes content
+  tags?: string[]; // optional tags
   accessToken?: string; // optional OAuth token to use for this request
 }
 
@@ -28,6 +29,7 @@ export const createNotionEntry = async ({
   endTime,
   status,
   notes,
+  tags,
   accessToken,
 }: CreateNotionEntryParams) => {
   try {
@@ -168,6 +170,23 @@ export const createNotionEntry = async ({
           },
         ],
       };
+    }
+
+    // Tags handling: multi_select/select/rich_text
+    if (tags && tags.length > 0) {
+      const tagsPropName = dbProps["Tags"]?.type
+        ? "Tags"
+        : Object.entries(dbProps).find(([, p]: any) => p?.type === "multi_select" || p?.type === "select" || p?.type === "rich_text")?.[0];
+      if (tagsPropName) {
+        const t = dbProps[tagsPropName]?.type;
+        if (t === "multi_select") {
+          properties[tagsPropName] = { multi_select: tags.map(name => ({ name })) };
+        } else if (t === "select") {
+          properties[tagsPropName] = { select: { name: tags[0] } };
+        } else if (t === "rich_text") {
+          properties[tagsPropName] = { rich_text: [{ text: { content: tags.join(", ") } }] };
+        }
+      }
     }
 
     // Create the page in Notion

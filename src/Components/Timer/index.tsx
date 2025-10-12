@@ -93,14 +93,13 @@ export default function Timer({
     const justStarted = busyIndicator && !prevBusy.current;
     if (justStarted) {
       const adventurePageId = sessionConfig.config.selectedProject?.value;
-      const targetDatabaseId = sessionConfig.config.selectedDatabase?.value || currentDatabaseId;
       const projectTitle = sessionConfig.config.selectedProject?.label || projectName;
       const questPageId = project?.value || adventurePageId; // fallback if UI chooses quest directly
 
       // If resuming the same session, only update status back to In Progress
       if (lastStartTimeRef.current === startTime) {
         if (questPageId) {
-          updateQuestStatus({ userId: "notion-user", status: "In Progress", questPageId, adventurePageId, targetDatabaseId })
+          updateQuestStatus({ userId: "notion-user", status: "In Progress", questPageId, adventurePageId })
             .catch((e) => {
               if (process.env.NODE_ENV === "development") {
                 console.warn("Failed to set In Progress on resume:", e);
@@ -111,8 +110,8 @@ export default function Timer({
         return;
       }
 
-      if (questPageId && targetDatabaseId) {
-        startQuestWork({ userId: "notion-user", questPageId, targetDatabaseId, projectTitle, adventurePageId })
+      if (questPageId) {
+        startQuestWork({ userId: "notion-user", questPageId, projectTitle, adventurePageId })
           .catch((e) => {
             if (process.env.NODE_ENV === "development") {
               console.warn("Failed to create tracker entry on start:", e);
@@ -122,7 +121,7 @@ export default function Timer({
       }
     }
     prevBusy.current = busyIndicator;
-  }, [busyIndicator, startTime, sessionConfig.config.selectedProject?.value, sessionConfig.config.selectedDatabase?.value, sessionConfig.config.selectedProject?.label, projectName, currentDatabaseId, project?.value]);
+  }, [busyIndicator, startTime, sessionConfig.config.selectedProject?.value, sessionConfig.config.selectedProject?.label, projectName, project?.value]);
 
   // Handle session completion and save to Notion if configured
   const handleSessionComplete = useCallback(async (sessionData: {
@@ -145,6 +144,11 @@ export default function Timer({
           autoClose: 5000,
         });
       }
+    } else {
+      // Provide a helpful hint when save isn’t configured
+      toast.info("Select a Time Tracking database in Session Configuration to auto-save.", {
+        autoClose: 4000,
+      });
     }
   }, [sessionConfig.isReadyToSave, sessionConfig.saveSessionToNotion, refreshCompleted]);
 
@@ -357,10 +361,12 @@ export default function Timer({
                 selectedTags={selectedTags}
                 selectedProject={sessionConfig.config.selectedProject}
                 selectedDatabase={sessionConfig.config.selectedDatabase}
+                selectedTrackingDatabase={sessionConfig.config.selectedTrackingDatabase}
                 availableDatabases={sessionConfig.availableDatabases}
                 onProjectSelect={sessionConfig.setSelectedProject}
                 onTagsSelect={sessionConfig.setSelectedTags}
                 onDatabaseSelect={sessionConfig.setSelectedDatabase}
+                onTrackingDatabaseSelect={sessionConfig.setSelectedTrackingDatabase}
                 isExpanded={sessionConfig.config.isExpanded}
                 onToggleExpanded={sessionConfig.setIsExpanded}
                 disabled={disableControls}

@@ -22,7 +22,8 @@ export default async function handler(
         endTime,
         targetDatabaseId,
         status,
-        notes
+        notes,
+        tags
       } = req.body;
 
       // Validate required fields
@@ -69,6 +70,7 @@ export default async function handler(
           endTime,
           status: status || "Completed",
           notes: notes || "",
+          tags,
           accessToken: userData.accessToken,
         });
 

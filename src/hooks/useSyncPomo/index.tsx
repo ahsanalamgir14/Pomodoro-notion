@@ -60,7 +60,8 @@ export default function useSyncPomo(onSessionComplete?: (sessionData: {
         const questPageId = project?.value;
         const adventurePageId = project?.value; // when selected project is an Adventure, propagate to its quests
         if (questPageId) {
-          updateQuestStatus({ userId: "notion-user", status: "Paused", questPageId, adventurePageId, targetDatabaseId: (databaseId as string) });
+          // Only update quest/adventure status; do not sync tracker DB here
+          updateQuestStatus({ userId: "notion-user", status: "Paused", questPageId, adventurePageId });
         }
       } catch (e) {
         if (process.env.NODE_ENV === "development") console.warn("Failed to pause quest:", e);
@@ -94,7 +95,8 @@ export default function useSyncPomo(onSessionComplete?: (sessionData: {
         const questPageId = project?.value;
         const adventurePageId = project?.value; // when selected project is an Adventure, propagate to its quests
         if (questPageId) {
-          updateQuestStatus({ userId: "notion-user", status: "Completed", questPageId, adventurePageId, targetDatabaseId: (databaseId as string) });
+          // Only update quest/adventure status; do not sync tracker DB here
+          updateQuestStatus({ userId: "notion-user", status: "Completed", questPageId, adventurePageId });
         }
       } catch (e) {
         if (process.env.NODE_ENV === "development") console.warn("Failed to complete quest:", e);
