@@ -218,6 +218,12 @@ function Home() {
                 >
                   🔄 Refresh databases
                 </button>
+                <a
+                  href="/embed"
+                  className="text-sm rounded bg-indigo-600 px-3 py-1 font-medium text-white hover:bg-indigo-500"
+                >
+                  ➕ Create Embed
+                </a>
                 <button
                   onClick={() => {
                     NotionCache.clearUserData();

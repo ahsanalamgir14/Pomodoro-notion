@@ -88,3 +88,14 @@ export const updateQuestStatus = async (params: { userId: string; status: string
     throw error;
   }
 };
+
+export const getConnectedPages = async (params: { userId: string; query?: string }) => {
+  try {
+    const query = new URLSearchParams({ userId: params.userId, ...(params.query ? { query: params.query } : {}) });
+    const response = await PomodoroClient.get(`/api/notion/pages?${query.toString()}`);
+    return response.data as { count: number; items: Array<{ id: string; title: string; url?: string }> };
+  } catch (error) {
+    console.error("Error fetching connected Notion pages:", error);
+    throw error;
+  }
+};
