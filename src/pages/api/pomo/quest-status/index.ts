@@ -155,6 +155,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
                 : props["End Date"]?.type === "date"
                   ? "End Date"
                   : Object.entries(props).find(([k, p]: any) => (k.toLowerCase().includes("end") || k.toLowerCase().includes("finish")) && p?.type === "date")?.[0];
+            const startDatePropName =
+              props["Start Time"]?.type === "date"
+                ? "Start Time"
+                : props["Start Date"]?.type === "date"
+                  ? "Start Date"
+                  : Object.entries(props).find(([k, p]: any) => (k.toLowerCase().includes("start") || k.toLowerCase().includes("begin")) && p?.type === "date")?.[0];
 
             const update: any = {};
             if (statusPropName) {
@@ -163,6 +169,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
             }
             if (status.toLowerCase() === "completed" && endDatePropName) {
               update[endDatePropName] = { date: { start: new Date().toISOString() } };
+            }
+            if (status.toLowerCase() === "in progress" && startDatePropName) {
+              update[startDatePropName] = { date: { start: new Date().toISOString() } };
             }
 
             if (Object.keys(update).length > 0) {

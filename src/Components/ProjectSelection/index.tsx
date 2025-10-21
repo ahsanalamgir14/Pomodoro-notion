@@ -3,6 +3,7 @@ import React from "react";
 import PlaceHolderLoader from "../PlaceHolderLoader";
 const Select = dynamic(() => import("react-select"), {
   loading: () => <PlaceHolderLoader />,
+  ssr: false,
 });
 
 type Props = {

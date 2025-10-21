@@ -8,22 +8,14 @@ import { useRouter } from "next/router";
 import { useEffect, useMemo, useState } from "react";
 import Line from "../../Components/Line";
 import NotionTags from "../../Components/NotionTags";
-
-const ProjectSelection = dynamic(
-  () => import("../../Components/ProjectSelection"),
-  {
-    loading: () => <div>Loading...</div>,
-  }
-);
-
+import ProjectSelection from "@/Components/ProjectSelection";
 import Tabs from "../../Components/Tabs";
-const Views = dynamic(() => import("../../Components/Views"), {
-  loading: () => <div>Loading...</div>,
-});
+import Views from "@/Components/Views";
 import useFormattedData from "../../hooks/useFormattedData";
 import {
   queryDatabase,
   retrieveDatabase,
+  listDatabases,
 } from "../../utils/apis/notion/database";
 import { fetchNotionUser } from "../../utils/apis/firebase/mockUserNotion";
 import { getProjectId, getProjectTitle } from "../../utils/notionutils";
@@ -64,6 +56,7 @@ export const getServerSideProps = async ({
           tab: tab || null,
           error: null,
           databaseId: databaseId,
+          availableDatabases: [],
         },
       };
     }
@@ -72,14 +65,32 @@ export const getServerSideProps = async ({
     console.log("📡 Making real Notion API calls for database:", databaseId);
     
     // Use real Notion API calls with the user's access token
-    const [database, db] = await Promise.all([
+    const [database, db, dbList] = await Promise.all([
       queryDatabase(databaseId, true, userData.accessToken),
-      retrieveDatabase(databaseId, true, userData.accessToken)
+      retrieveDatabase(databaseId, true, userData.accessToken),
+      listDatabases(true, userData.accessToken),
     ]);
     
     console.log("✅ Successfully fetched real Notion data");
     console.log("Database results count:", database.results?.length || 0);
     console.log("Database properties:", Object.keys(db.properties || {}));
+
+    const availableDatabases = (dbList.results || []).map((d: any) => {
+      const titleText = Array.isArray(d.title) && d.title.length > 0
+        ? d.title.map((t: any) => t.plain_text || "").join("").trim()
+        : "Untitled";
+      let icon: string | undefined = undefined;
+      if (d.icon?.type === "emoji") icon = d.icon.emoji;
+      else if (d.icon?.type === "file") icon = "📄";
+      else if (d.icon?.type === "external") icon = "🔗";
+
+      return {
+        id: d.id,
+        title: titleText || "Untitled",
+        // Next.js cannot serialize undefined; use null when icon is missing
+        icon: icon ?? null,
+      };
+    });
     
     return {
       props: {
@@ -88,6 +99,7 @@ export const getServerSideProps = async ({
         tab: tab || null,
         error: null,
         databaseId: databaseId,
+        availableDatabases,
       },
     };
   } catch (error) {
@@ -104,6 +116,7 @@ export const getServerSideProps = async ({
         tab: tab || null,
         error: null,
         databaseId: query.databaseId as string,
+        availableDatabases: [],
       },
     };
   }
@@ -115,6 +128,7 @@ export default function Pages({
   tab,
   error,
   databaseId,
+  availableDatabases,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
   const router = useRouter();
   const [selectedProperties, setProperties] = useState<
@@ -257,40 +271,38 @@ export default function Pages({
         />
         {!error ? (
           <>
-            <Tabs
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              tabs={TabsOptions}
-            />
-            <div className="m-5">
-              <ProjectSelection
-                disabled={busyIndicator}
-                value={project}
-                handleSelect={onProjectSelect}
-                projects={projects}
-              />
-            </div>
+            {/* Tabs */}
+            <Tabs tabs={TabsOptions} activeTab={activeTab} setActiveTab={setActiveTab} />
+             {/* Tags */}
             <NotionTags
+              options={properties}
               disabled={busyIndicator}
               handleSelect={setProperties}
-              options={properties}
+              selectedOptions={selectedProperties}
             />
+
+            {/* Project selection */}
+            <ProjectSelection
+              disabled={busyIndicator}
+              value={project as any}
+              projects={projects as any}
+              handleSelect={onProjectSelect as any}
+            />
+
+            {/* Views */}
             <Views
               activeTab={activeTab}
               pieData={piedata}
-              projectName={getProjectTitle(
-                database?.results.find((pr) => pr.id == String(project?.value)),
-                "Please select project"
-              )}
+              projectName={project?.label || "Please select project"}
               databaseId={databaseId}
               selectedTags={selectedProperties}
-              availableDatabases={[]}
+              availableDatabases={availableDatabases}
               projects={projects}
               availableTags={properties}
             />
           </>
         ) : (
-          JSON.stringify(error)
+          <p className="text-sm text-gray-500">Something went wrong.</p>
         )}
       </main>
     </>

@@ -25,3 +25,10 @@ export default function middleware(req: NextRequest) {
   // App now works directly with Notion connection
   return NextResponse.next();
 }
+
+export const config = {
+  matcher: [
+    // run middleware for all paths except next internals and common public assets
+    "/((?!_next/static|_next/image|favicon.ico|icon-192x192.png|icon-256x256.png|icon-384x384.png|icon-512x512.png|manifest.json|sounds|workers).*)",
+  ],
+};

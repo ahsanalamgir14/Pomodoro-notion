@@ -31,6 +31,7 @@ function decodeConfigParam() {
 export default function EmbedWidget() {
   const [config, setConfig] = useState<EmbedSettings | null>(null);
   const [selectedDbId, setSelectedDbId] = useState<string>("");
+  const [trackingDbId, setTrackingDbId] = useState<string>("");
   const [title, setTitle] = useState<string>("Widget Session");
   const [notes, setNotes] = useState<string>("");
   const [tagsStr, setTagsStr] = useState<string>("");
@@ -60,7 +61,14 @@ export default function EmbedWidget() {
 
   useEffect(() => {
     if (dbData?.databases?.results && dbData.databases.results.length > 0) {
-      setSelectedDbId(dbData.databases.results[0].id);
+      const firstId = dbData.databases.results[0].id;
+      setSelectedDbId((prev) => prev || firstId);
+      // Try to pick a Time Tracking database by name; fallback to first
+      const trackingCandidate = dbData.databases.results.find((d: any) => {
+        const name = (d?.title && d?.title[0]?.plain_text) || "";
+        return /time|tracking|timesheet|log/i.test(name);
+      })?.id || firstId;
+      setTrackingDbId((prev) => prev || trackingCandidate);
     }
   }, [dbData]);
 
@@ -166,8 +174,16 @@ export default function EmbedWidget() {
               <input className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" value={title} onChange={(e) => setTitle(e.target.value)} />
               <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                 <div>
-                  <label className="block mb-1">Tracking Database</label>
+                  <label className="block mb-1">Selected Table</label>
                   <select className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" value={selectedDbId} onChange={(e) => setSelectedDbId(e.target.value)}>
+                    {dbData?.databases?.results?.map((d: any) => (
+                      <option key={d.id} value={d.id}>{(d?.title && d?.title[0]?.plain_text) || d.id}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="block mb-1">Time Tracking Database</label>
+                  <select className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" value={trackingDbId} onChange={(e) => setTrackingDbId(e.target.value)}>
                     {dbData?.databases?.results?.map((d: any) => (
                       <option key={d.id} value={d.id}>{(d?.title && d?.title[0]?.plain_text) || d.id}</option>
                     ))}
@@ -208,25 +224,33 @@ export default function EmbedWidget() {
                   <div className="mt-3 flex items-center gap-3">
                     <button
                       className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
-                      onClick={() => {
+                      onClick={async () => {
                         // Update task status to In Progress when starting
                         const userId = "notion-user";
                         const targets = linkedQuestIds.length > 0 ? linkedQuestIds : [];
                         if (targets.length === 0) {
                           console.warn("No linked quests found on selected tracker entry.");
                         }
-                        targets.forEach((qid) => {
-                          startQuestWork({
-                            userId,
-                            questPageId: qid,
-                            targetDatabaseId: selectedDbId,
-                            projectTitle: selectedTaskTitle || title || "Task",
-                            adventurePageId: config?.pageId,
-                          }).catch((err) => {
+                        for (const qid of targets) {
+                          try {
+                            await startQuestWork({
+                              userId,
+                              questPageId: qid,
+                              projectTitle: selectedTaskTitle || title || "Task",
+                              adventurePageId: config?.pageId,
+                            });
+                            await updateQuestStatus({
+                              userId,
+                              questPageId: qid,
+                              status: "In Progress",
+                              targetDatabaseId: selectedDbId,
+                              adventurePageId: config?.pageId,
+                            });
+                          } catch (err) {
                             console.error("Failed to start quest", err);
                             setErrorMsg("Failed to update task status on start.");
-                          });
-                        });
+                          }
+                        }
                         setRunning(true);
                         const now = Date.now();
                         setStartTime(now);
@@ -278,24 +302,31 @@ export default function EmbedWidget() {
                           setErrorMsg("");
                           setRunning(false);
                           if (intervalRef.current) window.clearInterval(intervalRef.current);
-                          const endTime = Date.now();
-                          const timerValueMinutes = Math.max(1, Math.round(elapsedMs / 60000));
+                          const endTimeMs = Date.now();
                           const userId = "notion-user";
                           const tags = tagsStr.split(",").map((t) => t.trim()).filter(Boolean);
+                          // Save to Time Tracking database with exact fields
+                          if (!trackingDbId) {
+                            setErrorMsg("Please select a Time Tracking database.");
+                            return;
+                          }
+                          const timerSeconds = Math.max(60, Math.floor(elapsedMs / 1000));
+                          const startSeconds = Math.floor((startTime ?? endTimeMs) / 1000);
+                          const endSeconds = Math.floor(endTimeMs / 1000);
                           await savePomoSessionToNotion({
                             userId,
                             projectId: selectedTaskId || config?.pageId || "widget",
                             projectTitle: selectedTaskTitle || title || "Widget Session",
                             databaseId: selectedDbId,
-                            targetDatabaseId: selectedDbId,
-                            timerValue: timerValueMinutes,
-                            startTime: startTime || endTime,
-                            endTime,
+                            targetDatabaseId: trackingDbId,
+                            timerValue: timerSeconds,
+                            startTime: startSeconds,
+                            endTime: endSeconds,
                             status: "Completed",
                             notes,
                             tags,
                           });
-                          // Update task status to Completed
+                          // Update task status to Completed in selected table
                           const targets = linkedQuestIds.length > 0 ? linkedQuestIds : [];
                           for (const qid of targets) {
                             await updateQuestStatus({
@@ -306,12 +337,12 @@ export default function EmbedWidget() {
                               adventurePageId: config?.pageId,
                             });
                           }
-                          setSavingMsg("Session saved to Notion.");
+                          setSavingMsg("Time Tracking entry saved and status updated.");
                           setElapsedMs(0);
                           setStartTime(null);
                         } catch (err) {
-                          console.error("Widget save error", err);
-                          setErrorMsg("Failed to save session to Notion.");
+                          console.error("Widget completion error", err);
+                          setErrorMsg("Failed to save tracking entry or update status.");
                         }
                       }}
                     >
