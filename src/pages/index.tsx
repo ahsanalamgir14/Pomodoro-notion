@@ -110,30 +110,14 @@ function Home() {
   
   // Determine if we should show the databases (either we have data or we're connected and fetching)
   const shouldShowDatabases = isConnected && (displayData || isFetching);
+  
+  // Single source of truth for loading state
+  const isLoadingDatabases = isConnected && isFetching && !displayData;
 
   return (
     <>
       <main className="container mx-auto flex min-h-screen flex-col items-center  p-4">
-        {isFetching && (
-          <div>
-            <ContentLoader
-              className="mt-2"
-              height={100}
-              width={160}
-              viewBox="0 0 160 100"
-            >
-              <rect x="0" y="0" rx="5" ry="5" width="160" height="100" />
-            </ContentLoader>
-            <ContentLoader
-              className="mt-2"
-              height={100}
-              width={160}
-              viewBox="0 0 160 100"
-            >
-              <rect x="0" y="0" rx="5" ry="5" width="160" height="100" />
-            </ContentLoader>
-          </div>
-        )}
+        {/* When not connected, show connect UI; loading only appears in the databases view */}
         {!shouldShowDatabases && (
           <>
             <Header imgSrc={null} />
@@ -183,10 +167,10 @@ function Home() {
         )}
         {shouldShowDatabases && (
           <>
-            <Header imgSrc={displayData?.workspace?.workspace_icon} />
+            <Header imgSrc={displayData?.workspace?.workspace_icon ?? null} />
             
             {/* Show loading state if we're connected but still fetching */}
-            {isFetching && !displayData && (
+            {isLoadingDatabases && (
               <div className="mt-8 text-center">
                 <div className="text-lg text-gray-600 mb-4">Loading your databases...</div>
                 <ContentLoader
@@ -256,21 +240,19 @@ function Home() {
                 ))}
               </div>
             ) : (
-              <>
-                <h2 className="w-100 mt-10 text-center text-4xl leading-normal text-gray-500">
-                  No Database found
-                </h2>
-                <button
-                  onClick={() => setModal(true)}
-                  className="mt-5 rounded bg-blue-500 py-2 px-4 font-bold text-white hover:bg-blue-700"
-                >
-                  Add Notion
-                </button>
-                <section className="mt-10">
-                  <Footer />
-                </section>
-                {showModal && <NotionConnectModal setModal={setModal} />}
-              </>
+              !isFetching && displayData && (
+                <>
+                  <h2 className="w-100 mt-10 text-center text-4xl leading-normal text-gray-500">
+                    No databases found
+                  </h2>
+                  <p className="mt-4 text-center text-gray-600">
+                    Try refreshing or check Notion permissions for databases.
+                  </p>
+                  <section className="mt-10">
+                    <Footer />
+                  </section>
+                </>
+              )
             )}
           </>
         )}
