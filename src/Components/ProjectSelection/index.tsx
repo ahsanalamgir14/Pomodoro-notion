@@ -33,7 +33,7 @@ const colourStyles = ({
       return {
         ...styles,
         fontWeight: controlFontWeight,
-        minWidth,
+        width: "100%",
         boxShadow: "unset",
         cursor: "pointer",
         margin,
@@ -50,7 +50,7 @@ const colourStyles = ({
     },
     menu: (styles: any) => ({
       ...styles,
-      minWidth,
+      width: "100%",
       boxShadow: `0px 2px 24px #DAE6EF`,
       zIndex: 99999, //fix so that it can overlap over other components
     }),

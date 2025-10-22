@@ -16,7 +16,7 @@ const colourStyles: StylesConfig<ColourOption, true> = {
     return {
       ...styles,
       fontWeight: 400,
-      width: "310px",
+      width: "100%",
       boxShadow: "unset",
       cursor: "pointer",
       margin: "unset",
@@ -86,7 +86,7 @@ const colourStyles: StylesConfig<ColourOption, true> = {
   }),
   menu: (styles) => ({
     ...styles,
-    minWidth: "310px",
+    width: "100%",
     boxShadow: `0px 2px 24px #DAE6EF`,
     zIndex: 99999, //fix so that it can overlap over other components
   }),

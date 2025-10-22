@@ -273,21 +273,29 @@ export default function Pages({
           <>
             {/* Tabs */}
             <Tabs tabs={TabsOptions} activeTab={activeTab} setActiveTab={setActiveTab} />
-             {/* Tags */}
-            <NotionTags
-              options={properties}
-              disabled={busyIndicator}
-              handleSelect={setProperties}
-              selectedOptions={selectedProperties}
-            />
 
-            {/* Project selection */}
-            <ProjectSelection
-              disabled={busyIndicator}
-              value={project as any}
-              projects={projects as any}
-              handleSelect={onProjectSelect as any}
-            />
+            {/* Project and Tags selections */}
+            <div className="w-full max-w-md mx-auto space-y-4">
+              {/* Project selection first */}
+              <div>
+                <ProjectSelection
+                  disabled={busyIndicator}
+                  value={project as any}
+                  projects={projects as any}
+                  handleSelect={onProjectSelect as any}
+                />
+              </div>
+
+              {/* Tags selection with spacing below project */}
+              <div>
+                <NotionTags
+                  options={properties}
+                  disabled={busyIndicator}
+                  handleSelect={setProperties}
+                  selectedOptions={selectedProperties}
+                />
+              </div>
+            </div>
 
             {/* Views */}
             <Views
