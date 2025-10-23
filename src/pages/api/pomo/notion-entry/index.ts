@@ -63,6 +63,7 @@ export default async function handler(
         // Create entry in the selected Notion database
         const notionEntryId = await createNotionEntry({
           databaseId: targetDatabaseId,
+          sourceDatabaseId: databaseId,
           projectId,
           projectTitle,
           timerValue,

@@ -122,10 +122,11 @@ export const usePomoSessionConfig = ({
 
     // Use user-selected tracking database as the time tracker destination
     const targetDb = config.selectedTrackingDatabase?.value || "";
+    const sourceDb = config.selectedDatabase?.value || "";
     const saveParams = {
       projectId: config.selectedProject.value,
       projectTitle: config.selectedProject.label,
-      databaseId: targetDb,
+      databaseId: sourceDb,
       userId: "notion-user", // Use the same identifier as the rest of the app
       timerValue: sessionData.timerValue,
       startTime: sessionData.startTime,

@@ -9,6 +9,7 @@ const getNotionClient = (accessToken?: string) =>
 
 export interface CreateNotionEntryParams {
   databaseId: string;
+  sourceDatabaseId?: string; // quest source database to match relation
   projectId: string;
   projectTitle: string;
   timerValue: number; // in seconds
@@ -22,6 +23,7 @@ export interface CreateNotionEntryParams {
 
 export const createNotionEntry = async ({
   databaseId,
+  sourceDatabaseId,
   projectId,
   projectTitle,
   timerValue,
@@ -34,8 +36,9 @@ export const createNotionEntry = async ({
 }: CreateNotionEntryParams) => {
   try {
     const notion = getNotionClient(accessToken);
-    // Convert timer value to minutes for better readability
-    const timerMinutes = Math.round(timerValue / 60);
+    // Convert duration using start/end when available; fallback to timer value
+    const durationSeconds = endTime ? Math.max(0, endTime - startTime) : timerValue;
+    const timerMinutes = Math.round(durationSeconds / 60);
     
     // Format start and end times
     const startDate = new Date(startTime * 1000);
@@ -84,11 +87,19 @@ export const createNotionEntry = async ({
           : Object.entries(dbProps).find(([k, p]: any) => (k.toLowerCase().includes("duration") || k.toLowerCase().includes("time")) && (p?.type === "number" || p?.type === "rich_text"))?.[0];
 
     // Quest relation (link entry to quest if DB supports it)
-    const questRelationPropName = dbProps["Quest"]?.type === "relation"
+    let questRelationPropName = dbProps["Quest"]?.type === "relation"
       ? "Quest"
       : dbProps["Quests"]?.type === "relation"
         ? "Quests"
         : Object.entries(dbProps).find(([k, p]: any) => (k.toLowerCase().includes("quest")) && p?.type === "relation")?.[0];
+
+    // Prefer relation whose linked database matches sourceDatabaseId
+    if (projectId && sourceDatabaseId) {
+      try {
+        const relMatch = Object.entries(dbProps).find(([, p]: any) => p?.type === "relation" && p?.relation?.database_id === sourceDatabaseId);
+        if (relMatch) questRelationPropName = relMatch[0] as string;
+      } catch (_) {}
+    }
 
     // Prepare properties for the Notion page (aligned to Time Tracker schema)
     const properties: any = {};
@@ -117,7 +128,7 @@ export const createNotionEntry = async ({
 
     // Start
     if (startPropName) {
-      properties[startPropName] = { date: { start: startDate.toISOString() } };
+      properties[startPropName] = { date: { start: startDate.toISOString(), ...(endTime && !endPropName ? { end: endDate.toISOString() } : {}) } };
     }
 
     // End (only set when endTime provided)
