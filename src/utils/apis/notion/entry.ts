@@ -128,12 +128,26 @@ export const createNotionEntry = async ({
 
     // Start
     if (startPropName) {
-      properties[startPropName] = { date: { start: startDate.toISOString(), ...(endTime && !endPropName ? { end: endDate.toISOString() } : {}) } };
+      const startType = dbProps[startPropName]?.type;
+      if (startType === "date") {
+        properties[startPropName] = { date: { start: startDate.toISOString(), ...(endTime && !endPropName ? { end: endDate.toISOString() } : {}) } };
+      } else if (startType === "rich_text") {
+        properties[startPropName] = { rich_text: [{ text: { content: startDate.toLocaleString() } }] };
+      } else if (startType === "number") {
+        properties[startPropName] = { number: startTime };
+      }
     }
 
     // End (only set when endTime provided)
     if (endPropName && endTime) {
-      properties[endPropName] = { date: { start: endDate.toISOString() } };
+      const endType = dbProps[endPropName]?.type;
+      if (endType === "date") {
+        properties[endPropName] = { date: { start: endDate.toISOString() } };
+      } else if (endType === "rich_text") {
+        properties[endPropName] = { rich_text: [{ text: { content: endDate.toLocaleString() } }] };
+      } else if (endType === "number") {
+        properties[endPropName] = { number: endTime };
+      }
     }
 
     // Duration (only set when endTime provided)
@@ -156,11 +170,13 @@ export const createNotionEntry = async ({
     }
 
     // Quests as text (rich_text) if the database provides it
-    const questsTextPropName = dbProps["Quests"]?.type === "rich_text"
-      ? "Quests"
+    const questsTextPropName = dbProps["Quest Name"]?.type === "rich_text"
+      ? "Quest Name"
       : dbProps["Quest"]?.type === "rich_text"
         ? "Quest"
-        : undefined;
+        : dbProps["Quests"]?.type === "rich_text"
+          ? "Quests"
+          : undefined;
 
     if (questsTextPropName) {
       properties[questsTextPropName] = {
