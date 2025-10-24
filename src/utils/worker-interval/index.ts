@@ -5,7 +5,15 @@ export const useWorkerInterval = () => {
   const workerInterval = useRef<WorkerInterval>();
 
   useEffect(() => {
-    workerInterval.current = new WorkerInterval();
+    try {
+      workerInterval.current = new WorkerInterval();
+    } catch (err) {
+      // Gracefully degrade to window.setInterval by leaving workerInterval undefined
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("WorkerInterval init failed; falling back to window.setInterval", err);
+      }
+      workerInterval.current = undefined;
+    }
   }, []);
 
   // using useCallback to cache this func is neccessary otherwise react will rerender all the time and timer won't run

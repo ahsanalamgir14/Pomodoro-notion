@@ -141,6 +141,8 @@ export default function PomoSessionConfig({
               handleSelect={onDatabaseSelect}
               databases={availableDatabases}
               placeholder="Select status database (Adventure/Quest)"
+              label="Status Database"
+              helperText="Used to find quests and link relations"
             />
           </div>
 
@@ -153,6 +155,8 @@ export default function PomoSessionConfig({
                 handleSelect={onTrackingDatabaseSelect}
                 databases={availableDatabases}
                 placeholder="Select Time Tracking database"
+                label="Time Tracking Database"
+                helperText="Where completed sessions are saved"
               />
             </div>
           )}

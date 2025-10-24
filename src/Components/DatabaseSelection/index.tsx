@@ -13,6 +13,8 @@ interface DatabaseSelectionProps {
   disabled?: boolean;
   handleSelect: (database: DatabaseOption | null) => void;
   placeholder?: string;
+  label?: string;
+  helperText?: string;
 }
 
 const customStyles = {
@@ -54,12 +56,14 @@ export default function DatabaseSelection({
   databases,
   disabled = false,
   handleSelect,
-  placeholder = "Select database to save to..."
+  placeholder = "Select database to save to...",
+  label = "Target Database",
+  helperText = "Choose which Notion database to save your Pomodoro session to",
 }: DatabaseSelectionProps) {
   return (
     <div className="w-full">
       <label className="block text-sm font-medium text-gray-700 mb-2">
-        Target Database
+        {label}
       </label>
       <Select
         value={value}
@@ -82,7 +86,7 @@ export default function DatabaseSelection({
         )}
       />
       <p className="text-xs text-gray-500 mt-1">
-        Choose which Notion database to save your Pomodoro session to
+        {helperText}
       </p>
     </div>
   );

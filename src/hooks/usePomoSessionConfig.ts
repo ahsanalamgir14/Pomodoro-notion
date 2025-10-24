@@ -1,33 +1,19 @@
-import { useState, useEffect, useCallback } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePomoState } from "../utils/Context/PomoContext/Context";
-import { getAvailableDatabases, savePomoSessionToNotion } from "../utils/apis/notion/client";
 
-export interface ProjectOption {
-  label: string;
-  value: string;
-}
+export type ProjectOption = { label: string; value: string };
+export type TagOption = { label: string; value: string };
+export type DatabaseOption = { label: string; value: string; icon?: string | null };
 
-export interface TagOption {
-  label: string;
-  value: string;
-  color: string;
-}
-
-export interface DatabaseOption {
-  label: string;
-  value: string;
-  icon?: string;
-}
-
-export interface PomoSessionConfig {
+export type PomoSessionConfig = {
   selectedProject: ProjectOption | null;
   selectedTags: TagOption[];
-  selectedDatabase: DatabaseOption | null;
-  selectedTrackingDatabase: DatabaseOption | null;
+  selectedDatabase: DatabaseOption | null; // Status/source DB
+  selectedTrackingDatabase: DatabaseOption | null; // Time tracker/target DB
   isExpanded: boolean;
-}
+};
 
-export interface UsePomoSessionConfigReturn {
+export type UsePomoSessionConfigReturn = {
   config: PomoSessionConfig;
   availableDatabases: DatabaseOption[];
   isLoadingDatabases: boolean;
@@ -43,7 +29,9 @@ export interface UsePomoSessionConfigReturn {
     sessionType: "work" | "break";
   }) => Promise<void>;
   isReadyToSave: boolean;
-}
+};
+
+import { savePomoSessionToNotion } from "../utils/apis/notion/client";
 
 export const usePomoSessionConfig = ({
   projects,
@@ -56,7 +44,7 @@ export const usePomoSessionConfig = ({
   availableTags: TagOption[];
   selectedTags: TagOption[];
   currentDatabaseId?: string;
-  availableDatabases?: Array<{ id: string; title: string; icon?: string }>;
+  availableDatabases?: Array<{ id: string; title: string; icon?: string | null }>;
 }): UsePomoSessionConfigReturn => {
   const [{ project }] = usePomoState();
   const [config, setConfig] = useState<PomoSessionConfig>({
@@ -68,11 +56,14 @@ export const usePomoSessionConfig = ({
   });
 
   // Convert availableDatabases to the expected format
-  const convertedDatabases: DatabaseOption[] = availableDatabases.map(db => ({
-    label: db.title,
-    value: db.id,
-    icon: db.icon,
-  }));
+  const convertedDatabases: DatabaseOption[] = useMemo(
+    () => availableDatabases.map(db => ({
+      label: db.title,
+      value: db.id,
+      icon: db.icon ?? null,
+    })),
+    [availableDatabases]
+  );
 
   const isLoadingDatabases = false;
 
@@ -110,6 +101,19 @@ export const usePomoSessionConfig = ({
     }
   }, [selectedTags]);
 
+  // Default Status DB from current page/databaseId when available
+  useEffect(() => {
+    if (!config.selectedDatabase && currentDatabaseId && convertedDatabases.length > 0) {
+      const match = convertedDatabases.find(d => d.value === currentDatabaseId);
+      if (match) {
+        setConfig(prev => ({
+          ...prev,
+          selectedDatabase: match,
+        }));
+      }
+    }
+  }, [currentDatabaseId, convertedDatabases, config.selectedDatabase]);
+
   const saveSessionToNotion = useCallback(async (sessionData: {
     timerValue: number;
     startTime: number;
@@ -120,14 +124,18 @@ export const usePomoSessionConfig = ({
       throw new Error("Project must be selected");
     }
 
-    // Use user-selected tracking database as the time tracker destination
-    const targetDb = config.selectedTrackingDatabase?.value || "";
-    const sourceDb = config.selectedDatabase?.value || "";
+    if (!config.selectedTrackingDatabase?.value) {
+      throw new Error("Time Tracking database must be selected");
+    }
+
+    const sourceDb = config.selectedDatabase?.value || currentDatabaseId || ""; // source/status DB for relations
+    const targetDb = config.selectedTrackingDatabase.value; // target time tracker DB
+
     const saveParams = {
       projectId: config.selectedProject.value,
       projectTitle: config.selectedProject.label,
       databaseId: sourceDb,
-      userId: "notion-user", // Use the same identifier as the rest of the app
+      userId: "notion-user", // demo identifier used across the app
       timerValue: sessionData.timerValue,
       startTime: sessionData.startTime,
       endTime: sessionData.endTime,
@@ -141,8 +149,7 @@ export const usePomoSessionConfig = ({
   }, [config, currentDatabaseId]);
 
   const isReadyToSave = Boolean(
-    config.selectedProject &&
-    config.selectedTrackingDatabase?.value
+    config.selectedProject && config.selectedDatabase?.value && config.selectedTrackingDatabase?.value
   );
 
   return {
