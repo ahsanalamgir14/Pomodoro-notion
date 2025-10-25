@@ -5,8 +5,9 @@ import {
   SpeakerWaveIcon,
 } from "@heroicons/react/24/outline";
 import Head from "next/head";
-import React, { useEffect, useRef, useState } from "react";
+import React, { useCallback, useEffect, useRef, useState } from "react";
 import { FullScreen, useFullScreenHandle } from "react-full-screen";
+import { toast } from "react-toastify";
 import OutsideClickHandler from "react-outside-click-handler";
 import useSyncPomo from "../../hooks/useSyncPomo";
 import useWindowActive from "../../hooks/useWindowActive";
@@ -17,19 +18,32 @@ import SoundLevel from "../Noises/NoiseCard/SoundLevel";
 import Session from "../Session";
 import Switch from "../Switch";
 import WakeLockNote from "./WakeLockNote";
-import Clock from "../Clock";
+import PomoSessionConfig from "../PomoSessionConfig";
+import { usePomoSessionConfig } from "../../hooks/usePomoSessionConfig";
+import { getCompletedQuests, startQuestWork, updateQuestStatus } from "../../utils/apis/notion/client";
 
 type Props = {
   projectName: string;
+  projects?: Array<{ label: string; value: string }>;
+  availableTags?: Array<{ label: string; value: string; color: string }>;
+  selectedTags?: Array<{ label: string; value: string; color: string }>;
+  currentDatabaseId?: string;
+  availableDatabases?: Array<{ id: string; title: string; icon?: string }>;
 };
 
-export default function Timer({ projectName }: Props) {
+export default function Timer({ 
+  projectName,
+  projects = [],
+  availableTags = [],
+  selectedTags = [],
+  currentDatabaseId,
+  availableDatabases = []
+}: Props) {
   const timerScreen = useFullScreenHandle();
 
-  const [{ timerLabel, project, shouldTickSound }, dispatch] = usePomoState();
+  const [{ timerLabel, project, shouldTickSound, busyIndicator, startTime }, dispatch] = usePomoState();
 
-  const { clockifiedValue, togglePlayPause, resetTimer, restartPomo } =
-    useSyncPomo();
+
 
   const isWindowActive = useWindowActive();
 
@@ -39,6 +53,107 @@ export default function Timer({ projectName }: Props) {
   const [showNote, setNote] = useState<
     null | "success" | "error" | "warning"
   >();
+
+  const [completedSummary, setCompletedSummary] = useState<{ count: number; items: Array<{ id: string; title: string }> } | null>(null);
+  const [loadingCompleted, setLoadingCompleted] = useState(false);
+
+  // Initialize session configuration hook
+  const sessionConfig = usePomoSessionConfig({
+    projects,
+    availableTags,
+    selectedTags,
+    currentDatabaseId,
+    availableDatabases,
+  });
+
+  const refreshCompleted = useCallback(async () => {
+    if (!sessionConfig.config.selectedProject?.value || !currentDatabaseId) {
+      setCompletedSummary(null);
+      return;
+    }
+    try {
+      setLoadingCompleted(true);
+      const data = await getCompletedQuests({
+        userId: "notion-user",
+        databaseId: currentDatabaseId!,
+        adventurePageId: sessionConfig.config.selectedProject.value,
+      });
+      setCompletedSummary(data);
+    } catch (e) {
+      setCompletedSummary(null);
+    } finally {
+      setLoadingCompleted(false);
+    }
+  }, [sessionConfig.config.selectedProject?.value, currentDatabaseId]);
+
+  // When the timer transitions from stopped to started, create a live entry with proper Quest relation
+  const prevBusy = useRef(false);
+  const lastStartTimeRef = useRef<number | null>(null);
+  useEffect(() => {
+    const justStarted = busyIndicator && !prevBusy.current;
+    if (justStarted) {
+      const adventurePageId = sessionConfig.config.selectedProject?.value;
+      const projectTitle = sessionConfig.config.selectedProject?.label || projectName;
+      const questPageId = project?.value || adventurePageId; // fallback if UI chooses quest directly
+
+      // If resuming the same session, only update status back to In Progress
+      if (lastStartTimeRef.current === startTime) {
+        if (questPageId) {
+          updateQuestStatus({ userId: "notion-user", status: "In Progress", questPageId, adventurePageId })
+            .catch((e) => {
+              if (process.env.NODE_ENV === "development") {
+                console.warn("Failed to set In Progress on resume:", e);
+              }
+            });
+        }
+        prevBusy.current = busyIndicator;
+        return;
+      }
+
+      if (questPageId) {
+        startQuestWork({ userId: "notion-user", questPageId, projectTitle, adventurePageId })
+          .catch((e) => {
+            if (process.env.NODE_ENV === "development") {
+              console.warn("Failed to create tracker entry on start:", e);
+            }
+          });
+        lastStartTimeRef.current = startTime;
+      }
+    }
+    prevBusy.current = busyIndicator;
+  }, [busyIndicator, startTime, sessionConfig.config.selectedProject?.value, sessionConfig.config.selectedProject?.label, projectName, project?.value]);
+
+  // Handle session completion and save to Notion if configured
+  const handleSessionComplete = useCallback(async (sessionData: {
+    timerValue: number;
+    startTime: number;
+    endTime: number;
+    sessionType: "work" | "break";
+  }) => {
+    if (sessionConfig.isReadyToSave) {
+      try {
+        await sessionConfig.saveSessionToNotion(sessionData);
+        toast.success("Session saved to Notion database!", {
+          autoClose: 3000,
+        });
+        // Refresh completed quests after a successful save
+        refreshCompleted();
+      } catch (error) {
+        console.error("Failed to save session to Notion:", error);
+        toast.error("Failed to save session to Notion database", {
+          autoClose: 5000,
+        });
+      }
+    } else {
+      // Provide a helpful hint when save isn’t configured
+      toast.info("Select a Time Tracking database in Session Configuration to auto-save.", {
+        autoClose: 4000,
+      });
+    }
+  }, [sessionConfig.isReadyToSave, sessionConfig.saveSessionToNotion, refreshCompleted]);
+
+  const { clockifiedValue, togglePlayPause, resetTimer, restartPomo } =
+    useSyncPomo(handleSessionComplete);
 
   // prevent screen lock when timer is in focus
   const wakeLock = useRef<WakeLockSentinel>();
@@ -84,6 +199,11 @@ export default function Timer({ projectName }: Props) {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   useEffect(() => resetTimer(false), [project?.value]);
 
+  // Fetch completed quests relevant to the selected project and database
+  useEffect(() => {
+    refreshCompleted();
+  }, [refreshCompleted]);
+
   function handleTickChange(e: React.ChangeEvent<HTMLInputElement>) {
     dispatch({
       type: actionTypes.CHANGE_TICKING_SOUND,
@@ -96,177 +216,188 @@ export default function Timer({ projectName }: Props) {
       className="
       flex
       min-w-[350px] flex-col items-center justify-items-center 
-      rounded-[50px]
-      bg-white
-      p-9 text-gray-700 shadow-lg"
+      gap-5 p-5 text-center
+      "
     >
-      {clockifiedValue && (
-        <Head>
-          <title>{`${clockifiedValue} - ${timerLabel}`}</title>
-          <link rel="icon" href="/favicon.ico" />
-        </Head>
-      )}
-      <h2 className="mt-[0.5em] mb-[1.5em] text-2xl">{projectName}</h2>
-      <h3
-        id="timer-label"
-        className="relative z-30 mb-[15px] mt-5 text-xl font-medium text-gray-300"
-      >
-        {timerLabel}
-      </h3>
-      <h1
-        id="time-left"
-        className="font-quicksand relative z-10
-        m-0
-        mb-3 
-        text-5xl
-        font-extralight
-        text-gray-500
-        after:absolute
-        after:top-1/2
-        after:left-1/2
-        after:-z-10
-        after:block 
-        after:h-[180px]
-        after:w-[180px]
-        after:-translate-x-1/2
-        after:-translate-y-1/2
-        after:rounded-full 
-        after:bg-bgColor-10
-        after:shadow-md
-        after:shadow-gray-400
-        "
-      >
-        {clockifiedValue}
-      </h1>
-      <Controls
-        disableControls={disableControls}
-        handleReset={resetTimer}
-        handlePlayPause={togglePlayPause}
-        handleRestart={restartPomo}
-      />
-      <div className="flex w-full items-center justify-between gap-5">
-        <Container title="Break Length">
-          <Break />
-        </Container>
-        <Container title=" Session Length">
-          <Session />
-        </Container>
-      </div>
+      <Head>
+        <title>
+          {clockifiedValue} - {projectName}
+        </title>
+      </Head>
 
-      <div className="mt-2 flex items-center">
-        <Switch
-          checked={shouldTickSound}
-          onChange={handleTickChange}
-          text="Ticking"
-        />
-        <OutsideClickHandler onOutsideClick={() => setPopover(false)}>
-          <div className="relative mx-3 flex items-center ">
-            <button
-              onClick={() => setPopover((prev) => !prev)}
-              data-popover-target="popover-default"
-              type="button"
-              className="cursor-pointer text-center text-sm font-medium focus:outline-none"
-            >
-              <SpeakerWaveIcon className=" h-6 w-6 text-slate-700 hover:text-slate-400 active:text-slate-900" />
-            </button>
-            <PopOver visible={showPopover} />
-          </div>
-        </OutsideClickHandler>
-        <button onClick={timerScreen.enter} className="mx-2">
-          <ArrowsPointingOutIcon className="h-5 w-5" />
-        </button>
-      </div>
-      {/* disabled wakelock not now since it is no longer needed */}
-      {/* {showNote && (
-        <WakeLockNote onCloseClick={() => setNote(null)} type={showNote} />
-      )} */}
+      <WakeLockNote showNote={showNote} />
+
       <FullScreen handle={timerScreen}>
-        <div className={`${timerScreen.active ? "block" : "hidden"} `}>
-          <div className="flex h-screen w-screen flex-col items-center justify-center">
-            <h3 className="text-xl">{projectName}</h3>
-            <h4 className="my-5 text-4xl">
-              <div className="flex items-baseline gap-3">
-                {timerLabel}
-                <button className="h-6 w-6" onClick={timerScreen.exit}>
-                  <ArrowsPointingInIcon className="h-6 w-6" />
-                </button>
+        <div
+          className={`${
+            timerScreen.active
+              ? "flex h-screen w-screen flex-col items-center justify-center bg-gray-900 text-white"
+              : ""
+          }`}
+        >
+          {timerScreen.active && (
+            <div className="mb-8 text-center">
+              <h1 className="text-2xl font-bold">{projectName}</h1>
+              <div className="mt-4 text-6xl font-mono">
+                {clockifiedValue}
               </div>
-            </h4>
-            <h1
-              id="time-left"
-              className="font-quicksand relative z-10
-              m-0
-            mb-3 
-            text-9xl
-            font-extralight
-            text-gray-500
-        "
-            >
-              {clockifiedValue}
-            </h1>
-            <Clock />
+            </div>
+          )}
+
+          <div
+            className={`${
+              timerScreen.active ? "hidden" : "flex"
+            } flex-col items-center gap-5`}
+          >
+            {/* Single Card Design */}
+            <div className="w-full max-w-md rounded-2xl bg-white p-8 shadow-lg">
+              {/* Project Title */}
+              <h2 className="mb-6 text-center text-xl font-semibold text-gray-800">
+                {projectName}
+              </h2>
+
+              {/* Circular Timer Display */}
+              <div className="mb-8 flex justify-center">
+                <div className="relative h-48 w-48 rounded-full bg-gray-800 flex items-center justify-center">
+                  <div className="text-center text-white">
+                    <div className="text-sm font-medium mb-2">{timerLabel}</div>
+                    <div className="text-4xl font-mono font-bold">
+                      {clockifiedValue}
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Control Buttons */}
+              <div className="mb-8 flex justify-center">
+                <Controls
+                  disableControls={disableControls}
+                  handlePlayPause={togglePlayPause}
+                  handleReset={resetTimer}
+                  handleRestart={restartPomo}
+                />
+              </div>
+
+              {/* Session and Break Length Controls */}
+              <div className="mb-6 flex justify-between">
+                <div className="flex flex-col items-center">
+                  <h3 className="mb-2 text-sm font-medium text-gray-600">Break Length</h3>
+                  <div className="flex items-center gap-2">
+                    <Break />
+                  </div>
+                </div>
+                <div className="flex flex-col items-center">
+                  <h3 className="mb-2 text-sm font-medium text-gray-600">Session Length</h3>
+                  <div className="flex items-center gap-2">
+                    <Session />
+                  </div>
+                </div>
+              </div>
+
+              {/* Bottom Controls */}
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-3">
+                  <Switch
+                    checked={shouldTickSound}
+                    onChange={handleTickChange}
+                    label="Ticking"
+                  />
+                </div>
+                <div className="flex items-center gap-3">
+                  <OutsideClickHandler
+                    onOutsideClick={() => {
+                      setPopover(false);
+                    }}
+                  >
+                    <div className="relative">
+                      <SpeakerWaveIcon
+                        onClick={() => setPopover(!showPopover)}
+                        className="h-5 w-5 cursor-pointer text-gray-600"
+                      />
+                      <PopOver visible={showPopover} />
+                    </div>
+                  </OutsideClickHandler>
+                  <button
+                    onClick={timerScreen.enter}
+                    className="flex items-center gap-1 rounded-lg bg-purple-600 px-3 py-2 text-white hover:bg-purple-700"
+                  >
+                    <ArrowsPointingOutIcon className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* Relevant Quests Completed */}
+              <div className="mt-6 border-t pt-4 text-left">
+                <h3 className="text-sm font-medium text-gray-700">Relevant quests completed</h3>
+                {loadingCompleted && (
+                  <p className="mt-2 text-xs text-gray-500">Loading…</p>
+                )}
+                {!loadingCompleted && completedSummary && (
+                  <div className="mt-2">
+                    <p className="text-sm text-gray-600">Total: {completedSummary.count}</p>
+                    {completedSummary.items.length > 0 && (
+                      <ul className="mt-2 list-disc pl-5">
+                        {completedSummary.items.slice(0, 5).map(item => (
+                          <li key={item.id} className="text-sm text-gray-700">{item.title}</li>
+                        ))}
+                      </ul>
+                    )}
+                    {completedSummary.items.length === 0 && (
+                      <p className="text-xs text-gray-500">No completed quests for this adventure yet.</p>
+                    )}
+                  </div>
+                )}
+                {!loadingCompleted && !completedSummary && (
+                  <p className="mt-2 text-xs text-gray-500">Select a project and database to see completed quests.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Session Configuration */}
+            <div className="w-full max-w-md">
+              <PomoSessionConfig
+                projects={projects}
+                availableTags={availableTags}
+                selectedTags={selectedTags}
+                selectedProject={sessionConfig.config.selectedProject}
+                selectedDatabase={sessionConfig.config.selectedDatabase}
+                selectedTrackingDatabase={sessionConfig.config.selectedTrackingDatabase}
+                availableDatabases={sessionConfig.availableDatabases}
+                onProjectSelect={sessionConfig.setSelectedProject}
+                onTagsSelect={sessionConfig.setSelectedTags}
+                onDatabaseSelect={sessionConfig.setSelectedDatabase}
+                onTrackingDatabaseSelect={sessionConfig.setSelectedTrackingDatabase}
+                isExpanded={sessionConfig.config.isExpanded}
+                onToggleExpanded={sessionConfig.setIsExpanded}
+                disabled={disableControls}
+              />
+            </div>
           </div>
+
+          {timerScreen.active && (
+            <button
+              onClick={timerScreen.exit}
+              className="mt-8 flex items-center gap-2 rounded bg-purple-600 px-4 py-2 text-white hover:bg-purple-700"
+            >
+              <ArrowsPointingInIcon className="h-4 w-4" />
+              Exit Fullscreen
+            </button>
+          )}
         </div>
       </FullScreen>
     </div>
   );
 }
 
-function Container({
-  children,
-  title,
-}: {
-  title: string;
-  children: JSX.Element | React.ReactNode;
-}) {
-  return (
-    <div className="flex flex-col items-center">
-      <span id="break-label" className="text-md">
-        {title}
-      </span>
-      <div className="flex items-center justify-between gap-2	text-center">
-        {children}
-      </div>
-    </div>
-  );
-}
 
 function PopOver({ visible } = { visible: false }) {
-  const [{ tickVolume }, dispatch] = usePomoState();
-
-  const [volume, setVolume] = useState(tickVolume);
-
-  useEffect(() => {
-    // reason for this is context is slow i guess slow update to dom
-    dispatch({
-      type: actionTypes.CHANGE_TICK_VOLUME,
-      payload: volume,
-    });
-  }, [dispatch, volume]);
-
   return (
     <div
-      id="volumebar-popover"
       className={`${
-        visible
-          ? "scale-100 transform opacity-100"
-          : "pointer-events-none scale-95 transform opacity-0"
-      } absolute -left-20 top-8 w-52 rounded-lg border border-slate-300 bg-white p-1 text-sm font-light text-slate-500 shadow-2xl transition duration-75 ease-in`}
+        visible ? "block" : "hidden"
+      } absolute bottom-8 left-1/2 z-10 w-48 -translate-x-1/2 transform rounded-lg border border-gray-200 bg-white p-3 shadow-lg`}
     >
-      <div className="relative">
-        <div
-          className="absolute -top-[9px] left-[41%] z-0 h-2 w-2 rotate-45 rounded-tl-sm border-t border-l
-         border-slate-300  bg-white"
-        ></div>
-      </div>
-      <div className="flex items-center gap-3   bg-white px-2 py-1">
-        <div className="w-6">{Math.floor(volume * 100)}</div>
-        <SoundLevel
-          defaultValue={volume * 100}
-          value="Tickvolume"
-          handleChange={setVolume}
-        />
-      </div>
+      <SoundLevel />
     </div>
   );
 }

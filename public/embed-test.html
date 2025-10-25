@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Embed Widget Test</title>
+    <style>
+      body { font-family: system-ui, Arial, sans-serif; margin: 0; padding: 24px; background: #f7f7f7; }
+      .container { max-width: 900px; margin: 0 auto; }
+      .card { background: #fff; border: 1px solid #e5e7eb; border-radius: 12px; padding: 16px; }
+      iframe { width: 100%; height: 700px; border: 1px solid #e5e7eb; border-radius: 12px; }
+      .note { color: #6b7280; font-size: 13px; margin-top: 8px; }
+      .url { font-family: monospace; font-size: 12px; background: #f3f4f6; padding: 8px; border-radius: 8px; }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1>Embed Widget Test (local)</h1>
+      <p class="note">This page loads the embed widget in an iframe from the same origin.</p>
+      <div class="card">
+        <p class="note">Iframe source:</p>
+        <div class="url">/embed/widget?c=eyJwYWdlSWQiOiIyN2M4M2IxYi0zNDViLTgwNzgtOWM2OS1kZWE1OWY4MzhhYmYiLCJ0aGVtZSI6ImxpZ2h0Iiwid2lkZ2V0QmciOiIjZmZmZmZmIiwid2lkZ2V0Q29sb3IiOiIjMTExMTExIiwiaW5wdXRXaWR0aCI6MzIwLCJpbnB1dEJvcmRlciI6IiNkMWQ1ZGIiLCJ0aW1lckNvbG9yIjoiI2VmNDQ0NCIsInRpbWVyRm9udFNpemUiOjQ4fQ==</div>
+        <iframe src="/embed/widget?c=eyJwYWdlSWQiOiIyN2M4M2IxYi0zNDViLTgwNzgtOWM2OS1kZWE1OWY4MzhhYmYiLCJ0aGVtZSI6ImxpZ2h0Iiwid2lkZ2V0QmciOiIjZmZmZmZmIiwid2lkZ2V0Q29sb3IiOiIjMTExMTExIiwiaW5wdXRXaWR0aCI6MzIwLCJpbnB1dEJvcmRlciI6IiNkMWQ1ZGIiLCJ0aW1lckNvbG9yIjoiI2VmNDQ0NCIsInRpbWVyRm9udFNpemUiOjQ4fQ=="></iframe>
+        <p class="note">If the iframe above renders, the widget loads correctly in a normal HTML page.</p>
+      </div>
+    </div>
+  </body>
+  </html>

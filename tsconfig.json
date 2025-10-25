@@ -19,6 +19,7 @@
     "noUncheckedIndexedAccess": true,
     "paths": {
       "@/components/*": ["./src/components/*"],
+      "@/Components/*": ["./src/Components/*"],
       "@/utils/*": ["./src/utils/*"],
       "@/public/*": ["./public/*"],
     }

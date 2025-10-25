@@ -21,32 +21,14 @@ export default function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  const isAuthenticated = !!(
-    req.cookies.get("next-auth.session-token") ??
-    req.cookies.get("__Secure-next-auth.session-token")
-  );
-
-  // if not authenticated and accessing login route then allow
-  if (!isAuthenticated) {
-    if (anonymousRoutes.findIndex((r) => pathname.startsWith(r)) != -1) {
-      return NextResponse.next();
-    } else {
-      // otherwise redirect
-      const url = req.nextUrl.clone();
-      url.pathname = "/login";
-      return NextResponse.redirect(url);
-    }
-  }
-
-  if (isAuthenticated) {
-    // if authenticated and accessing login page then redirect
-    if (anonymousRoutes.findIndex((r) => pathname.startsWith(r)) != -1) {
-      const url = req.nextUrl.clone();
-      url.pathname = "/";
-      return NextResponse.redirect(url);
-    } else {
-      // otherwise allow
-      return NextResponse.next();
-    }
-  }
+  // Simplified: Allow all routes without authentication
+  // App now works directly with Notion connection
+  return NextResponse.next();
 }
+
+export const config = {
+  matcher: [
+    // run middleware for all paths except next internals and common public assets
+    "/((?!_next/static|_next/image|favicon.ico|icon-192x192.png|icon-256x256.png|icon-384x384.png|icon-512x512.png|manifest.json|sounds|workers).*)",
+  ],
+};

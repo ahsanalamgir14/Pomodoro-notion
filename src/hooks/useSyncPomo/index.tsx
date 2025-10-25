@@ -13,8 +13,15 @@ import useClickSound from "../Sound/useClickSound";
 import useNotificationSound from "../Sound/useNotificationSound";
 import { usePomoClient } from "../Storage/usePomoClient";
 import useNotification from "../useNotification";
+// Quest start is initiated from Timer component to include proper DB relation
+import { updateQuestStatus } from "../../utils/apis/notion/client";
 
-export default function useSyncPomo() {
+export default function useSyncPomo(onSessionComplete?: (sessionData: {
+  timerValue: number;
+  startTime: number;
+  endTime: number;
+  sessionType: "work" | "break";
+}) => void) {
   const [
     { project, databaseId, startTime, timerValue, sessionValue },
     pomoDispatch,
@@ -48,6 +55,17 @@ export default function useSyncPomo() {
     if (type == "Session") {
       //when session ends save session time
       saveProjectTime();
+      // Update status to Paused on Quest
+      try {
+        const questPageId = project?.value;
+        const adventurePageId = project?.value; // when selected project is an Adventure, propagate to its quests
+        if (questPageId) {
+          // Only update quest/adventure status; do not sync tracker DB here
+          updateQuestStatus({ userId: "notion-user", status: "Paused", questPageId, adventurePageId });
+        }
+      } catch (e) {
+        if (process.env.NODE_ENV === "development") console.warn("Failed to pause quest:", e);
+      }
     }
   }
 
@@ -57,8 +75,32 @@ export default function useSyncPomo() {
     showNotification(`${type} Completed`, "Pomo Complete");
     if (type == "Session") {
       saveProjectTime();
+      
+      // Call session completion callback if provided
+      if (onSessionComplete) {
+        const endTime = Math.floor(new Date().getTime() / 1000);
+        const sessionDuration = getSessionInSecond() - timerValue - elapsedTime.current;
+        onSessionComplete({
+          timerValue: sessionDuration,
+          startTime: startTime,
+          endTime: endTime,
+          sessionType: "work"
+        });
+      }
+      
       //when session ends save session time
       bellRingPlay();
+      // Update status to Completed on Quest
+      try {
+        const questPageId = project?.value;
+        const adventurePageId = project?.value; // when selected project is an Adventure, propagate to its quests
+        if (questPageId) {
+          // Only update quest/adventure status; do not sync tracker DB here
+          updateQuestStatus({ userId: "notion-user", status: "Completed", questPageId, adventurePageId });
+        }
+      } catch (e) {
+        if (process.env.NODE_ENV === "development") console.warn("Failed to complete quest:", e);
+      }
     } else {
       alarmWoodPlay();
       //reset start time when noise to session happens
@@ -88,27 +130,51 @@ export default function useSyncPomo() {
   function saveProjectTime() {
     // persist project timer
     if (project?.value) {
+      // If Firebase timesheet saving is disabled via env, skip writing to Firestore
+      if (process.env.NEXT_PUBLIC_DISABLE_FIREBASE === "true") {
+        console.log("⚙️ Firebase timesheet saving disabled; skipping Firestore write.");
+        return;
+      }
+
+      const timeSpent = getSessionInSecond() - timerValue - elapsedTime.current;
+      const endTime = Math.floor(new Date().getTime() / 1000);
+      
+      console.log("💾 Saving timesheet:", {
+        projectId: project.value,
+        projectLabel: project.label,
+        databaseId: databaseId,
+        timeSpent: timeSpent,
+        startTime: startTime,
+        endTime: endTime,
+        timerValue: timerValue,
+        elapsedTime: elapsedTime.current
+      });
+      
       addTimesheet(
         project.value,
         databaseId as string,
-        getSessionInSecond() - timerValue - elapsedTime.current,
+        timeSpent,
         startTime,
-        Math.floor(new Date().getTime() / 1000)
+        endTime
       )
         .then(() => {
+          console.log("✅ Timesheet saved successfully");
           toast.success(`Timesheet added ${project.label}`, {
             autoClose: false,
           });
           setTimeout(refetch, 3000); //refetch after 3 sec
         })
-        .catch(() =>
+        .catch((error) => {
+          console.error("❌ Timesheet save error:", error);
           toast.error(`Timesheet upload error ${project.label}`, {
             autoClose: false,
-          })
-        );
+          });
+        });
       // even if api fails reset elapsed timer
       elapsedTime.current =
         timerValue == 0 ? 0 : getSessionInSecond() - timerValue; //if timer value is having some value then delete session time from there
+    } else {
+      console.log("⚠️ No project selected, skipping timesheet save");
     }
   }
 

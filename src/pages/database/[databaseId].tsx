@@ -5,6 +5,7 @@ import { AxiosError } from "axios";
 import { GetServerSidePropsContext, InferGetServerSidePropsType } from "next";
 import Link from "next/link";
 import ContentLoader from "react-content-loader";
+import { useAuth } from "../../utils/Context/AuthContext/Context";
 
 export const getServerSideProps = async ({
   query,
@@ -28,12 +29,16 @@ export const getServerSideProps = async ({
 export default function Pages({
   databaseId,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
+  const { user } = useAuth();
+  
   const { data, isFetching } = trpc.private.queryDatabase.useQuery(
     {
       databaseId: databaseId as string,
+      email: user?.email || "",
     },
     {
       refetchOnWindowFocus: false,
+      enabled: !!user?.email, // Only run query if user email exists
     }
   );
 

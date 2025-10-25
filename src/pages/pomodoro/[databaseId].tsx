@@ -4,34 +4,27 @@ import { GetServerSidePropsContext, InferGetServerSidePropsType } from "next";
 import dynamic from "next/dynamic";
 import Link from "next/link";
 import { useRouter } from "next/router";
-import { getSession } from "next-auth/react";
+// import { getSession } from "next-auth/react"; // Removed next-auth dependency
 import { useEffect, useMemo, useState } from "react";
 import Line from "../../Components/Line";
 import NotionTags from "../../Components/NotionTags";
-
-const ProjectSelection = dynamic(
-  () => import("../../Components/ProjectSelection"),
-  {
-    loading: () => <div>Loading...</div>,
-  }
-);
-
+import ProjectSelection from "@/Components/ProjectSelection";
 import Tabs from "../../Components/Tabs";
-const Views = dynamic(() => import("../../Components/Views"), {
-  loading: () => <div>Loading...</div>,
-});
+import Views from "@/Components/Views";
 import useFormattedData from "../../hooks/useFormattedData";
 import {
   queryDatabase,
   retrieveDatabase,
+  listDatabases,
 } from "../../utils/apis/notion/database";
+import { fetchNotionUser } from "../../utils/apis/firebase/mockUserNotion";
 import { getProjectId, getProjectTitle } from "../../utils/notionutils";
 import { actionTypes } from "../../utils/Context/PomoContext/reducer";
 import { actionTypes as userActiontype } from "../../utils/Context/UserContext/reducer";
 import { actionTypes as projActiontype } from "../../utils/Context/ProjectContext/reducer";
 import { usePomoState } from "../../utils/Context/PomoContext/Context";
 import { notEmpty } from "../../types/notEmpty";
-import { fetchNotionUser } from "../../utils/apis/firebase/userNotion";
+// No authentication required - using mock data directly
 import { useUserState } from "../../utils/Context/UserContext/Context";
 import { useProjectState } from "@/utils/Context/ProjectContext/Context";
 import { TabsOptions } from "../../Components/Views/utils";
@@ -40,50 +33,102 @@ export const getServerSideProps = async ({
   query,
   req,
 }: GetServerSidePropsContext) => {
+  const databaseId = query.databaseId as string;
+  const tab = query.tab as string;
   try {
-    const session = await getSession({ req });
-    if (!session?.user?.email) throw new Error("Session not found");
-    const user = await fetchNotionUser(session?.user?.email);
-    if (!user) throw new Error("User not found");
-    const [database, db] = await Promise.all([
-      queryDatabase(query.databaseId as string, true, user.accessToken),
-      retrieveDatabase(query.databaseId as string, true, user.accessToken),
+    
+    console.log("Fetching real Notion database data for:", databaseId);
+    
+    // Get the user's access token from Firebase
+    const userEmail = "notion-user"; // Use the same identifier as the OAuth flow
+    console.log("🔍 Fetching user data for email:", userEmail);
+    const userData = await fetchNotionUser(userEmail);
+    
+    if (!userData || !userData.accessToken) {
+      console.log("❌ No user data or access token found, falling back to mock data");
+      console.log("User data:", userData);
+      const { mockDatabaseQuery, mockDatabaseDetail } = await import("../../utils/apis/notion/mockDatabase");
+      
+      return {
+        props: {
+          database: mockDatabaseQuery,
+          db: mockDatabaseDetail,
+          tab: tab || null,
+          error: null,
+          databaseId: databaseId,
+          availableDatabases: [],
+        },
+      };
+    }
+    
+    console.log("🔑 Access token found:", userData.accessToken.substring(0, 20) + "...");
+    console.log("📡 Making real Notion API calls for database:", databaseId);
+    
+    // Use real Notion API calls with the user's access token
+    const [database, db, dbList] = await Promise.all([
+      queryDatabase(databaseId, true, userData.accessToken),
+      retrieveDatabase(databaseId, true, userData.accessToken),
+      listDatabases(true, userData.accessToken),
     ]);
+    
+    console.log("✅ Successfully fetched real Notion data");
+    console.log("Database results count:", database.results?.length || 0);
+    console.log("Database properties:", Object.keys(db.properties || {}));
+
+    const availableDatabases = (dbList.results || []).map((d: any) => {
+      const titleText = Array.isArray(d.title) && d.title.length > 0
+        ? d.title.map((t: any) => t.plain_text || "").join("").trim()
+        : "Untitled";
+      let icon: string | undefined = undefined;
+      if (d.icon?.type === "emoji") icon = d.icon.emoji;
+      else if (d.icon?.type === "file") icon = "📄";
+      else if (d.icon?.type === "external") icon = "🔗";
+
+      return {
+        id: d.id,
+        title: titleText || "Untitled",
+        // Next.js cannot serialize undefined; use null when icon is missing
+        icon: icon ?? null,
+      };
+    });
+    
     return {
       props: {
-        userId: user.id,
         database,
         db,
-        tab: (query?.tab as string) || null,
-        databaseId: query.databaseId as string,
+        tab: tab || null,
+        error: null,
+        databaseId: databaseId,
+        availableDatabases,
       },
     };
   } catch (error) {
-    console.log(error);
-    const err = error as AxiosError;
-    if (process.env.NODE_ENV === "development")
-      return {
-        props: {
-          error: err.response?.data,
-        },
-      };
+    console.log("❌ Error fetching real Notion data:", error);
+    
+    // Fallback to mock data if real API fails
+    console.log("🔄 Falling back to mock data");
+    const { mockDatabaseQuery, mockDatabaseDetail } = await import("../../utils/apis/notion/mockDatabase");
+    
     return {
-      redirect: {
-        permanent: false,
-        destination: "/login",
+      props: {
+        database: mockDatabaseQuery,
+        db: mockDatabaseDetail,
+        tab: tab || null,
+        error: null,
+        databaseId: query.databaseId as string,
+        availableDatabases: [],
       },
-      props: {},
     };
   }
 };
 
 export default function Pages({
-  userId,
   database,
   db,
   tab,
   error,
   databaseId,
+  availableDatabases,
 }: InferGetServerSidePropsType<typeof getServerSideProps>) {
   const router = useRouter();
   const [selectedProperties, setProperties] = useState<
@@ -115,14 +160,7 @@ export default function Pages({
     );
   }, [activeTab]);
 
-  useEffect(
-    () =>
-      userDispatch({
-        type: userActiontype.SET_USERID,
-        payload: userId,
-      }),
-    [userId]
-  );
+  // No user authentication required - removed userId dependency
 
   useEffect(() => {
     if (databaseId)
@@ -233,35 +271,46 @@ export default function Pages({
         />
         {!error ? (
           <>
-            <Tabs
-              activeTab={activeTab}
-              setActiveTab={setActiveTab}
-              tabs={TabsOptions}
-            />
-            <div className="m-5">
-              <ProjectSelection
-                disabled={busyIndicator}
-                value={project}
-                handleSelect={onProjectSelect}
-                projects={projects}
-              />
+            {/* Tabs */}
+            <Tabs tabs={TabsOptions} activeTab={activeTab} setActiveTab={setActiveTab} />
+
+            {/* Project and Tags selections */}
+            <div className="w-full max-w-md mx-auto space-y-4">
+              {/* Project selection first */}
+              <div>
+                <ProjectSelection
+                  disabled={busyIndicator}
+                  value={project as any}
+                  projects={projects as any}
+                  handleSelect={onProjectSelect as any}
+                />
+              </div>
+
+              {/* Tags selection with spacing below project */}
+              <div>
+                <NotionTags
+                  options={properties}
+                  disabled={busyIndicator}
+                  handleSelect={setProperties}
+                  selectedOptions={selectedProperties}
+                />
+              </div>
             </div>
-            <NotionTags
-              disabled={busyIndicator}
-              handleSelect={setProperties}
-              options={properties}
-            />
+
+            {/* Views */}
             <Views
               activeTab={activeTab}
               pieData={piedata}
-              projectName={getProjectTitle(
-                database?.results.find((pr) => pr.id == String(project?.value)),
-                "Please select project"
-              )}
+              projectName={project?.label || "Please select project"}
+              databaseId={databaseId}
+              selectedTags={selectedProperties}
+              availableDatabases={availableDatabases}
+              projects={projects}
+              availableTags={properties}
             />
           </>
         ) : (
-          JSON.stringify(error)
+          <p className="text-sm text-gray-500">Something went wrong.</p>
         )}
       </main>
     </>

@@ -1,6 +1,6 @@
 import { GITHUB_URL, PORTFOLIO_URL } from "@/utils/constants";
 import { getAppVersion } from "@/utils/utils";
-import { signOut, useSession } from "next-auth/react";
+import { useAuth } from "../../utils/Context/AuthContext/Context";
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
@@ -11,8 +11,7 @@ import Dropdown, { MenuType } from "../Dropdown";
 import NotionConnectModal from "../NotionModifyModal";
 
 export default function Header({ imgSrc }: { imgSrc?: string }) {
-  const { data: session, status: sessionStatus } = useSession();
-
+  const { user, logout, isLoading } = useAuth();
   const [showModal, setModal] = useState(false);
 
   const [notify] = useNotification();
@@ -20,8 +19,8 @@ export default function Header({ imgSrc }: { imgSrc?: string }) {
   const menuList: MenuType[] = useMemo(
     (): MenuType[] => [
       {
-        label: session?.user?.email ?? "No email found",
-        value: session?.user?.email ?? "noemail",
+        label: user?.email ?? "No email found",
+        value: user?.email ?? "noemail",
         component: {
           type: "button",
           onClick: () => {
@@ -134,7 +133,7 @@ export default function Header({ imgSrc }: { imgSrc?: string }) {
         component: {
           type: "button",
           onClick: () => {
-            signOut();
+            logout();
           },
         },
       },
@@ -147,7 +146,7 @@ export default function Header({ imgSrc }: { imgSrc?: string }) {
         },
       },
     ],
-    [session?.user?.email]
+    [user?.email]
   );
 
   return (
@@ -160,7 +159,7 @@ export default function Header({ imgSrc }: { imgSrc?: string }) {
         </Link>
       </h1>
       {/* show dropdown if user logged in */}
-      {sessionStatus == "loading" ? (
+      {isLoading ? (
         <div>
           <div className="hidden flex-col items-center justify-center sm:flex ">
             <ContentLoader
@@ -190,14 +189,14 @@ export default function Header({ imgSrc }: { imgSrc?: string }) {
           </ContentLoader>
         </div>
       ) : (
-        session && (
+        user && (
           <div>
             <div className="hidden flex-col items-center justify-center sm:flex ">
-              {session.user && session?.user.name} <br />
+              {user && user?.username} <br />
             </div>
             <Image
               loading="lazy"
-              src={imgSrc ?? session.user?.image ?? "https://picsum.photos/50"}
+              src={imgSrc ?? "https://picsum.photos/50"}
               alt="pic"
               width={50}
               height={50}

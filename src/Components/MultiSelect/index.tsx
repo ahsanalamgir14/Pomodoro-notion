@@ -16,7 +16,7 @@ const colourStyles: StylesConfig<ColourOption, true> = {
     return {
       ...styles,
       fontWeight: 400,
-      width: "310px",
+      width: "100%",
       boxShadow: "unset",
       cursor: "pointer",
       margin: "unset",
@@ -86,7 +86,7 @@ const colourStyles: StylesConfig<ColourOption, true> = {
   }),
   menu: (styles) => ({
     ...styles,
-    minWidth: "310px",
+    width: "100%",
     boxShadow: `0px 2px 24px #DAE6EF`,
     zIndex: 99999, //fix so that it can overlap over other components
   }),
@@ -105,18 +105,21 @@ interface Props {
   options: ColourOption[];
   disabled?: boolean;
   handleSelect: (e: any) => void;
+  selectedOptions?: ColourOption[];
 }
 
 export default function MultiSelect({
   options,
   disabled = false,
   handleSelect,
+  selectedOptions,
 }: Props) {
   return (
     <Select
       closeMenuOnSelect={false}
       isMulti
       options={options}
+      value={selectedOptions}
       styles={colourStyles}
       isDisabled={disabled}
       id="notion-tags-select"

@@ -4,8 +4,31 @@ export interface IAppState {
   endDate: number;
 }
 
+// Generate a UUID for the user
+const generateUserId = (): string => {
+  // Check if we already have a user ID in localStorage
+  if (typeof window !== 'undefined') {
+    const stored = localStorage.getItem('pomodoro_user_id');
+    if (stored) return stored;
+  }
+
+  // Generate a new UUID
+  const uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
+    const r = Math.random() * 16 | 0;
+    const v = c == 'x' ? r : (r & 0x3 | 0x8);
+    return v.toString(16);
+  });
+
+  // Store it in localStorage for persistence
+  if (typeof window !== 'undefined') {
+    localStorage.setItem('pomodoro_user_id', uuid);
+  }
+
+  return uuid;
+};
+
 export const initialState: IAppState = {
-  userId: "",
+  userId: generateUserId(), // Generate a proper UUID for the user
   startDate: Math.floor(new Date().getTime() / 1000),
   endDate: Math.floor(new Date().getTime() / 1000),
 };
