@@ -39,7 +39,7 @@ export const createNotionEntry = async ({
     // Convert duration using start/end when available; fallback to timer value
     const durationSeconds = endTime ? Math.max(0, endTime - startTime) : timerValue;
     const timerMinutes = Math.round(durationSeconds / 60);
-    
+
     // Format start and end times
     const startDate = new Date(startTime * 1000);
     const endDate = endTime ? new Date(endTime * 1000) : new Date();
@@ -57,7 +57,7 @@ export const createNotionEntry = async ({
           break;
         }
       }
-    } catch (_) {}
+    } catch (_) { }
 
     // Status (status or select)
     const statusPropName = dbProps["Status"]?.type ? "Status" : Object.entries(dbProps).find(([, p]: any) => p?.type === "status" || p?.type === "select")?.[0];
@@ -76,6 +76,11 @@ export const createNotionEntry = async ({
         : dbProps["Due Date"]?.type === "date"
           ? "Due Date"
           : Object.entries(dbProps).find(([k, p]: any) => (k.toLowerCase().includes("end") || k.toLowerCase().includes("finish") || k.toLowerCase().includes("due")) && p?.type === "date")?.[0];
+
+    // Fallback: single generic date property (e.g., "Date")
+    const genericDatePropName = !startPropName && !endPropName
+      ? Object.entries(dbProps).find(([, p]: any) => p?.type === "date")?.[0]
+      : undefined;
 
     // Duration (prefer number; fallback to rich_text)
     const durationPropName = dbProps["Duration"]?.type
@@ -98,7 +103,7 @@ export const createNotionEntry = async ({
       try {
         const relMatch = Object.entries(dbProps).find(([, p]: any) => p?.type === "relation" && p?.relation?.database_id === sourceDatabaseId);
         if (relMatch) questRelationPropName = relMatch[0] as string;
-      } catch (_) {}
+      } catch (_) { }
     }
 
     // Prepare properties for the Notion page (aligned to Time Tracker schema)
@@ -119,10 +124,18 @@ export const createNotionEntry = async ({
     if (statusPropName) {
       const defaultStatus = status || "Completed";
       const propType = dbProps[statusPropName]?.type;
+      // Try to resolve to an existing option if needed
+      const options = (propType === "status"
+        ? (dbProps[statusPropName]?.status?.options || [])
+        : (dbProps[statusPropName]?.select?.options || [])) as Array<{ name: string }>;
+      const resolvedStatus = options?.some(o => o?.name === defaultStatus)
+        ? defaultStatus
+        : (options?.find(o => /done|complete|completed|finished/i.test(o?.name))?.name || options?.[0]?.name || defaultStatus);
+
       if (propType === "status") {
-        properties[statusPropName] = { status: { name: defaultStatus } };
+        properties[statusPropName] = { status: { name: resolvedStatus } };
       } else if (propType === "select") {
-        properties[statusPropName] = { select: { name: defaultStatus } };
+        properties[statusPropName] = { select: { name: resolvedStatus } };
       }
     }
 
@@ -150,6 +163,19 @@ export const createNotionEntry = async ({
       }
     }
 
+    // Single generic Date property handling
+    if (!startPropName && !endPropName && genericDatePropName) {
+      const t = dbProps[genericDatePropName]?.type;
+      if (t === "date") {
+        properties[genericDatePropName] = {
+          date: {
+            start: startDate.toISOString(),
+            ...(endTime ? { end: endDate.toISOString() } : {}),
+          },
+        };
+      }
+    }
+
     // Duration (only set when endTime provided)
     if (durationPropName && endTime) {
       const propType = dbProps[durationPropName]?.type;
@@ -169,14 +195,24 @@ export const createNotionEntry = async ({
       properties[questRelationPropName] = { relation: [{ id: projectId }] };
     }
 
-    // Quests as text (rich_text) if the database provides it
+    // Also try linking "Project" relation if present
+    const projectRelationPropName = Object.entries(dbProps).find(([k, p]: any) => p?.type === "relation" && (k.toLowerCase().includes("project") || (sourceDatabaseId && p?.relation?.database_id === sourceDatabaseId)))?.[0];
+    if (projectRelationPropName && projectId) {
+      properties[projectRelationPropName] = { relation: [{ id: projectId }] };
+    }
+
+    // Quests/Project as text (rich_text) if the database provides it
     const questsTextPropName = dbProps["Quest Name"]?.type === "rich_text"
       ? "Quest Name"
       : dbProps["Quest"]?.type === "rich_text"
         ? "Quest"
         : dbProps["Quests"]?.type === "rich_text"
           ? "Quests"
-          : undefined;
+          : dbProps["Project Name"]?.type === "rich_text"
+            ? "Project Name"
+            : dbProps["Project"]?.type === "rich_text"
+              ? "Project"
+              : undefined;
 
     if (questsTextPropName) {
       properties[questsTextPropName] = {
@@ -216,14 +252,91 @@ export const createNotionEntry = async ({
       }
     }
 
-    // Create the page in Notion
-    const response = await notion.pages.create({
-      parent: {
-        database_id: databaseId
-      },
-      properties
-    });
+    // Create or update the page in Notion
+    // Try to upsert an existing tracker entry for this quest/project
+    let targetPageId: string | null = null;
+    try {
+      // Prefer relation-based match
+      if (questRelationPropName && projectId) {
+        const propType = (dbProps[questRelationPropName] as any)?.type;
+        if (propType === "relation") {
+          const queryRes = await notion.databases.query({
+            database_id: databaseId,
+            filter: {
+              property: questRelationPropName,
+              relation: { contains: projectId },
+            },
+          });
+          if ((queryRes?.results || []).length > 0) {
+            targetPageId = (queryRes.results[0] as any)?.id || null;
+          }
+        }
+      }
 
+      // If not found via relation, try rich_text property for quest/project name
+      if (!targetPageId) {
+        const questsTextPropName = dbProps["Quest Name"]?.type === "rich_text"
+          ? "Quest Name"
+          : dbProps["Project Name"]?.type === "rich_text"
+            ? "Project Name"
+            : dbProps["Project"]?.type === "rich_text"
+              ? "Project"
+              : dbProps["Quest"]?.type === "rich_text"
+                ? "Quest"
+                : undefined;
+        if (questsTextPropName && projectTitle) {
+          const queryRes = await notion.databases.query({
+            database_id: databaseId,
+            filter: {
+              property: questsTextPropName,
+              rich_text: { contains: projectTitle },
+            },
+            sorts: [{ timestamp: "last_edited_time", direction: "descending" }],
+          });
+          if ((queryRes?.results || []).length > 0) {
+            targetPageId = (queryRes.results[0] as any)?.id || null;
+          }
+        }
+      }
+
+      // If still not found, try title contains projectTitle
+      if (!targetPageId && titlePropName && projectTitle) {
+        const queryRes = await notion.databases.query({
+          database_id: databaseId,
+          filter: {
+            property: titlePropName,
+            title: { contains: projectTitle },
+          },
+          sorts: [{ timestamp: "last_edited_time", direction: "descending" }],
+        });
+        if ((queryRes?.results || []).length > 0) {
+          targetPageId = (queryRes.results[0] as any)?.id || null;
+        }
+      }
+    } catch (e) {
+      // Non-blocking: if query fails, we'll create a new page below
+      if (process.env.NODE_ENV !== "production") {
+        console.warn("Upsert lookup failed, will create new page:", e);
+      }
+    }
+
+    if (targetPageId) {
+      // Update the existing page with all properties
+      const response = await notion.pages.update({
+        page_id: targetPageId,
+        properties,
+      });
+      return response.id;
+    } else {
+      // Create a new page
+      const response = await notion.pages.create({
+        parent: {
+          database_id: databaseId,
+        },
+        properties,
+      });
+      return response.id;
+    }
     return response.id;
   } catch (error) {
     console.error("Error creating Notion entry:", error);
@@ -238,7 +351,7 @@ export const getDatabaseProperties = async (databaseId: string) => {
     const database = await notion.databases.retrieve({
       database_id: databaseId
     });
-    
+
     return database.properties;
   } catch (error) {
     console.error("Error retrieving database properties:", error);
