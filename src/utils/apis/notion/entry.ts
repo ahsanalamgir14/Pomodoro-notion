@@ -133,12 +133,35 @@ export const createNotionEntry = async ({
       const defaultStatus = status || "Completed";
       const propType = dbProps[statusPropName]?.type;
       // Try to resolve to an existing option if needed
+      const statusConfig = dbProps[statusPropName]?.status;
       const options = (propType === "status"
-        ? (dbProps[statusPropName]?.status?.options || [])
-        : (dbProps[statusPropName]?.select?.options || [])) as Array<{ name: string }>;
-      const resolvedStatus = options?.some(o => o?.name === defaultStatus)
-        ? defaultStatus
-        : (options?.find(o => /done|complete|completed|finished/i.test(o?.name))?.name || options?.[0]?.name || defaultStatus);
+        ? (statusConfig?.options || [])
+        : (dbProps[statusPropName]?.select?.options || [])) as Array<{ name: string; id?: string; color?: string; group_id?: string }>;
+
+      let resolvedStatus: string | undefined = undefined;
+
+      // 1) Exact match with requested status name
+      resolvedStatus = options?.some(o => o?.name === defaultStatus) ? defaultStatus : undefined;
+
+      // 2) If property type is 'status', prefer an option from the 'Complete' group
+      if (!resolvedStatus && propType === "status") {
+        const groups: Array<{ id: string; name: string }> = statusConfig?.groups || [];
+        const completeGroupId = groups.find(g => /done|complete|completed|finished/i.test(g?.name || ""))?.id;
+        if (completeGroupId) {
+          const optionInComplete = options.find(o => o.group_id === completeGroupId)?.name;
+          if (optionInComplete) resolvedStatus = optionInComplete;
+        }
+      }
+
+      // 3) Regex match on option names
+      if (!resolvedStatus) {
+        resolvedStatus = options?.find(o => /done|complete|completed|finished/i.test(o?.name || ""))?.name;
+      }
+
+      // 4) Fallback to first option or requested default
+      if (!resolvedStatus) {
+        resolvedStatus = options?.[0]?.name || defaultStatus;
+      }
 
       if (propType === "status") {
         properties[statusPropName] = { status: { name: resolvedStatus } };
@@ -206,9 +229,23 @@ export const createNotionEntry = async ({
       }
     }
 
+    // Explicit override: if a property exactly named "Duration (minutes)" exists as number, set it
+    if (dbProps["Duration (minutes)"]?.type === "number") {
+      properties["Duration (minutes)"] = { number: timerMinutes };
+    }
+
+    if (dbProps["Duration"]?.type === "number") {
+      properties["Duration"] = { number: timerMinutes };
+    }
+
     // Link to Quest via relation if present
     if (questRelationPropName && projectId) {
       properties[questRelationPropName] = { relation: [{ id: projectId }] };
+    }
+
+    // Explicit override: if a property exactly named "Quests" exists as relation, set it
+    if (projectId && dbProps["Quests"]?.type === "relation") {
+      properties["Quests"] = { relation: [{ id: projectId }] };
     }
 
     // Explicit support: If a property named "Quest Name" is a relation, set it too
@@ -279,6 +316,11 @@ export const createNotionEntry = async ({
           properties[tagsPropName] = { rich_text: [{ text: { content: tags.join(", ") } }] };
         }
       }
+    }
+
+    // Explicit override: if a property exactly named "Tags" exists as multi_select, set it
+    if (tags && tags.length > 0 && dbProps["Tags"]?.type === "multi_select") {
+      properties["Tags"] = { multi_select: tags.map(name => ({ name })) };
     }
 
     // Create or update the page in Notion
