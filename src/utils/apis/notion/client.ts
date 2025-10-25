@@ -12,6 +12,8 @@ export interface SaveToNotionParams {
   status?: string;
   notes?: string;
   tags?: string[];
+  questPageId?: string;
+  questPageIds?: string[];
 }
 
 export const savePomoSessionToNotion = async (params: SaveToNotionParams) => {

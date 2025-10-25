@@ -7,6 +7,7 @@ export type DatabaseOption = { label: string; value: string; icon?: string | nul
 
 export type PomoSessionConfig = {
   selectedProject: ProjectOption | null;
+  selectedQuests: ProjectOption[];
   selectedTags: TagOption[];
   selectedDatabase: DatabaseOption | null; // Status/source DB
   selectedTrackingDatabase: DatabaseOption | null; // Time tracker/target DB
@@ -18,6 +19,7 @@ export type UsePomoSessionConfigReturn = {
   availableDatabases: DatabaseOption[];
   isLoadingDatabases: boolean;
   setSelectedProject: (project: ProjectOption | null) => void;
+  setSelectedQuests: (quests: ProjectOption[]) => void;
   setSelectedTags: (tags: TagOption[]) => void;
   setSelectedDatabase: (database: DatabaseOption | null) => void;
   setSelectedTrackingDatabase: (database: DatabaseOption | null) => void;
@@ -49,6 +51,7 @@ export const usePomoSessionConfig = ({
   const [{ project }] = usePomoState();
   const [config, setConfig] = useState<PomoSessionConfig>({
     selectedProject: null,
+    selectedQuests: [],
     selectedTags: [],
     selectedDatabase: null,
     selectedTrackingDatabase: null,
@@ -57,11 +60,7 @@ export const usePomoSessionConfig = ({
 
   // Convert availableDatabases to the expected format
   const convertedDatabases: DatabaseOption[] = useMemo(
-    () => availableDatabases.map(db => ({
-      label: db.title,
-      value: db.id,
-      icon: db.icon ?? null,
-    })),
+    () => availableDatabases.map(db => ({ label: db.title, value: db.id, icon: db.icon ?? null })),
     [availableDatabases]
   );
 
@@ -69,6 +68,10 @@ export const usePomoSessionConfig = ({
 
   const setSelectedProject = useCallback((project: ProjectOption | null) => {
     setConfig(prev => ({ ...prev, selectedProject: project }));
+  }, []);
+
+  const setSelectedQuests = useCallback((quests: ProjectOption[]) => {
+    setConfig(prev => ({ ...prev, selectedQuests: quests }));
   }, []);
 
   const setSelectedTags = useCallback((tags: TagOption[]) => {
@@ -143,6 +146,7 @@ export const usePomoSessionConfig = ({
       status: "Completed",
       notes: "",
       tags: (config.selectedTags || []).map(t => t.label),
+      questPageIds: (config.selectedQuests || []).map(q => q.value),
     };
 
     await savePomoSessionToNotion(saveParams);
@@ -157,6 +161,7 @@ export const usePomoSessionConfig = ({
     availableDatabases: convertedDatabases,
     isLoadingDatabases,
     setSelectedProject,
+    setSelectedQuests,
     setSelectedTags,
     setSelectedDatabase,
     setSelectedTrackingDatabase,

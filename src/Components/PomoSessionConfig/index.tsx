@@ -18,6 +18,11 @@ const DatabaseSelection = dynamic(
   { loading: () => <div>Loading...</div> }
 );
 
+const QuestSelection = dynamic(
+  () => import("../QuestSelection"),
+  { loading: () => <div>Loading...</div> }
+);
+
 interface ProjectOption {
   label: string;
   value: string;
@@ -38,8 +43,10 @@ interface DatabaseOption {
 interface PomoSessionConfigProps {
   // Project selection
   selectedProject: ProjectOption | null;
+  selectedQuests?: ProjectOption[];
   projects: ProjectOption[];
   onProjectSelect: (project: ProjectOption | null) => void;
+  onQuestsSelect?: (quests: ProjectOption[]) => void;
   
   // Tag selection
   selectedTags: TagOption[];
@@ -61,8 +68,10 @@ interface PomoSessionConfigProps {
 
 export default function PomoSessionConfig({
   selectedProject,
+  selectedQuests,
   projects,
   onProjectSelect,
+  onQuestsSelect,
   selectedTags,
   availableTags,
   onTagsSelect,
@@ -113,13 +122,25 @@ export default function PomoSessionConfig({
       {/* Expanded Content */}
       {expanded && (
         <div className="px-4 pb-4 space-y-4 border-t border-gray-100">
+          {/* Quest Relation Selection (shown before Project, disabled until Project selected) */}
+          {onQuestsSelect && (
+            <div>
+              <QuestSelection
+                disabled={disabled || !selectedProject}
+                projectId={selectedProject?.value || null}
+                values={selectedQuests || []}
+                onChange={onQuestsSelect}
+              />
+            </div>
+          )}
+
           {/* Project Selection */}
           <div>
             <ProjectSelection
               disabled={disabled}
-              value={selectedProject}
+              value={selectedProject as unknown as Record<string, unknown>}
               handleSelect={onProjectSelect}
-              projects={projects}
+              projects={projects as unknown as Array<Record<string, unknown>>}
             />
           </div>
 

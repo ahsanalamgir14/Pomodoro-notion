@@ -19,6 +19,8 @@ export interface CreateNotionEntryParams {
   notes?: string; // optional notes content
   tags?: string[]; // optional tags
   accessToken?: string; // optional OAuth token to use for this request
+  questPageId?: string; // optional explicit quest page to relate
+  questPageIds?: string[]; // optional multiple quest pages to relate
 }
 
 export const createNotionEntry = async ({
@@ -33,6 +35,8 @@ export const createNotionEntry = async ({
   notes,
   tags,
   accessToken,
+  questPageId,
+  questPageIds,
 }: CreateNotionEntryParams) => {
   try {
     const notion = getNotionClient(accessToken);
@@ -238,14 +242,19 @@ export const createNotionEntry = async ({
       properties["Duration"] = { number: timerMinutes };
     }
 
+    // Determine which page ID to use for quest relation
+    const relationTargetIds = (questPageIds && questPageIds.length > 0)
+      ? questPageIds
+      : (questPageId ? [questPageId] : (projectId ? [projectId] : []));
+
     // Link to Quest via relation if present
-    if (questRelationPropName && projectId) {
-      properties[questRelationPropName] = { relation: [{ id: projectId }] };
+    if (questRelationPropName && relationTargetIds.length > 0) {
+      properties[questRelationPropName] = { relation: relationTargetIds.map(id => ({ id })) };
     }
 
     // Explicit override: if a property exactly named "Quests" exists as relation, set it
-    if (projectId && dbProps["Quests"]?.type === "relation") {
-      properties["Quests"] = { relation: [{ id: projectId }] };
+    if (relationTargetIds.length > 0 && dbProps["Quests"]?.type === "relation") {
+      properties["Quests"] = { relation: relationTargetIds.map(id => ({ id })) };
     }
 
     // Explicit support: If a property named "Quest Name" is a relation, set it too
@@ -255,8 +264,8 @@ export const createNotionEntry = async ({
 
     // Also try linking "Project" relation if present
     const projectRelationPropName = Object.entries(dbProps).find(([k, p]: any) => p?.type === "relation" && (k.toLowerCase().includes("project") || (sourceDatabaseId && p?.relation?.database_id === sourceDatabaseId)))?.[0];
-    if (projectRelationPropName && projectId) {
-      properties[projectRelationPropName] = { relation: [{ id: projectId }] };
+    if (projectRelationPropName && relationTargetIds.length > 0) {
+      properties[projectRelationPropName] = { relation: relationTargetIds.map(id => ({ id })) };
     }
 
     // Quests/Project as text (rich_text) if the database provides it

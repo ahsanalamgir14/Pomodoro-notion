@@ -23,7 +23,9 @@ export default async function handler(
         targetDatabaseId,
         status,
         notes,
-        tags
+        tags,
+        questPageId,
+        questPageIds
       } = req.body;
 
       // Validate required fields
@@ -72,6 +74,8 @@ export default async function handler(
           status: status || "Completed",
           notes: notes || "",
           tags,
+          questPageId,
+          questPageIds,
           accessToken: userData.accessToken,
         });
 
