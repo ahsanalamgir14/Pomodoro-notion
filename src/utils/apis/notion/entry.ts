@@ -109,6 +109,14 @@ export const createNotionEntry = async ({
     // Prepare properties for the Notion page (aligned to Time Tracker schema)
     const properties: any = {};
 
+    // Fallback rich_text properties for non-settable Start/End (e.g., created_time)
+    const startTextPropName = dbProps["Start Time (text)"]?.type === "rich_text"
+      ? "Start Time (text)"
+      : Object.entries(dbProps).find(([k, p]: any) => /start\s*time/i.test(k) && p?.type === "rich_text")?.[0];
+    const endTextPropName = dbProps["End Time (text)"]?.type === "rich_text"
+      ? "End Time (text)"
+      : Object.entries(dbProps).find(([k, p]: any) => /end\s*time|finish/i.test(k) && p?.type === "rich_text")?.[0];
+
     // Title
     properties[titlePropName] = {
       title: [
@@ -176,8 +184,16 @@ export const createNotionEntry = async ({
       }
     }
 
-    // Duration (only set when endTime provided)
-    if (durationPropName && endTime) {
+    // Fallback: write Start/End as rich_text when date properties are not available/settable
+    if (!startPropName && startTextPropName) {
+      properties[startTextPropName] = { rich_text: [{ text: { content: startDate.toLocaleString() } }] };
+    }
+    if (!endPropName && endTime && endTextPropName) {
+      properties[endTextPropName] = { rich_text: [{ text: { content: endDate.toLocaleString() } }] };
+    }
+
+    // Duration: always set using minutes (prefer number; fallback rich_text)
+    if (durationPropName) {
       const propType = dbProps[durationPropName]?.type;
       if (propType === "number") {
         properties[durationPropName] = { number: timerMinutes };
@@ -193,6 +209,11 @@ export const createNotionEntry = async ({
     // Link to Quest via relation if present
     if (questRelationPropName && projectId) {
       properties[questRelationPropName] = { relation: [{ id: projectId }] };
+    }
+
+    // Explicit support: If a property named "Quest Name" is a relation, set it too
+    if (projectId && dbProps["Quest Name"]?.type === "relation") {
+      properties["Quest Name"] = { relation: [{ id: projectId }] };
     }
 
     // Also try linking "Project" relation if present
@@ -235,11 +256,19 @@ export const createNotionEntry = async ({
       };
     }
 
-    // Tags handling: multi_select/select/rich_text
+    // Tags handling: prefer properties named like Tags/Category/Label; avoid arbitrary selects
     if (tags && tags.length > 0) {
-      const tagsPropName = dbProps["Tags"]?.type
-        ? "Tags"
-        : Object.entries(dbProps).find(([, p]: any) => p?.type === "multi_select" || p?.type === "select" || p?.type === "rich_text")?.[0];
+      let tagsPropName: string | undefined = undefined;
+      if (dbProps["Tags"]?.type) {
+        tagsPropName = "Tags";
+      } else {
+        const preferredName = Object.entries(dbProps).find(([k, p]: any) => (
+          (p?.type === "multi_select" || p?.type === "select" || p?.type === "rich_text") &&
+          (/tag|tags|label|labels|category|categories/i.test(k))
+        ))?.[0] as string | undefined;
+        tagsPropName = preferredName;
+      }
+
       if (tagsPropName) {
         const t = dbProps[tagsPropName]?.type;
         if (t === "multi_select") {
@@ -337,7 +366,6 @@ export const createNotionEntry = async ({
       });
       return response.id;
     }
-    return response.id;
   } catch (error) {
     console.error("Error creating Notion entry:", error);
     throw new Error(`Failed to create Notion entry: ${error instanceof Error ? error.message : "Unknown error"}`);
