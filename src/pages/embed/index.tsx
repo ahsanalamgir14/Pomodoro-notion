@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import { getConnectedPages } from "../../utils/apis/notion/client";
+import { NotionCache } from "../../utils/notionCache";
 
 type ThemeType = "light" | "dark";
 
@@ -10,6 +11,7 @@ export default function CreateEmbedPage() {
   const [loadingPages, setLoadingPages] = useState(false);
   const [selectedPageId, setSelectedPageId] = useState<string>("");
   const [theme, setTheme] = useState<ThemeType>("light");
+  const [isConnected, setIsConnected] = useState(false);
 
   // Style options
   const [widgetBg, setWidgetBg] = useState<string>("#ffffff");
@@ -25,7 +27,15 @@ export default function CreateEmbedPage() {
     const run = async () => {
       try {
         setLoadingPages(true);
-        const data = await getConnectedPages({ userId: "notion-user" });
+        const userData = typeof window !== "undefined" ? NotionCache.getUserData() : null;
+        const userEmail = userData?.email;
+        setIsConnected(!!userData?.accessToken);
+        if (!userEmail) {
+          setPages([]);
+          setSelectedPageId("");
+          return;
+        }
+        const data = await getConnectedPages({ userId: userEmail });
         setPages(data.items);
         if (data.items[0]) setSelectedPageId(data.items[0].id);
       } catch (e) {
@@ -37,14 +47,11 @@ export default function CreateEmbedPage() {
     run();
   }, []);
 
-  const containerClasses = useMemo(() => {
-    return theme === "dark" ? "bg-neutral-900 text-neutral-100" : "bg-white text-neutral-900";
-  }, [theme]);
-
+  // Theme applies only to preview UI — enforce full-card dark/light styles
   const previewCardStyle: React.CSSProperties = {
-    backgroundColor: widgetBg,
-    color: widgetColor,
-    border: `1px solid ${inputBorder}`,
+    backgroundColor: theme === "dark" ? "#111827" : "#ffffff",
+    color: theme === "dark" ? "#f9fafb" : "#111827",
+    border: `1px solid ${theme === "dark" ? "#374151" : inputBorder}`,
     borderRadius: 12,
     padding: 16,
     width: 380,
@@ -59,15 +66,25 @@ export default function CreateEmbedPage() {
 
   const inputStyle: React.CSSProperties = {
     width: inputWidth,
-    border: `1px solid ${inputBorder}`,
+    border: `1px solid ${theme === "dark" ? "#374151" : inputBorder}`,
     borderRadius: 8,
     padding: "8px 12px",
     backgroundColor: theme === "dark" ? "#0a0a0a" : "#ffffff",
     color: theme === "dark" ? "#f5f5f5" : "#111827",
   };
 
+  const secondaryButtonStyle: React.CSSProperties = {
+    backgroundColor: theme === "dark" ? "#374151" : "#e5e7eb",
+    color: theme === "dark" ? "#f9fafb" : "#111827",
+    border: `1px solid ${theme === "dark" ? "#4b5563" : "#d1d5db"}`,
+    borderRadius: 8,
+    padding: "8px 12px",
+    fontWeight: 500,
+  };
+
   return (
-    <div className={`min-h-screen ${containerClasses}`}> 
+    // Only default page styles; theme applied in preview UI only
+    <div className={"min-h-screen"}> 
       <Head>
         <title>Create Embed • Pomodoro for Notion</title>
       </Head>
@@ -100,6 +117,14 @@ export default function CreateEmbedPage() {
                   <option key={p.id} value={p.id}>{p.title}</option>
                 ))}
               </select>
+              {!isConnected && (
+                <div className="mt-2 flex items-center gap-2">
+                  <span className="text-xs text-red-600">Not connected to Notion.</span>
+                  <Link href="/">
+                    <span className="text-xs rounded bg-blue-600 px-2 py-1 text-white hover:bg-blue-500">Connect Notion</span>
+                  </Link>
+                </div>
+              )}
 
               {/* Theme */}
               <div className="mt-4">
@@ -230,7 +255,7 @@ export default function CreateEmbedPage() {
               <div style={previewCardStyle}>
                 <div style={timerStyle}>24:37</div>
                 <div className="mt-3 flex items-center gap-3">
-                  <button className="rounded-md bg-neutral-200 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-neutral-300">Pause</button>
+                  <button style={secondaryButtonStyle}>Pause</button>
                   <button className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">Complete</button>
                 </div>
               </div>
