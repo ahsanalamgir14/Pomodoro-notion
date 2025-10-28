@@ -3,15 +3,17 @@ import React, { useState } from "react";
 import Link from "next/link";
 import Footer from "../Components/Footer";
 import GoogleButton from "../Components/GoogleButton";
+import { useRouter } from "next/router";
 
 export default function Login() {
+  const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState<string | null>(null);
 
-  const onSubmit = (e: React.FormEvent) => {
+  const onSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setSuccess(null);
@@ -21,8 +23,22 @@ export default function Login() {
       return;
     }
 
-    // Demo-only: no backend call
-    setSuccess("Signed in (demo only). No backend connected.");
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email, password })
+      });
+      const json = await res.json().catch(() => ({}));
+      if (!res.ok) {
+        setError(json?.error || 'Login failed');
+        return;
+      }
+      setSuccess('Signed in successfully');
+      router.push('/');
+    } catch (err) {
+      setError('Login failed');
+    }
   };
 
   return (
@@ -38,7 +54,7 @@ export default function Login() {
       <div className="mt-8 w-full max-w-md rounded-xl bg-white p-6 shadow-md">
         <h3 className="text-center text-2xl font-bold text-gray-900">Sign in</h3>
         <p className="mt-2 text-center text-sm text-gray-600">
-          This is a demo login. It does not connect to a backend.
+          Sign in with your email and password to continue.
         </p>
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
           <div>
@@ -93,6 +109,13 @@ export default function Login() {
           >
             Sign in
           </button>
+
+          <div className="mt-3 text-center text-sm">
+            <span className="text-gray-600">Don't have an account?</span>{" "}
+            <Link href="/signup">
+              <a className="text-indigo-600 hover:text-indigo-700">Sign up</a>
+            </Link>
+          </div>
         </form>
 
         <div className="mt-4">

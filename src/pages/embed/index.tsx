@@ -307,7 +307,7 @@ export default function CreateEmbedPage() {
                     </button>
                   </div>
                   <p className="mt-1 text-xs opacity-60">Paste this link in a Notion Embed block.</p>
-                  {isAuthenticated && (
+                  {isAuthenticated ? (
                     <div className="mt-2 flex items-center gap-2">
                       <button
                         className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500"
