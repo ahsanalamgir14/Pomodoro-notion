@@ -22,6 +22,11 @@ export default function CreateEmbedPage() {
   const [timerFontSize, setTimerFontSize] = useState<number>(48);
   const [embedLink, setEmbedLink] = useState<string>("");
   const [saveMsg, setSaveMsg] = useState<string>("");
+  // Session + account saves
+  const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+  const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
+  const [savedEmbeds, setSavedEmbeds] = useState<Array<{ id: string; title: string; link: string; createdAt: number }>>([]);
+  const [accountSaveMsg, setAccountSaveMsg] = useState<string>("");
 
   useEffect(() => {
     const run = async () => {
@@ -45,6 +50,31 @@ export default function CreateEmbedPage() {
       }
     };
     run();
+  }, []);
+  // Check cookie-based session and load saved embeds
+  useEffect(() => {
+    let mounted = true;
+    fetch('/api/session')
+      .then((r) => r.json())
+      .then((data) => {
+        if (!mounted) return;
+        if (data?.isAuthenticated) {
+          setIsAuthenticated(true);
+          setSessionEmail(data?.email || null);
+          fetch('/api/embeds')
+            .then((r) => r.json())
+            .then((json) => {
+              if (!mounted) return;
+              setSavedEmbeds(json?.items || []);
+            })
+            .catch(() => {});
+        } else {
+          setIsAuthenticated(false);
+          setSessionEmail(null);
+        }
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
   }, []);
 
   // Theme applies only to preview UI — enforce full-card dark/light styles
@@ -80,6 +110,52 @@ export default function CreateEmbedPage() {
     borderRadius: 8,
     padding: "8px 12px",
     fontWeight: 500,
+  };
+  // Save current embedLink to account via API
+  const saveToAccount = async () => {
+    try {
+      setAccountSaveMsg("");
+      if (!isAuthenticated || !embedLink) {
+        setAccountSaveMsg("Login required or missing link.");
+        return;
+      }
+      const title = pages.find((p) => p.id === selectedPageId)?.title || "Untitled Embed";
+      const settings = {
+        pageId: selectedPageId,
+        theme,
+        widgetBg,
+        widgetColor,
+        inputWidth,
+        inputBorder,
+        timerColor,
+        timerFontSize,
+      };
+      const res = await fetch('/api/embeds', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ id: selectedPageId || 'default', title, link: embedLink, config: settings }),
+      });
+      if (!res.ok) {
+        const err = await res.json().catch(() => ({}));
+        setAccountSaveMsg(err?.error || 'Failed to save link');
+        return;
+      }
+      const json = await res.json();
+      setSavedEmbeds(json?.items || []);
+      setAccountSaveMsg('Saved to account.');
+    } catch (e) {
+      setAccountSaveMsg('Failed to save link');
+    }
+  };
+  const deleteSavedLink = async (link: string) => {
+    try {
+      const res = await fetch(`/api/embeds?link=${encodeURIComponent(link)}`, { method: 'DELETE' });
+      if (!res.ok) return;
+      const json = await res.json();
+      setSavedEmbeds(json?.items || []);
+    } catch (e) {
+      // ignore
+    }
   };
 
   return (
@@ -231,9 +307,50 @@ export default function CreateEmbedPage() {
                     </button>
                   </div>
                   <p className="mt-1 text-xs opacity-60">Paste this link in a Notion Embed block.</p>
+                  {isAuthenticated && (
+                    <div className="mt-2 flex items-center gap-2">
+                      <button
+                        className="rounded-md bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500"
+                        onClick={saveToAccount}
+                      >
+                        Save Link to Account
+                      </button>
+                      {accountSaveMsg && <span className="text-xs opacity-70">{accountSaveMsg}</span>}
+                    </div>
+                  ) : (
+                    <p className="mt-1 text-xs opacity-60">Sign in via Notion to save links to your account.</p>
+                  )}
                 </div>
               )}
             </div>
+            {isAuthenticated && (
+              <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
+                <h2 className="mb-3 text-lg font-medium">Saved Embeds</h2>
+                {savedEmbeds.length === 0 ? (
+                  <p className="text-sm opacity-70">No saved links yet.</p>
+                ) : (
+                  <ul className="space-y-2">
+                    {savedEmbeds.map((item) => (
+                      <li key={item.link} className="flex items-center gap-2">
+                        <span className="flex-1 text-sm">{item.title}</span>
+                        <button
+                          className="rounded-md bg-neutral-200 px-3 py-1 text-sm hover:bg-neutral-300 dark:bg-neutral-700 dark:text-white"
+                          onClick={() => { if (typeof window !== 'undefined') navigator.clipboard.writeText(item.link); }}
+                        >
+                          Copy
+                        </button>
+                        <button
+                          className="rounded-md bg-red-600 px-3 py-1 text-sm font-medium text-white hover:bg-red-500"
+                          onClick={() => deleteSavedLink(item.link)}
+                        >
+                          Delete
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            )}
           </div>
 
           {/* Right column: Previews */}

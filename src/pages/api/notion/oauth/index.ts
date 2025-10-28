@@ -67,6 +67,17 @@ export default async function handler(
         });
         console.log("Notion user created successfully");
         
+        // Set minimal cookie session for the connected user
+        try {
+          const secureFlag = process.env.NODE_ENV === "production" ? "Secure; " : "";
+          res.setHeader(
+            "Set-Cookie",
+            `session_user=${encodeURIComponent(userEmail)}; Path=/; HttpOnly; ${secureFlag}SameSite=Lax; Max-Age=${60 * 60 * 24 * 30}` // 30 days
+          );
+        } catch (cookieErr) {
+          console.warn("Failed to set session cookie:", cookieErr);
+        }
+
         // Redirect with success and cache data in client
         const cacheData = encodeURIComponent(JSON.stringify({
           accessToken: access_token,
