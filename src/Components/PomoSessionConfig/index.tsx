@@ -37,7 +37,7 @@ interface TagOption {
 interface DatabaseOption {
   label: string;
   value: string;
-  icon?: string;
+  icon?: string | null;
 }
 
 interface PomoSessionConfigProps {

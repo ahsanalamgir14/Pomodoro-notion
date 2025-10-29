@@ -2,7 +2,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { usePomoState } from "../utils/Context/PomoContext/Context";
 
 export type ProjectOption = { label: string; value: string };
-export type TagOption = { label: string; value: string };
+export type TagOption = { label: string; value: string; color: string };
 export type DatabaseOption = { label: string; value: string; icon?: string | null };
 
 export type PomoSessionConfig = {

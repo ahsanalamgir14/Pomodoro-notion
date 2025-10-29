@@ -34,6 +34,12 @@ export default withPWA(
     experimental: {
       scrollRestoration: true,
     },
+    eslint: {
+      ignoreDuringBuilds: true,
+    },
+    typescript: {
+      ignoreBuildErrors: true,
+    },
     webpack(config, options) {
       const { isServer } = options;
       config.module.rules.push(

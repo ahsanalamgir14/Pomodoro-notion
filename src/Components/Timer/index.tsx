@@ -41,7 +41,7 @@ export default function Timer({
 }: Props) {
   const timerScreen = useFullScreenHandle();
 
-  const [{ timerLabel, project, shouldTickSound, busyIndicator, startTime }, dispatch] = usePomoState();
+  const [{ timerLabel, project, shouldTickSound, busyIndicator, startTime, tickVolume }, dispatch] = usePomoState();
 
 
 
@@ -225,7 +225,9 @@ export default function Timer({
         </title>
       </Head>
 
-      <WakeLockNote showNote={showNote} />
+      {showNote && (
+        <WakeLockNote type={showNote} onCloseClick={() => setNote(null)} />
+      )}
 
       <FullScreen handle={timerScreen}>
         <div
@@ -300,7 +302,7 @@ export default function Timer({
                   <Switch
                     checked={shouldTickSound}
                     onChange={handleTickChange}
-                    label="Ticking"
+                    text="Ticking"
                   />
                 </div>
                 <div className="flex items-center gap-3">
@@ -314,7 +316,14 @@ export default function Timer({
                         onClick={() => setPopover(!showPopover)}
                         className="h-5 w-5 cursor-pointer text-gray-600"
                       />
-                      <PopOver visible={showPopover} />
+                      <PopOver visible={showPopover} 
+                        defaultValue={tickVolume * 100}
+                        value={"tick-volume"}
+                        disabled={!shouldTickSound}
+                        handleChange={(level: number) => {
+                          dispatch({ type: actionTypes.CHANGE_TICK_VOLUME, payload: level });
+                        }}
+                      />
                     </div>
                   </OutsideClickHandler>
                   <button
@@ -356,21 +365,23 @@ export default function Timer({
             {/* Session Configuration */}
             <div className="w-full max-w-md">
               <PomoSessionConfig
-                projects={projects}
+                selectedTags={sessionConfig.config.selectedTags}
                 availableTags={availableTags}
-                selectedTags={selectedTags}
+                onTagsSelect={sessionConfig.setSelectedTags}
+                projects={projects}
                 selectedProject={sessionConfig.config.selectedProject}
+                selectedQuests={sessionConfig.config.selectedQuests}
+                onProjectSelect={sessionConfig.setSelectedProject}
+                onQuestsSelect={sessionConfig.setSelectedQuests}
                 selectedDatabase={sessionConfig.config.selectedDatabase}
                 selectedTrackingDatabase={sessionConfig.config.selectedTrackingDatabase}
                 availableDatabases={sessionConfig.availableDatabases}
-                onProjectSelect={sessionConfig.setSelectedProject}
-                onTagsSelect={sessionConfig.setSelectedTags}
                 onDatabaseSelect={sessionConfig.setSelectedDatabase}
                 onTrackingDatabaseSelect={sessionConfig.setSelectedTrackingDatabase}
                 isExpanded={sessionConfig.config.isExpanded}
-                onToggleExpanded={sessionConfig.setIsExpanded}
-                disabled={disableControls}
-              />
+                  onToggleExpanded={() => sessionConfig.setIsExpanded(!sessionConfig.config.isExpanded)}
+                  disabled={disableControls}
+                />
             </div>
           </div>
 
@@ -390,14 +401,22 @@ export default function Timer({
 }
 
 
-function PopOver({ visible } = { visible: false }) {
+interface PopOverProps {
+  visible?: boolean;
+  defaultValue: number;
+  value: string;
+  disabled?: boolean;
+  handleChange: (level: number) => void;
+}
+
+function PopOver({ visible = false, defaultValue, value, disabled, handleChange }: PopOverProps) {
   return (
     <div
       className={`${
         visible ? "block" : "hidden"
       } absolute bottom-8 left-1/2 z-10 w-48 -translate-x-1/2 transform rounded-lg border border-gray-200 bg-white p-3 shadow-lg`}
     >
-      <SoundLevel />
+      <SoundLevel defaultValue={defaultValue} value={value} disabled={disabled} handleChange={handleChange} />
     </div>
   );
 }

@@ -4,7 +4,7 @@ import Select from "react-select";
 interface DatabaseOption {
   label: string;
   value: string;
-  icon?: string;
+  icon?: string | null;
 }
 
 interface DatabaseSelectionProps {
