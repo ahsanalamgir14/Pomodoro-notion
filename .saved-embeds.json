@@ -1,1 +1,20 @@
-{}
+{
+  "notion-user": [
+    {
+      "id": "28b83b1b-345b-80e9-8956-e44cc657a09f",
+      "title": "Promo App Test",
+      "link": "http://localhost:3000/embed/widget?c=eyJwYWdlSWQiOiIyOGI4M2IxYi0zNDViLTgwZTktODk1Ni1lNDRjYzY1N2EwOWYiLCJ0aGVtZSI6ImRhcmsiLCJ3aWRnZXRCZyI6IiNmZmZmZmYiLCJ3aWRnZXRDb2xvciI6IiMxMTExMTEiLCJpbnB1dFdpZHRoIjozMjAsImlucHV0Qm9yZGVyIjoiI2QxZDVkYiIsInRpbWVyQ29sb3IiOiIjZmZmZmZmIiwidGltZXJGb250U2l6ZSI6NDh9",
+      "config": {
+        "pageId": "28b83b1b-345b-80e9-8956-e44cc657a09f",
+        "theme": "dark",
+        "widgetBg": "#ffffff",
+        "widgetColor": "#111111",
+        "inputWidth": 320,
+        "inputBorder": "#d1d5db",
+        "timerColor": "#ffffff",
+        "timerFontSize": 48
+      },
+      "createdAt": 1761752229718
+    }
+  ]
+}

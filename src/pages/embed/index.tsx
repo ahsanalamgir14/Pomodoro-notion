@@ -28,19 +28,25 @@ export default function CreateEmbedPage() {
   const [savedEmbeds, setSavedEmbeds] = useState<Array<{ id: string; title: string; link: string; createdAt: number }>>([]);
   const [accountSaveMsg, setAccountSaveMsg] = useState<string>("");
 
+  // Track Notion connection only
+  useEffect(() => {
+    const userData = typeof window !== "undefined" ? NotionCache.getUserData() : null;
+    setIsConnected(!!userData?.accessToken);
+  }, []);
+
+  // Fetch Notion pages using session email (fallback to cached email)
   useEffect(() => {
     const run = async () => {
       try {
         setLoadingPages(true);
-        const userData = typeof window !== "undefined" ? NotionCache.getUserData() : null;
-        const userEmail = userData?.email;
-        setIsConnected(!!userData?.accessToken);
-        if (!userEmail) {
+        const cacheEmail = typeof window !== "undefined" ? NotionCache.getUserData()?.email : null;
+        const email = sessionEmail || cacheEmail;
+        if (!email) {
           setPages([]);
           setSelectedPageId("");
           return;
         }
-        const data = await getConnectedPages({ userId: userEmail });
+        const data = await getConnectedPages({ userId: email });
         setPages(data.items);
         if (data.items[0]) setSelectedPageId(data.items[0].id);
       } catch (e) {
@@ -50,7 +56,8 @@ export default function CreateEmbedPage() {
       }
     };
     run();
-  }, []);
+  }, [sessionEmail]);
+
   // Check cookie-based session and load saved embeds
   useEffect(() => {
     let mounted = true;

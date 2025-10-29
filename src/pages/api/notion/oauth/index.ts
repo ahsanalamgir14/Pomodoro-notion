@@ -4,6 +4,16 @@ import { showError } from "../../../../utils/apis";
 // Use mock implementation for development to avoid Firebase setup
 import { createNotionUser } from "../../../../utils/apis/firebase/mockUserNotion";
 
+// Helper to read current session email if the user is logged in
+function getSessionEmail(req: NextApiRequest): string | null {
+  const cookieHeader = req.headers.cookie || "";
+  const cookies = Object.fromEntries(cookieHeader.split(";").map((c) => {
+    const [k, v] = c.trim().split("=");
+    return [k, v];
+  }));
+  return cookies["session_user"] ? decodeURIComponent(cookies["session_user"]) : null;
+}
+
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse
@@ -55,8 +65,9 @@ export default async function handler(
       console.log("Token exchange successful");
       const { access_token, ...workspaceData } = data;
       
-      // Use the simplified user identifier - no complex email logic needed
-      const userEmail = "notion-user";
+      // Prefer the logged-in user's email; otherwise fallback to simplified identifier
+      const existingEmail = getSessionEmail(req);
+      const userEmail = existingEmail || "notion-user";
       
       console.log("Creating Notion user in Firebase...");
       try {
@@ -67,18 +78,7 @@ export default async function handler(
         });
         console.log("Notion user created successfully");
         
-        // Set minimal cookie session for the connected user
-        try {
-          const secureFlag = process.env.NODE_ENV === "production" ? "Secure; " : "";
-          res.setHeader(
-            "Set-Cookie",
-            `session_user=${encodeURIComponent(userEmail)}; Path=/; HttpOnly; ${secureFlag}SameSite=Lax; Max-Age=${60 * 60 * 24 * 30}` // 30 days
-          );
-        } catch (cookieErr) {
-          console.warn("Failed to set session cookie:", cookieErr);
-        }
-
-        // Redirect with success and cache data in client
+        // Redirect with success and cache data in client (do NOT override session cookie)
         const cacheData = encodeURIComponent(JSON.stringify({
           accessToken: access_token,
           workspace: workspaceData,
