@@ -14,6 +14,7 @@ function Home() {
   const [cachedData, setCachedData] = useState<any>(null);
   const [isConnected, setIsConnected] = useState(false);
   const router = useRouter();
+  const [sessionEmail, setSessionEmail] = useState<string | null>(null);
 
   // Handle OAuth callback and cache data
   useEffect(() => {
@@ -72,8 +73,25 @@ function Home() {
     }
   }, [router.query, router.isReady]);
 
+  // Fetch session email to scope Notion queries to the logged-in user
+  useEffect(() => {
+    let mounted = true;
+    fetch('/api/session')
+      .then((r) => r.json())
+      .then((data) => {
+        if (!mounted) return;
+        if (data?.isAuthenticated) {
+          setSessionEmail(data?.email || null);
+        } else {
+          setSessionEmail(null);
+        }
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
   // Use a simple identifier for Notion connection - no user accounts needed
-  const userIdentifier = "notion-user";
+  const userIdentifier = sessionEmail || "notion-user";
   
   // Only fetch from API if we don't have cached data and user is connected
   const shouldFetch = isConnected && !cachedData;
@@ -261,4 +279,4 @@ function Home() {
   );
 }
 
-export default Home;
+export default Home;
