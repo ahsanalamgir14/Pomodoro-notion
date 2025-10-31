@@ -45,13 +45,32 @@ export default async function handler(
         console.error("Missing environment variables:", { clientId: !!clientId, clientSecret: !!clientSecret });
         throw new Error("OAuth configuration error");
       }
+
+      // Compute redirect_uri to satisfy Notion token exchange requirements
+      // Prefer explicit env, otherwise derive from forwarded headers
+      const redirectUriEnv = process.env.NEXT_PUBLIC_NOTION_AUTH_REDIRECT_URI;
+      const forwardedProto = (req.headers["x-forwarded-proto"] as string) || undefined;
+      const forwardedHost = (req.headers["x-forwarded-host"] as string) || undefined;
+      const hostHeader = req.headers.host;
+      const origin = forwardedProto && forwardedHost
+        ? `${forwardedProto}://${forwardedHost}`
+        : hostHeader
+          ? `https://${hostHeader}`
+          : undefined;
+      const redirectUri = redirectUriEnv || (origin ? `${origin}/api/notion/oauth` : undefined);
+
+      if (!redirectUri) {
+        console.error("Missing redirect URI for Notion token exchange");
+        return res.redirect("/?error=" + encodeURIComponent("OAuth redirect URI misconfigured. Please contact support."));
+      }
       
-      console.log("Starting token exchange with Notion API...");
+      console.log("Starting token exchange with Notion API...", { redirectUri });
       const { data } = await axios.post(
         "https://api.notion.com/v1/oauth/token",
         {
           grant_type: "authorization_code",
           code,
+          redirect_uri: redirectUri,
         },
         {
           headers: { "Content-Type": "application/json" },

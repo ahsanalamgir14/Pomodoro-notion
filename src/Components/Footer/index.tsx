@@ -1,17 +1,11 @@
 import Link from "next/link";
 
-export default function Footer() {
+type FooterProps = { showCredit?: boolean };
+
+export default function Footer({ showCredit = true }: FooterProps) {
   return (
     <footer className=" w-full gap-10 text-center">
-      <section>
-        <h1 className="font-extrabold leading-normal text-gray-700 ">
-          Made with <span className="text-purple-300">❤️ By </span>{" "}
-          <a href="https://github.com/robokishan">
-            <span className="underline">Kishan Joshi</span>
-          </a>
-        </h1>
-      </section>
-      <section className="mt-5">
+  <section className="mt-5">
         <Link href="/privacy">
           <a className="underline">Privacy Policy</a>
         </Link>
@@ -23,3 +17,4 @@ export default function Footer() {
     </footer>
   );
 }
+

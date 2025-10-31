@@ -267,7 +267,7 @@ function Home() {
                     Try refreshing or check Notion permissions for databases.
                   </p>
                   <section className="mt-10">
-                    <Footer />
+                    <Footer showCredit={false} />
                   </section>
                 </>
               )
@@ -279,4 +279,4 @@ function Home() {
   );
 }
 
-export default Home;
+export default Home;
