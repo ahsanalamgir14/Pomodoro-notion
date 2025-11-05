@@ -228,9 +228,11 @@ export const createNotionEntry = async ({
     }
 
     // Determine relation target ids
+    // Only use explicit quest page ids for quest relations.
+    // Avoid falling back to projectId for quest relations to prevent mismatched database relations.
     const rawRelationIds = (questPageIds && questPageIds.length > 0)
       ? questPageIds
-      : (questPageId ? [questPageId] : (projectId ? [projectId] : []));
+      : (questPageId ? [questPageId] : []);
 
     // Filter relation ids to match relation's database_id when available
     let filteredRelationIds = rawRelationIds;
@@ -253,21 +255,28 @@ export const createNotionEntry = async ({
       }
     } catch (_) { }
 
-    if (questRelationPropName && filteredRelationIds.length > 0) {
-      properties[questRelationPropName] = { relation: filteredRelationIds.map(id => ({ id })) };
+    if (questRelationPropName) {
+      if (filteredRelationIds.length > 0) {
+        properties[questRelationPropName] = { relation: filteredRelationIds.map(id => ({ id })) };
+      } else if (rawRelationIds.length > 0) {
+        // Fallback: attempt to set relation with provided quest ids even if filtering produced no matches.
+        // Notion will reject unmatched ids; this ensures we still write when database_id could not be resolved.
+        properties[questRelationPropName] = { relation: rawRelationIds.map(id => ({ id })) };
+      }
     }
 
     if (rawRelationIds.length > 0 && dbProps["Quests"]?.type === "relation") {
       properties["Quests"] = { relation: rawRelationIds.map(id => ({ id })) };
     }
 
-    if (projectId && dbProps["Quest Name"]?.type === "relation") {
-      properties["Quest Name"] = { relation: [{ id: projectId }] };
-    }
+    // Do NOT set "Quest Name" relation with projectId; only quest ids should populate quest relations
 
     const projectRelationPropName = Object.entries(dbProps).find(([k, p]: any) => p?.type === "relation" && (k.toLowerCase().includes("project") || (sourceDatabaseId && p?.relation?.database_id === sourceDatabaseId)))?.[0];
-    if (projectRelationPropName && rawRelationIds.length > 0) {
-      properties[projectRelationPropName] = { relation: rawRelationIds.map(id => ({ id })) };
+    if (projectRelationPropName) {
+      const projectRelationIds = (rawRelationIds.length > 0) ? rawRelationIds : (projectId ? [projectId] : []);
+      if (projectRelationIds.length > 0) {
+        properties[projectRelationPropName] = { relation: projectRelationIds.map(id => ({ id })) };
+      }
     }
 
     const questsTextPropName = dbProps["Quest Name"]?.type === "rich_text"
