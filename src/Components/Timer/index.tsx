@@ -97,12 +97,14 @@ export default function Timer({
     if (justStarted) {
       const adventurePageId = sessionConfig.config.selectedProject?.value;
       const projectTitle = sessionConfig.config.selectedProject?.label || projectName;
-      const questPageId = project?.value || adventurePageId; // fallback if UI chooses quest directly
+      // Prefer the top-level selected quest; fall back to project/adventure
+      const questPageId = (selectedQuests?.[0]?.value) || project?.value || adventurePageId;
+      const targetDatabaseId = sessionConfig.config.selectedTrackingDatabase?.value;
 
       // If resuming the same session, only update status back to In Progress
       if (lastStartTimeRef.current === startTime) {
         if (questPageId) {
-          updateQuestStatus({ userId: "notion-user", status: "In Progress", questPageId, adventurePageId })
+          updateQuestStatus({ userId: "notion-user", status: "In Progress", questPageId, adventurePageId, targetDatabaseId })
             .catch((e) => {
               if (process.env.NODE_ENV === "development") {
                 console.warn("Failed to set In Progress on resume:", e);
@@ -114,7 +116,7 @@ export default function Timer({
       }
 
       if (questPageId) {
-        startQuestWork({ userId: "notion-user", questPageId, projectTitle, adventurePageId })
+        startQuestWork({ userId: "notion-user", questPageId, projectTitle, adventurePageId, targetDatabaseId })
           .catch((e) => {
             if (process.env.NODE_ENV === "development") {
               console.warn("Failed to create tracker entry on start:", e);
@@ -124,7 +126,7 @@ export default function Timer({
       }
     }
     prevBusy.current = busyIndicator;
-  }, [busyIndicator, startTime, sessionConfig.config.selectedProject?.value, sessionConfig.config.selectedProject?.label, projectName, project?.value]);
+  }, [busyIndicator, startTime, sessionConfig.config.selectedProject?.value, sessionConfig.config.selectedProject?.label, projectName, project?.value, selectedQuests, sessionConfig.config.selectedTrackingDatabase?.value]);
 
   // Handle session completion and save to Notion if configured
   const handleSessionComplete = useCallback(async (sessionData: {

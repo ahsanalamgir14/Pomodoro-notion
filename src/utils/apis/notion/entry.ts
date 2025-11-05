@@ -94,7 +94,24 @@ export const createNotionEntry = async ({
           ? "Quest Name"
           : Object.entries(dbProps).find(([k, p]: any) => (k.toLowerCase().includes("quest") || k.toLowerCase().includes("project")) && p?.type === "relation")?.[0];
 
-    if (projectId && sourceDatabaseId) {
+    // Prefer matching the tracker relation property to the actual Quest pages' parent database
+    // This ensures we relate to the correct database instead of accidentally matching the source (Adventure) DB
+    try {
+      const firstQuestId = (questPageIds && questPageIds.length > 0) ? questPageIds[0] : (questPageId || undefined);
+      if (firstQuestId) {
+        const qPage = await notion.pages.retrieve({ page_id: firstQuestId });
+        const qParent = (qPage as any)?.parent;
+        const questDbId = qParent?.type === "database_id" ? qParent?.database_id : undefined;
+        if (questDbId) {
+          const relToQuestDb = Object.entries(dbProps).find(([, p]: any) => p?.type === "relation" && p?.relation?.database_id === questDbId);
+          if (relToQuestDb) questRelationPropName = relToQuestDb[0] as string;
+        }
+      }
+    } catch (_) { }
+
+    // As a fallback, if we didn't find a relation to the Quest DB, try matching to the source DB
+    // (useful when the tracker relates directly to the Adventure/Project)
+    if (projectId && sourceDatabaseId && !questRelationPropName) {
       try {
         const relMatch = Object.entries(dbProps).find(([, p]: any) => p?.type === "relation" && p?.relation?.database_id === sourceDatabaseId);
         if (relMatch) questRelationPropName = relMatch[0] as string;
