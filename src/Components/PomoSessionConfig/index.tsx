@@ -122,18 +122,6 @@ export default function PomoSessionConfig({
       {/* Expanded Content */}
       {expanded && (
         <div className="px-4 pb-4 space-y-4 border-t border-gray-100">
-          {/* Quest Relation Selection (shown before Project, disabled until Project selected) */}
-          {onQuestsSelect && (
-            <div>
-              <QuestSelection
-                disabled={disabled || !selectedProject}
-                projectId={selectedProject?.value || null}
-                values={selectedQuests || []}
-                onChange={onQuestsSelect}
-              />
-            </div>
-          )}
-
           {/* Project Selection */}
           <div>
             <ProjectSelection
@@ -143,6 +131,19 @@ export default function PomoSessionConfig({
               projects={projects as unknown as Array<Record<string, unknown>>}
             />
           </div>
+
+          {/* Quest Relation Selection (shown after Project, disabled until Project selected) */}
+          {onQuestsSelect && (
+            <div>
+              <label className="block text-xs font-medium text-gray-600 mb-1">Quests (relation)</label>
+              <QuestSelection
+                disabled={disabled || !selectedProject}
+                projectId={selectedProject?.value || null}
+                values={selectedQuests || []}
+                onChange={onQuestsSelect}
+              />
+            </div>
+          )}
 
           {/* Tags Selection */}
           <div>
