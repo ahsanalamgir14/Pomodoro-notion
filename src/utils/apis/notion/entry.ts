@@ -228,11 +228,27 @@ export const createNotionEntry = async ({
     }
 
     // Determine relation target ids
-    // Only use explicit quest page ids for quest relations.
-    // Avoid falling back to projectId for quest relations to prevent mismatched database relations.
-    const rawRelationIds = (questPageIds && questPageIds.length > 0)
+    // Prefer explicit quest page ids for quest relations.
+    let rawRelationIds = (questPageIds && questPageIds.length > 0)
       ? questPageIds
       : (questPageId ? [questPageId] : []);
+
+    // If no explicit quest ids provided, try to pull quests from the selected project page's own relation
+    // This mirrors the UI expectation: the project's associated Quests should be written to the tracker entry.
+    if (rawRelationIds.length === 0 && projectId) {
+      try {
+        const projPage: any = await notion.pages.retrieve({ page_id: projectId });
+        const projProps: Record<string, any> = projPage?.properties || {};
+        // Try to find a relation property named like Quests/Quest on the project page
+        const entry = Object.entries(projProps).find(([k, p]: any) => p?.type === "relation" && /quest|quests/i.test(k))
+          || Object.entries(projProps).find(([, p]: any) => p?.type === "relation");
+        const relItems: Array<{ id: string }> = entry ? (((entry[1] as any)?.relation) || []) : [];
+        const ids = relItems.map(r => r?.id).filter(Boolean) as string[];
+        if (ids.length > 0) {
+          rawRelationIds = ids;
+        }
+      } catch (_) { /* ignore */ }
+    }
 
     // Filter relation ids to match relation's database_id when available
     let filteredRelationIds = rawRelationIds;
