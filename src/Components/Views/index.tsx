@@ -22,6 +22,7 @@ export default function Views({
   projectName = "Please select project",
   databaseId,
   selectedTags = [],
+  selectedQuests = [],
   availableDatabases = [],
   projects = [],
   availableTags = [],
@@ -34,6 +35,10 @@ export default function Views({
     label: string;
     value: string;
     color: string;
+  }>;
+  selectedQuests?: Array<{
+    label: string;
+    value: string;
   }>;
   availableDatabases?: Array<{
     id: string;
@@ -69,6 +74,7 @@ export default function Views({
           projectName={projectName}
           currentDatabaseId={databaseId}
           selectedTags={selectedTags}
+          selectedQuests={selectedQuests}
           availableDatabases={availableDatabases}
           projects={projects}
           availableTags={availableTags}

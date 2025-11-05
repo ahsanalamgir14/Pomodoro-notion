@@ -27,6 +27,7 @@ type Props = {
   projects?: Array<{ label: string; value: string }>;
   availableTags?: Array<{ label: string; value: string; color: string }>;
   selectedTags?: Array<{ label: string; value: string; color: string }>;
+  selectedQuests?: Array<{ label: string; value: string }>;
   currentDatabaseId?: string;
   availableDatabases?: Array<{ id: string; title: string; icon?: string }>;
 };
@@ -36,6 +37,7 @@ export default function Timer({
   projects = [],
   availableTags = [],
   selectedTags = [],
+  selectedQuests = [],
   currentDatabaseId,
   availableDatabases = []
 }: Props) {
@@ -62,6 +64,7 @@ export default function Timer({
     projects,
     availableTags,
     selectedTags,
+    selectedQuests,
     currentDatabaseId,
     availableDatabases,
   });

@@ -9,6 +9,7 @@ import { useEffect, useMemo, useState } from "react";
 import Line from "../../Components/Line";
 import NotionTags from "../../Components/NotionTags";
 import ProjectSelection from "@/Components/ProjectSelection";
+import QuestSelection from "@/Components/QuestSelection";
 import Tabs from "../../Components/Tabs";
 import Views from "@/Components/Views";
 import useFormattedData from "../../hooks/useFormattedData";
@@ -252,6 +253,9 @@ export default function Pages({
     });
   };
 
+  // Top-level Quests (relation) selection, shown below Project like Tags
+  const [selectedQuestsTop, setSelectedQuestsTop] = useState<Array<{ label: string; value: string }>>([]);
+
   return (
     <>
       <main className=" mx-auto flex  flex-col  items-center  p-4 ">
@@ -286,6 +290,18 @@ export default function Pages({
                 />
               </div>
 
+              {/* Quests (relation) selection below project, disabled until project selected */}
+              <div>
+                <label className="block text-xs font-medium text-gray-600 mb-1">Quests (relation)</label>
+                <QuestSelection
+                  key={project?.value || "quest-select-top"}
+                  disabled={busyIndicator || !project?.value}
+                  projectId={project?.value || null}
+                  values={selectedQuestsTop}
+                  onChange={setSelectedQuestsTop}
+                />
+              </div>
+
               {/* Tags selection with spacing below project */}
               <div>
                 <NotionTags
@@ -304,6 +320,7 @@ export default function Pages({
               projectName={project?.label || "Please select project"}
               databaseId={databaseId}
               selectedTags={selectedProperties}
+              selectedQuests={selectedQuestsTop}
               availableDatabases={availableDatabases}
               projects={projects}
               availableTags={properties}
