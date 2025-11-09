@@ -205,10 +205,10 @@ export const createNotionEntry = async ({
     }
 
     if (!startPropName && startTextPropName) {
-      properties[startTextPropName] = { rich_text: [{ text: { content: startDate.toLocaleString() } }] };
+      properties[startTextPropName] = { rich_text: [{ type: "text", text: { content: startDate.toLocaleString() } }] };
     }
     if (!endPropName && endTime && endTextPropName) {
-      properties[endTextPropName] = { rich_text: [{ text: { content: endDate.toLocaleString() } }] };
+      properties[endTextPropName] = { rich_text: [{ type: "text", text: { content: endDate.toLocaleString() } }] };
     }
 
     // Duration: explicitly map numeric minutes
@@ -217,7 +217,7 @@ export const createNotionEntry = async ({
       if (propType === "number") {
         properties[durationPropName] = { number: timerMinutes };
       } else if (propType === "rich_text") {
-        properties[durationPropName] = { rich_text: [{ text: { content: String(timerMinutes) } }] };
+        properties[durationPropName] = { rich_text: [{ type: "text", text: { content: String(timerMinutes) } }] };
       }
     }
     if (dbProps["Duration (minutes)"]?.type === "number") {
@@ -295,26 +295,39 @@ export const createNotionEntry = async ({
       }
     }
 
-    const questsTextPropName = dbProps["Quest Name"]?.type === "rich_text"
-      ? "Quest Name"
-      : dbProps["Quest"]?.type === "rich_text"
-        ? "Quest"
-        : dbProps["Quests"]?.type === "rich_text"
-          ? "Quests"
-          : dbProps["Project Name"]?.type === "rich_text"
-            ? "Project Name"
-            : dbProps["Project"]?.type === "rich_text"
-              ? "Project"
-              : undefined;
+    const questsTextPropName = (
+      Object.entries(dbProps).find(([k, p]: any) => p?.type === "rich_text" && /quest|quests|task|tasks/i.test(k))?.[0]
+    ) as string | undefined;
 
     if (questsTextPropName) {
-      properties[questsTextPropName] = { rich_text: [{ text: { content: projectTitle } }] };
+      let questsTextContent = projectTitle;
+      try {
+        const idsForText = rawRelationIds.length > 0 ? rawRelationIds : [];
+        if (idsForText.length > 0) {
+          const titles = await Promise.all(idsForText.map(async (id) => {
+            try {
+              const q = await notion.pages.retrieve({ page_id: id });
+              const props: any = (q as any)?.properties || {};
+              const titleKey = Object.entries(props).find(([, p]: any) => p?.type === "title")?.[0];
+              const titleArr = titleKey ? (props[titleKey]?.title || []) : [];
+              const text = (titleArr[0]?.plain_text) || (titleArr[0]?.text?.content) || "";
+              return text.trim();
+            } catch (_) { return ""; }
+          }));
+          const names = titles.filter(Boolean);
+          if (names.length > 0) {
+            questsTextContent = names.join(", ");
+          }
+        }
+      } catch (_) { /* ignore text build errors */ }
+
+      properties[questsTextPropName] = { rich_text: [{ type: "text", text: { content: questsTextContent } }] };
     }
 
     if (dbProps["Notes"]?.type === "rich_text") {
       properties["Notes"] = {
         rich_text: [
-          { text: { content: `Session: ${timerMinutes} min | Start: ${startDate.toLocaleString()} | End: ${endDate.toLocaleString()}` } },
+          { type: "text", text: { content: `Session: ${timerMinutes} min | Start: ${startDate.toLocaleString()} | End: ${endDate.toLocaleString()}` } },
         ],
       };
     }
@@ -337,7 +350,7 @@ export const createNotionEntry = async ({
         } else if (t === "select") {
           properties[tagsPropName] = { select: { name: tags[0] } };
         } else if (t === "rich_text") {
-          properties[tagsPropName] = { rich_text: [{ text: { content: tags.join(", ") } }] };
+          properties[tagsPropName] = { rich_text: [{ type: "text", text: { content: tags.join(", ") } }] };
         }
       }
     }
