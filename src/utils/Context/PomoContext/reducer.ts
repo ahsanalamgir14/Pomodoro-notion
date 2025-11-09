@@ -16,7 +16,8 @@ export interface IAppState {
 
 export const DEFAULT_SESSION_TIMER = 1;
 export const DEFAULT_BREAK_TIEMR = 15;
-export const DEFAULT_TIMER_VALUE = DEFAULT_SESSION_TIMER * 60;
+// Set initial session timer (in seconds) to 10 for default start
+export const DEFAULT_TIMER_VALUE = 10;
 
 const timerInit = {
   breakValue: DEFAULT_BREAK_TIEMR,
@@ -31,7 +32,7 @@ const soundInit = {
 
 const session = {
   timerLabel: "Session",
-  // timerValue is the initial value of 1 minute multiplied by 60 to have it in seconds, easily decreasable by 1
+  // timerValue is the initial value in seconds for the session
   timerValue: DEFAULT_TIMER_VALUE, //2700, // TODO: for debug timer set 2
 } as const;
 

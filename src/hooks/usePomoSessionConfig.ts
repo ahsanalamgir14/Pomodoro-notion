@@ -39,12 +39,14 @@ export const usePomoSessionConfig = ({
   projects,
   availableTags,
   selectedTags,
+  selectedQuests = [],
   currentDatabaseId,
   availableDatabases = [],
 }: {
   projects: ProjectOption[];
   availableTags: TagOption[];
   selectedTags: TagOption[];
+  selectedQuests?: ProjectOption[];
   currentDatabaseId?: string;
   availableDatabases?: Array<{ id: string; title: string; icon?: string | null }>;
 }): UsePomoSessionConfigReturn => {
@@ -89,6 +91,19 @@ export const usePomoSessionConfig = ({
   const setIsExpanded = useCallback((expanded: boolean) => {
     setConfig(prev => ({ ...prev, isExpanded: expanded }));
   }, []);
+
+  // Sync in top-level selections when they change
+  useEffect(() => {
+    if (selectedTags && selectedTags.length >= 0) {
+      setConfig(prev => ({ ...prev, selectedTags }));
+    }
+  }, [selectedTags]);
+
+  useEffect(() => {
+    if (selectedQuests && selectedQuests.length >= 0) {
+      setConfig(prev => ({ ...prev, selectedQuests }));
+    }
+  }, [selectedQuests]);
 
   // Sync selected project from global Pomo context
   useEffect(() => {
