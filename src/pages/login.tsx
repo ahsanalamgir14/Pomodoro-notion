@@ -35,7 +35,8 @@ export default function Login() {
         return;
       }
       setSuccess('Signed in successfully');
-      router.push('/');
+      const redirectTarget = (router.query.redirect as string) || '/';
+      router.push(redirectTarget);
     } catch (err) {
       setError('Login failed');
     }
