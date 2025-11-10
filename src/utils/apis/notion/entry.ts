@@ -226,6 +226,9 @@ export const createNotionEntry = async ({
     if (dbProps["Duration"]?.type === "number") {
       properties["Duration"] = { number: timerMinutes };
     }
+    if (dbProps["Duration"]?.type === "rich_text") {
+      properties["Duration"] = { rich_text: [{ type: "text", text: { content: String(timerMinutes) } }] };
+    }
 
     // Determine relation target ids
     // Prefer explicit quest page ids for quest relations.
@@ -296,8 +299,14 @@ export const createNotionEntry = async ({
     }
 
     const questsTextPropName = (
-      Object.entries(dbProps).find(([k, p]: any) => p?.type === "rich_text" && /quest|quests|task|tasks/i.test(k))?.[0]
-    ) as string | undefined;
+      dbProps["Quests"]?.type === "rich_text"
+        ? "Quests"
+        : dbProps["Quest Name"]?.type === "rich_text"
+          ? "Quest Name"
+          : dbProps["Project Name"]?.type === "rich_text"
+            ? "Project Name"
+            : (Object.entries(dbProps).find(([k, p]: any) => p?.type === "rich_text" && /quest|quests|task|tasks/i.test(k))?.[0] as string | undefined)
+    );
 
     if (questsTextPropName) {
       let questsTextContent = projectTitle;
