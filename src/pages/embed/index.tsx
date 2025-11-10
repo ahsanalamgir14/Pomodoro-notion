@@ -31,10 +31,7 @@ export default function CreateEmbedPage() {
   // Data selections
   const [selectedTaskDbId, setSelectedTaskDbId] = useState<string>("");
   const [selectedSessionDbId, setSelectedSessionDbId] = useState<string>("");
-  const [selectedTaskId, setSelectedTaskId] = useState<string>("");
-  const [selectedTaskTitle, setSelectedTaskTitle] = useState<string>("");
   const [lockDbSelections, setLockDbSelections] = useState<boolean>(true);
-  const [includeTaskInLink, setIncludeTaskInLink] = useState<boolean>(false);
 
   // Track Notion connection only
   useEffect(() => {
@@ -109,30 +106,6 @@ export default function CreateEmbedPage() {
       setSelectedSessionDbId((prev) => prev || trackingCandidate);
     }
   }, [dbs]);
-  const { data: dbQuery } = trpc.private.queryDatabase.useQuery(
-    { email: userIdentifier, databaseId: selectedTaskDbId },
-    { enabled: !!selectedTaskDbId, refetchOnWindowFocus: false, retry: false }
-  );
-  const taskItems = useMemo(() => {
-    const results: any[] = dbQuery?.database?.results || [];
-    const items = results.map((r: any) => {
-      const props: Record<string, any> = r?.properties || {};
-      const titlePropName = Object.entries(props).find(([, p]: any) => p?.type === "title")?.[0] || "Name";
-      const titleParts = props?.[titlePropName]?.title || [];
-      const title = Array.isArray(titleParts)
-        ? titleParts.map((t: any) => t?.plain_text || t?.text?.content || "").join("").trim()
-        : "Untitled";
-      return { id: r?.id as string, title: title || "Untitled" };
-    });
-    return items as Array<{ id: string; title: string }>;
-  }, [dbQuery]);
-  useEffect(() => {
-    if (taskItems.length > 0) {
-      const first = taskItems[0];
-      setSelectedTaskId((prev) => prev || first.id);
-      setSelectedTaskTitle((prev) => prev || first.title);
-    }
-  }, [taskItems]);
 
   // Theme applies only to preview UI — enforce full-card dark/light styles
   const previewCardStyle: React.CSSProperties = {
@@ -190,10 +163,7 @@ export default function CreateEmbedPage() {
         sessionDatabaseId: selectedSessionDbId,
         hideDbSelectors: lockDbSelections,
       };
-      if (includeTaskInLink) {
-        settings.taskId = selectedTaskId;
-        settings.taskTitle = selectedTaskTitle;
-      }
+      // Task selection is handled within the embedded UI; omit taskId/taskTitle
       const res = await fetch('/api/embeds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -305,31 +275,10 @@ export default function CreateEmbedPage() {
                       ))}
                     </select>
                   </div>
-                  <div className="sm:col-span-2">
-                    <label className="block text-sm font-medium mb-1">Task</label>
-                    <select
-                      className="w-full rounded-md border border-neutral-300 bg-white p-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"
-                      value={selectedTaskId}
-                      onChange={(e) => {
-                        const id = e.target.value;
-                        setSelectedTaskId(id);
-                        const found = taskItems.find((t) => t.id === id);
-                        setSelectedTaskTitle(found?.title || "");
-                      }}
-                    >
-                      {taskItems.map((t) => (
-                        <option key={t.id} value={t.id}>{t.title}</option>
-                      ))}
-                    </select>
-                  </div>
                   <div className="sm:col-span-2 flex flex-col gap-2">
                     <label className="inline-flex items-center gap-2">
                       <input id="hideDbSelectors" type="checkbox" checked={lockDbSelections} onChange={(e) => setLockDbSelections(e.target.checked)} />
                       <span className="text-sm">Hide database selectors in embed</span>
-                    </label>
-                    <label className="inline-flex items-center gap-2">
-                      <input id="includeTaskInLink" type="checkbox" checked={includeTaskInLink} onChange={(e) => setIncludeTaskInLink(e.target.checked)} />
-                      <span className="text-sm">Include selected task in link</span>
                     </label>
                   </div>
                 </div>
@@ -382,10 +331,7 @@ export default function CreateEmbedPage() {
                         sessionDatabaseId: selectedSessionDbId,
                         hideDbSelectors: lockDbSelections,
                       };
-                      if (includeTaskInLink) {
-                        settings.taskId = selectedTaskId;
-                        settings.taskTitle = selectedTaskTitle;
-                      }
+                      // Task selection happens in the embedded UI; do not include taskId/taskTitle in link
                       if (typeof window !== "undefined") {
                         const key = `EMBED_SETTINGS_${selectedPageId || "default"}`;
                         window.localStorage.setItem(key, JSON.stringify(settings));

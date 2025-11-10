@@ -16,5 +16,26 @@
       },
       "createdAt": 1761752229718
     }
+  ],
+  "ahsanalamgir14@gmail.com": [
+    {
+      "id": "27c83b1b-345b-8078-9c69-dea59f838abf",
+      "title": "Find the Lost Amulet 27c83b1b345b80789c69dea59f838abf",
+      "link": "http://localhost:3000/embed/widget?c=eyJwYWdlSWQiOiIyN2M4M2IxYi0zNDViLTgwNzgtOWM2OS1kZWE1OWY4MzhhYmYiLCJ0aGVtZSI6ImRhcmsiLCJ3aWRnZXRCZyI6IiNmZmZmZmYiLCJ3aWRnZXRDb2xvciI6IiMwYTA2MDYiLCJpbnB1dFdpZHRoIjozMjAsImlucHV0Qm9yZGVyIjoiI2QxZDVkYiIsInRpbWVyQ29sb3IiOiIjZWY0NDQ0IiwidGltZXJGb250U2l6ZSI6NDgsInRhc2tEYXRhYmFzZUlkIjoiMjdjODNiMWItMzQ1Yi04MDVjLWJiYWQtZTA2NWI5NDhkNTQyIiwic2Vzc2lvbkRhdGFiYXNlSWQiOiIyN2M4M2IxYi0zNDViLTgwMDMtYWQwMi1mMTQ4NmE0NDg0YmIiLCJoaWRlRGJTZWxlY3RvcnMiOnRydWV9",
+      "config": {
+        "pageId": "27c83b1b-345b-8078-9c69-dea59f838abf",
+        "theme": "dark",
+        "widgetBg": "#ffffff",
+        "widgetColor": "#0a0606",
+        "inputWidth": 320,
+        "inputBorder": "#d1d5db",
+        "timerColor": "#ef4444",
+        "timerFontSize": 48,
+        "taskDatabaseId": "27c83b1b-345b-805c-bbad-e065b948d542",
+        "sessionDatabaseId": "27c83b1b-345b-8003-ad02-f1486a4484bb",
+        "hideDbSelectors": true
+      },
+      "createdAt": 1762795509768
+    }
   ]
 }
