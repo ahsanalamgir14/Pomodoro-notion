@@ -221,20 +221,20 @@ export default function EmbedWidget() {
   }, [dbQueryData, selectedTaskId]);
 
   const previewCardStyle: React.CSSProperties = useMemo(() => ({
-    backgroundColor: config?.widgetBgColor || (config?.theme === "dark" ? "#111827" : "#ffffff"),
-    color: config?.widgetTextColor || (config?.theme === "dark" ? "#f9fafb" : "#111827"),
-    border: `1px solid ${config?.theme === "dark" ? "#374151" : (config?.inputBorderColor || "#d1d5db")}`,
+    backgroundColor: (config?.widgetBgColor ?? config?.widgetBg) || (config?.theme === "dark" ? "#111827" : "#ffffff"),
+    color: (config?.widgetTextColor ?? config?.widgetColor) || (config?.theme === "dark" ? "#f9fafb" : "#111827"),
+    border: `1px solid ${config?.theme === "dark" ? "#374151" : ((config?.inputBorderColor ?? config?.inputBorder) || "#d1d5db")}`,
     borderRadius: 12,
     padding: 16,
   }), [config]);
 
   const inputStyle: React.CSSProperties = useMemo(() => ({
     width: config?.inputWidth ? `${config.inputWidth}%` : "100%",
-    border: `1px solid ${config?.inputBorderColor || (config?.theme === "dark" ? "#374151" : "#d1d5db")}`,
+    border: `1px solid ${((config?.inputBorderColor ?? config?.inputBorder) || (config?.theme === "dark" ? "#374151" : "#d1d5db"))}`,
     padding: "8px 10px",
     borderRadius: 8,
     backgroundColor: config?.theme === "dark" ? "#111827" : "#ffffff",
-    color: config?.widgetTextColor || (config?.theme === "dark" ? "#f9fafb" : "#111827"),
+    color: (config?.widgetTextColor ?? config?.widgetColor) || (config?.theme === "dark" ? "#f9fafb" : "#111827"),
     outline: "none",
   }), [config]);
 
@@ -243,6 +243,13 @@ export default function EmbedWidget() {
     fontSize: config?.timerFontSize || 48,
     fontWeight: 700,
     fontVariantNumeric: "tabular-nums",
+  }), [config]);
+
+  const previewTitleStyle: React.CSSProperties = useMemo(() => ({
+    fontSize: 12,
+    fontWeight: 500,
+    color: config?.theme === "dark" ? "#9ca3af" : "#6b7280",
+    marginBottom: 4,
   }), [config]);
 
   const secondaryButtonStyle: React.CSSProperties = useMemo(() => ({
@@ -400,6 +407,7 @@ export default function EmbedWidget() {
               </div>
             ) : (
               <div style={previewCardStyle}>
+                <div style={previewTitleStyle}>Timer Running</div>
                 <div style={timerStyle}>{new Date(elapsedMs).toISOString().substr(14, 5)}</div>
                 <div className="mt-3 flex items-center gap-3">
                   <button
