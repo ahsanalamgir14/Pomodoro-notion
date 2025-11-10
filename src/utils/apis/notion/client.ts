@@ -91,6 +91,16 @@ export const updateQuestStatus = async (params: { userId: string; status: string
   }
 };
 
+export const updateTaskStatus = async (params: { userId: string; pageId: string; status: string }) => {
+  try {
+    const response = await PomodoroClient.post("/api/pomo/task-status", params);
+    return response.data;
+  } catch (error) {
+    console.error("Error updating task status:", error);
+    throw error;
+  }
+};
+
 export const getConnectedPages = async (params: { userId: string; query?: string }) => {
   try {
     const query = new URLSearchParams({ userId: params.userId, ...(params.query ? { query: params.query } : {}) });

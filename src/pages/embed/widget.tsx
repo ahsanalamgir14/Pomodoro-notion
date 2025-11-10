@@ -3,7 +3,7 @@ import Head from "next/head";
 import { trpc } from "../../utils/trpc";
 import QuestSelection from "../../Components/QuestSelection";
 import NotionTags from "../../Components/NotionTags";
-import { savePomoSessionToNotion, startQuestWork, updateQuestStatus } from "../../utils/apis/notion/client";
+import { savePomoSessionToNotion, startQuestWork, updateQuestStatus, updateTaskStatus } from "../../utils/apis/notion/client";
 
 type EmbedSettings = {
   pageId?: string;
@@ -349,6 +349,14 @@ export default function EmbedWidget() {
                       onClick={async () => {
                         // Update task status to In Progress when starting
                         const userId = "notion-user";
+                        const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
+                        if (taskPageId) {
+                          try {
+                            await updateTaskStatus({ userId, pageId: taskPageId, status: "In Progress" });
+                          } catch (e) {
+                            console.warn("Failed to set task status In Progress", e);
+                          }
+                        }
                         const targets = (selectedQuests?.map(q => q.value) || []).length > 0
                           ? selectedQuests.map(q => q.value)
                           : (linkedQuestIds.length > 0 ? linkedQuestIds : []);
@@ -401,6 +409,12 @@ export default function EmbedWidget() {
                         setRunning(false);
                         if (intervalRef.current) window.clearInterval(intervalRef.current);
                         const userId = "notion-user";
+                        const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
+                        if (taskPageId) {
+                          updateTaskStatus({ userId, pageId: taskPageId, status: "Paused" }).catch((e) => {
+                            console.warn("Failed to set task status Paused", e);
+                          });
+                        }
                         const targets = linkedQuestIds.length > 0 ? linkedQuestIds : [];
                         targets.forEach((qid) => {
                           updateQuestStatus({
@@ -451,6 +465,15 @@ export default function EmbedWidget() {
                             tags,
                             questPageIds: (selectedQuests || []).map(q => q.value),
                           });
+                          // Update task status to Completed in selected table
+                          const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
+                          if (taskPageId) {
+                            try {
+                              await updateTaskStatus({ userId, pageId: taskPageId, status: "Completed" });
+                            } catch (e) {
+                              console.warn("Failed to set task status Completed", e);
+                            }
+                          }
                           // Update task status to Completed in selected table
                           const targets = (selectedQuests?.map(q => q.value) || []).length > 0
                             ? selectedQuests.map(q => q.value)
