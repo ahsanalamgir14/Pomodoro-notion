@@ -223,9 +223,9 @@ export default function EmbedWidget() {
   const previewCardStyle: React.CSSProperties = useMemo(() => ({
     backgroundColor: config?.widgetBgColor || (config?.theme === "dark" ? "#111827" : "#ffffff"),
     color: config?.widgetTextColor || (config?.theme === "dark" ? "#f9fafb" : "#111827"),
+    border: `1px solid ${config?.theme === "dark" ? "#374151" : (config?.inputBorderColor || "#d1d5db")}`,
     borderRadius: 12,
     padding: 16,
-    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
   }), [config]);
 
   const inputStyle: React.CSSProperties = useMemo(() => ({
@@ -242,7 +242,16 @@ export default function EmbedWidget() {
     color: config?.timerColor || (config?.theme === "dark" ? "#93c5fd" : "#2563eb"),
     fontSize: config?.timerFontSize || 48,
     fontWeight: 700,
-    letterSpacing: 1,
+    fontVariantNumeric: "tabular-nums",
+  }), [config]);
+
+  const secondaryButtonStyle: React.CSSProperties = useMemo(() => ({
+    backgroundColor: config?.theme === "dark" ? "#374151" : "#e5e7eb",
+    color: config?.theme === "dark" ? "#f9fafb" : "#111827",
+    border: `1px solid ${config?.theme === "dark" ? "#4b5563" : "#d1d5db"}`,
+    borderRadius: 8,
+    padding: "8px 12px",
+    fontWeight: 500,
   }), [config]);
 
   const containerClasses = useMemo(() => {
@@ -265,78 +274,77 @@ export default function EmbedWidget() {
         )}
         {config && (
           <div>
-            {/* Controls */}
-            <div className="mb-4 rounded-lg border border-neutral-200 p-4 text-sm dark:border-neutral-800">
-              <div className="mb-2">Notion Page: <span className="opacity-70">{config.pageId || "(not set)"}</span></div>
-              <label className="block mb-1">Session Title</label>
-              <input className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" value={title} onChange={(e) => setTitle(e.target.value)} />
-              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                {!(config?.hideDbSelectors ?? config?.hideSelectors) && (
-                  <>
-                    <div>
-                      <label className="block mb-1">Selected Table</label>
-                      <select className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" value={selectedDbId} onChange={(e) => setSelectedDbId(e.target.value)}>
-                        {dbData?.databases?.results?.map((d: any) => (
-                          <option key={d.id} value={d.id}>{(d?.title && d?.title[0]?.plain_text) || d.id}</option>
-                        ))}
-                      </select>
-                    </div>
-                    <div>
-                      <label className="block mb-1">Time Tracking Database</label>
-                      <select className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" value={trackingDbId} onChange={(e) => setTrackingDbId(e.target.value)}>
-                        {dbData?.databases?.results?.map((d: any) => (
-                          <option key={d.id} value={d.id}>{(d?.title && d?.title[0]?.plain_text) || d.id}</option>
-                        ))}
-                      </select>
-                    </div>
-                  </>
-                )}
-                <div>
-                  <label className="block mb-1">Task</label>
-                  <select
-                    className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800"
-                    value={selectedTaskId}
-                    onChange={(e) => {
-                      const id = e.target.value;
-                      setSelectedTaskId(id);
-                      const found = taskItems.find((t) => t.id === id);
-                      setSelectedTaskTitle(found?.title || "");
-                    }}
-                  >
-                    {taskItems.map((t) => (
-                      <option key={t.id} value={t.id}>{t.title}</option>
-                    ))}
-                  </select>
+            {/* Controls / Timer Card */}
+            {!running ? (
+              <div className="mb-4 rounded-lg border border-neutral-200 p-4 text-sm dark:border-neutral-800">
+                <div className="mb-2">Notion Page: <span className="opacity-70">{config.pageId || "(not set)"}</span></div>
+                <label className="block mb-1">Session Title</label>
+                <input className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" value={title} onChange={(e) => setTitle(e.target.value)} />
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {!(config?.hideDbSelectors ?? config?.hideSelectors) && (
+                    <>
+                      <div>
+                        <label className="block mb-1">Selected Table</label>
+                        <select className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" value={selectedDbId} onChange={(e) => setSelectedDbId(e.target.value)}>
+                          {dbData?.databases?.results?.map((d: any) => (
+                            <option key={d.id} value={d.id}>{(d?.title && d?.title[0]?.plain_text) || d.id}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block mb-1">Time Tracking Database</label>
+                        <select className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" value={trackingDbId} onChange={(e) => setTrackingDbId(e.target.value)}>
+                          {dbData?.databases?.results?.map((d: any) => (
+                            <option key={d.id} value={d.id}>{(d?.title && d?.title[0]?.plain_text) || d.id}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </>
+                  )}
+                  <div>
+                    <label className="block mb-1">Task</label>
+                    <select
+                      className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800"
+                      value={selectedTaskId}
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        setSelectedTaskId(id);
+                        const found = taskItems.find((t) => t.id === id);
+                        setSelectedTaskTitle(found?.title || "");
+                      }}
+                    >
+                      {taskItems.map((t) => (
+                        <option key={t.id} value={t.id}>{t.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block mb-1">Quests (relation)</label>
+                    <QuestSelection
+                      disabled={!selectedTaskId}
+                      projectId={selectedTaskId || null}
+                      values={selectedQuests}
+                      onChange={(opts: any[]) => {
+                        const arr = (opts || []) as Array<{ label: string; value: string }>;
+                        setSelectedQuests(arr);
+                        setLinkedQuestIds(arr.map((o) => o.value));
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1">Tags</label>
+                    <NotionTags
+                      options={availableTags}
+                      disabled={!selectedDbId}
+                      selectedOptions={selectedTags}
+                      handleSelect={(vals: Array<{ label: string; value: string; color: string }>) => {
+                        setSelectedTags(vals || []);
+                      }}
+                    />
+                  </div>
                 </div>
-                <div className="sm:col-span-2">
-                  <label className="block mb-1">Quests (relation)</label>
-                  <QuestSelection
-                    disabled={!selectedTaskId}
-                    projectId={selectedTaskId || null}
-                    values={selectedQuests}
-                    onChange={(opts: any[]) => {
-                      const arr = (opts || []) as Array<{ label: string; value: string }>;
-                      setSelectedQuests(arr);
-                      setLinkedQuestIds(arr.map((o) => o.value));
-                    }}
-                  />
-                </div>
-                <div>
-                  <label className="block mb-1">Tags</label>
-                  <NotionTags
-                    options={availableTags}
-                    disabled={!selectedDbId}
-                    selectedOptions={selectedTags}
-                    handleSelect={(vals: Array<{ label: string; value: string; color: string }>) => {
-                      setSelectedTags(vals || []);
-                    }}
-                  />
-                </div>
-              </div>
-              <label className="mt-3 block mb-1">Notes</label>
-              <textarea className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
-              {/* Start button duplicated in the config card above */}
-              {!running && (
+                <label className="mt-3 block mb-1">Notes</label>
+                <textarea className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
                 <div className="mt-3 flex items-center gap-3">
                   <button
                     className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
@@ -388,175 +396,109 @@ export default function EmbedWidget() {
                   >
                     Start
                   </button>
-                  <span className="text-xs opacity-70">Tracking time…</span>
                 </div>
-              )}
-            </div>
-
-            {/* Widget */}
-            <div style={previewCardStyle}>
-              {/* Start/Running State */}
-              {!running && (
-                <>
-                  <div className="mt-3 flex items-center gap-3">
-                    <button
-                      className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
-                      onClick={async () => {
-                        // Update task status to In Progress when starting
+              </div>
+            ) : (
+              <div style={previewCardStyle}>
+                <div style={timerStyle}>{new Date(elapsedMs).toISOString().substr(14, 5)}</div>
+                <div className="mt-3 flex items-center gap-3">
+                  <button
+                    style={secondaryButtonStyle}
+                    onClick={() => {
+                      setRunning(false);
+                      if (intervalRef.current) window.clearInterval(intervalRef.current);
+                      const userId = "notion-user";
+                      const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
+                      if (taskPageId) {
+                        updateTaskStatus({ userId, pageId: taskPageId, status: "Paused" }).catch((e) => {
+                          console.warn("Failed to set task status Paused", e);
+                        });
+                      }
+                      const targets = linkedQuestIds.length > 0 ? linkedQuestIds : [];
+                      targets.forEach((qid) => {
+                        updateQuestStatus({
+                          userId,
+                          questPageId: qid,
+                          status: "Paused",
+                          targetDatabaseId: selectedDbId,
+                          adventurePageId: config?.pageId,
+                        }).catch((err) => {
+                          console.error("Failed to pause quest", err);
+                          setErrorMsg("Failed to update task status on pause.");
+                        });
+                      });
+                    }}
+                  >
+                    Pause
+                  </button>
+                  <button
+                    className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
+                    onClick={async () => {
+                      try {
+                        setSavingMsg("");
+                        setErrorMsg("");
+                        setRunning(false);
+                        if (intervalRef.current) window.clearInterval(intervalRef.current);
+                        const endTimeMs = Date.now();
                         const userId = "notion-user";
+                        const tags = (selectedTags || []).map(t => t.label).filter(Boolean);
+                        if (!trackingDbId) {
+                          setErrorMsg("Please select a Time Tracking database.");
+                          return;
+                        }
+                        const timerSeconds = Math.max(60, Math.floor(elapsedMs / 1000));
+                        const startSeconds = Math.floor((startTime ?? endTimeMs) / 1000);
+                        const endSeconds = Math.floor(endTimeMs / 1000);
+                        await savePomoSessionToNotion({
+                          userId,
+                          projectId: selectedTaskId || config?.pageId || "widget",
+                          projectTitle: selectedTaskTitle || title || "Widget Session",
+                          databaseId: selectedDbId,
+                          targetDatabaseId: trackingDbId,
+                          timerValue: timerSeconds,
+                          startTime: startSeconds,
+                          endTime: endSeconds,
+                          status: "Completed",
+                          notes,
+                          tags,
+                          questPageIds: (selectedQuests || []).map(q => q.value),
+                        });
                         const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
                         if (taskPageId) {
                           try {
-                            await updateTaskStatus({ userId, pageId: taskPageId, status: "In Progress" });
+                            await updateTaskStatus({ userId, pageId: taskPageId, status: "Completed" });
                           } catch (e) {
-                            console.warn("Failed to set task status In Progress", e);
+                            console.warn("Failed to set task status Completed", e);
                           }
                         }
                         const targets = (selectedQuests?.map(q => q.value) || []).length > 0
                           ? selectedQuests.map(q => q.value)
                           : (linkedQuestIds.length > 0 ? linkedQuestIds : []);
-                        if (targets.length === 0) {
-                          console.warn("No linked quests found on selected tracker entry.");
-                        }
                         for (const qid of targets) {
-                          try {
-                            await startQuestWork({
-                              userId,
-                              questPageId: qid,
-                              projectTitle: selectedTaskTitle || title || "Task",
-                              adventurePageId: config?.pageId,
-                            });
-                            await updateQuestStatus({
-                              userId,
-                              questPageId: qid,
-                              status: "In Progress",
-                              targetDatabaseId: selectedDbId,
-                              adventurePageId: config?.pageId,
-                            });
-                          } catch (err) {
-                            console.error("Failed to start quest", err);
-                            setErrorMsg("Failed to update task status on start.");
-                          }
-                        }
-                        setRunning(true);
-                        const now = Date.now();
-                        setStartTime(now);
-                        setElapsedMs(0);
-                        if (intervalRef.current) window.clearInterval(intervalRef.current);
-                        intervalRef.current = window.setInterval(() => {
-                          setElapsedMs((prev) => prev + 1000);
-                        }, 1000);
-                      }}
-                    >
-                      Start
-                    </button>
-                    <span className="text-xs opacity-70">Tracking time…</span>
-                  </div>
-                </>
-              )}
-              {running && (
-                <>
-                  <div style={timerStyle}>{new Date(elapsedMs).toISOString().substr(14, 5)}</div>
-                  <div className="mt-3 flex items-center gap-3">
-                    <button
-                      className="rounded-md bg-neutral-200 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-neutral-300"
-                      onClick={() => {
-                        setRunning(false);
-                        if (intervalRef.current) window.clearInterval(intervalRef.current);
-                        const userId = "notion-user";
-                        const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
-                        if (taskPageId) {
-                          updateTaskStatus({ userId, pageId: taskPageId, status: "Paused" }).catch((e) => {
-                            console.warn("Failed to set task status Paused", e);
-                          });
-                        }
-                        const targets = linkedQuestIds.length > 0 ? linkedQuestIds : [];
-                        targets.forEach((qid) => {
-                          updateQuestStatus({
+                          await updateQuestStatus({
                             userId,
                             questPageId: qid,
-                            status: "Paused",
+                            status: "Completed",
                             targetDatabaseId: selectedDbId,
                             adventurePageId: config?.pageId,
-                          }).catch((err) => {
-                            console.error("Failed to pause quest", err);
-                            setErrorMsg("Failed to update task status on pause.");
                           });
-                        });
-                      }}
-                    >
-                      Pause
-                    </button>
-                    <button
-                      className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
-                      onClick={async () => {
-                        try {
-                          setSavingMsg("");
-                          setErrorMsg("");
-                          setRunning(false);
-                          if (intervalRef.current) window.clearInterval(intervalRef.current);
-                          const endTimeMs = Date.now();
-                          const userId = "notion-user";
-                          const tags = (selectedTags || []).map(t => t.label).filter(Boolean);
-                          // Save to Time Tracking database with exact fields
-                          if (!trackingDbId) {
-                            setErrorMsg("Please select a Time Tracking database.");
-                            return;
-                          }
-                          const timerSeconds = Math.max(60, Math.floor(elapsedMs / 1000));
-                          const startSeconds = Math.floor((startTime ?? endTimeMs) / 1000);
-                          const endSeconds = Math.floor(endTimeMs / 1000);
-                          await savePomoSessionToNotion({
-                            userId,
-                            projectId: selectedTaskId || config?.pageId || "widget",
-                            projectTitle: selectedTaskTitle || title || "Widget Session",
-                            databaseId: selectedDbId,
-                            targetDatabaseId: trackingDbId,
-                            timerValue: timerSeconds,
-                            startTime: startSeconds,
-                            endTime: endSeconds,
-                            status: "Completed",
-                            notes,
-                            tags,
-                            questPageIds: (selectedQuests || []).map(q => q.value),
-                          });
-                          // Update task status to Completed in selected table
-                          const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
-                          if (taskPageId) {
-                            try {
-                              await updateTaskStatus({ userId, pageId: taskPageId, status: "Completed" });
-                            } catch (e) {
-                              console.warn("Failed to set task status Completed", e);
-                            }
-                          }
-                          // Update task status to Completed in selected table
-                          const targets = (selectedQuests?.map(q => q.value) || []).length > 0
-                            ? selectedQuests.map(q => q.value)
-                            : (linkedQuestIds.length > 0 ? linkedQuestIds : []);
-                          for (const qid of targets) {
-                            await updateQuestStatus({
-                              userId,
-                              questPageId: qid,
-                              status: "Completed",
-                              targetDatabaseId: selectedDbId,
-                              adventurePageId: config?.pageId,
-                            });
-                          }
-                          setSavingMsg("Time Tracking entry saved and status updated.");
-                          setElapsedMs(0);
-                          setStartTime(null);
-                        } catch (err) {
-                          console.error("Widget completion error", err);
-                          setErrorMsg("Failed to save tracking entry or update status.");
                         }
-                      }}
-                    >
-                      Complete
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+                        setSavingMsg("Time Tracking entry saved and status updated.");
+                        setElapsedMs(0);
+                        setStartTime(null);
+                      } catch (err) {
+                        console.error("Widget completion error", err);
+                        setErrorMsg("Failed to save tracking entry or update status.");
+                      }
+                    }}
+                  >
+                    Complete
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Removed duplicate Widget card; Start button is now in the config card above */}
 
             {(savingMsg || errorMsg) && (
               <div className="mt-3 text-sm">
