@@ -3,6 +3,7 @@ import Head from "next/head";
 import Link from "next/link";
 import { getConnectedPages } from "../../utils/apis/notion/client";
 import { NotionCache } from "../../utils/notionCache";
+import { trpc } from "../../utils/trpc";
 
 type ThemeType = "light" | "dark";
 
@@ -27,6 +28,13 @@ export default function CreateEmbedPage() {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
   const [savedEmbeds, setSavedEmbeds] = useState<Array<{ id: string; title: string; link: string; createdAt: number }>>([]);
   const [accountSaveMsg, setAccountSaveMsg] = useState<string>("");
+  // Data selections
+  const [selectedTaskDbId, setSelectedTaskDbId] = useState<string>("");
+  const [selectedSessionDbId, setSelectedSessionDbId] = useState<string>("");
+  const [selectedTaskId, setSelectedTaskId] = useState<string>("");
+  const [selectedTaskTitle, setSelectedTaskTitle] = useState<string>("");
+  const [lockDbSelections, setLockDbSelections] = useState<boolean>(true);
+  const [includeTaskInLink, setIncludeTaskInLink] = useState<boolean>(false);
 
   // Track Notion connection only
   useEffect(() => {
@@ -84,6 +92,48 @@ export default function CreateEmbedPage() {
     return () => { mounted = false; };
   }, []);
 
+  // Databases and tasks for selections
+  const userIdentifier = sessionEmail || (typeof window !== "undefined" ? NotionCache.getUserData()?.email : null) || "notion-user";
+  const { data: dbs } = trpc.private.getDatabases.useQuery(
+    { email: userIdentifier },
+    { refetchOnWindowFocus: false, retry: false }
+  );
+  useEffect(() => {
+    if (dbs?.databases?.results?.length) {
+      const firstId = dbs.databases.results[0].id;
+      setSelectedTaskDbId((prev) => prev || firstId);
+      const trackingCandidate = dbs.databases.results.find((d: any) => {
+        const name = (d?.title && d?.title[0]?.plain_text) || "";
+        return /time|tracking|timesheet|log/i.test(name);
+      })?.id || firstId;
+      setSelectedSessionDbId((prev) => prev || trackingCandidate);
+    }
+  }, [dbs]);
+  const { data: dbQuery } = trpc.private.queryDatabase.useQuery(
+    { email: userIdentifier, databaseId: selectedTaskDbId },
+    { enabled: !!selectedTaskDbId, refetchOnWindowFocus: false, retry: false }
+  );
+  const taskItems = useMemo(() => {
+    const results: any[] = dbQuery?.database?.results || [];
+    const items = results.map((r: any) => {
+      const props: Record<string, any> = r?.properties || {};
+      const titlePropName = Object.entries(props).find(([, p]: any) => p?.type === "title")?.[0] || "Name";
+      const titleParts = props?.[titlePropName]?.title || [];
+      const title = Array.isArray(titleParts)
+        ? titleParts.map((t: any) => t?.plain_text || t?.text?.content || "").join("").trim()
+        : "Untitled";
+      return { id: r?.id as string, title: title || "Untitled" };
+    });
+    return items as Array<{ id: string; title: string }>;
+  }, [dbQuery]);
+  useEffect(() => {
+    if (taskItems.length > 0) {
+      const first = taskItems[0];
+      setSelectedTaskId((prev) => prev || first.id);
+      setSelectedTaskTitle((prev) => prev || first.title);
+    }
+  }, [taskItems]);
+
   // Theme applies only to preview UI — enforce full-card dark/light styles
   const previewCardStyle: React.CSSProperties = {
     backgroundColor: theme === "dark" ? "#111827" : "#ffffff",
@@ -127,7 +177,7 @@ export default function CreateEmbedPage() {
         return;
       }
       const title = pages.find((p) => p.id === selectedPageId)?.title || "Untitled Embed";
-      const settings = {
+      const settings: any = {
         pageId: selectedPageId,
         theme,
         widgetBg,
@@ -136,7 +186,14 @@ export default function CreateEmbedPage() {
         inputBorder,
         timerColor,
         timerFontSize,
+        taskDatabaseId: selectedTaskDbId,
+        sessionDatabaseId: selectedSessionDbId,
+        hideDbSelectors: lockDbSelections,
       };
+      if (includeTaskInLink) {
+        settings.taskId = selectedTaskId;
+        settings.taskTitle = selectedTaskTitle;
+      }
       const res = await fetch('/api/embeds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -228,6 +285,56 @@ export default function CreateEmbedPage() {
                 </div>
               </div>
 
+              {/* Data selections for embed */}
+              <div className="mt-4">
+                <h3 className="mb-2 text-sm font-medium">Data Selections</h3>
+                <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Task Database</label>
+                    <select className="w-full rounded-md border border-neutral-300 bg-white p-2 text-sm dark:border-neutral-700 dark:bg-neutral-800" value={selectedTaskDbId} onChange={(e) => setSelectedTaskDbId(e.target.value)}>
+                      {dbs?.databases?.results?.map((d: any) => (
+                        <option key={d.id} value={d.id}>{(d?.title && d?.title[0]?.plain_text) || d.id}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium mb-1">Session Database</label>
+                    <select className="w-full rounded-md border border-neutral-300 bg-white p-2 text-sm dark:border-neutral-700 dark:bg-neutral-800" value={selectedSessionDbId} onChange={(e) => setSelectedSessionDbId(e.target.value)}>
+                      {dbs?.databases?.results?.map((d: any) => (
+                        <option key={d.id} value={d.id}>{(d?.title && d?.title[0]?.plain_text) || d.id}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block text-sm font-medium mb-1">Task</label>
+                    <select
+                      className="w-full rounded-md border border-neutral-300 bg-white p-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+                      value={selectedTaskId}
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        setSelectedTaskId(id);
+                        const found = taskItems.find((t) => t.id === id);
+                        setSelectedTaskTitle(found?.title || "");
+                      }}
+                    >
+                      {taskItems.map((t) => (
+                        <option key={t.id} value={t.id}>{t.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2 flex flex-col gap-2">
+                    <label className="inline-flex items-center gap-2">
+                      <input id="hideDbSelectors" type="checkbox" checked={lockDbSelections} onChange={(e) => setLockDbSelections(e.target.checked)} />
+                      <span className="text-sm">Hide database selectors in embed</span>
+                    </label>
+                    <label className="inline-flex items-center gap-2">
+                      <input id="includeTaskInLink" type="checkbox" checked={includeTaskInLink} onChange={(e) => setIncludeTaskInLink(e.target.checked)} />
+                      <span className="text-sm">Include selected task in link</span>
+                    </label>
+                  </div>
+                </div>
+              </div>
+
               {/* Colors and sizes */}
               <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
@@ -262,7 +369,7 @@ export default function CreateEmbedPage() {
                   className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
                   onClick={() => {
                     try {
-                      const settings = {
+                      const settings: any = {
                         pageId: selectedPageId,
                         theme,
                         widgetBg,
@@ -271,7 +378,14 @@ export default function CreateEmbedPage() {
                         inputBorder,
                         timerColor,
                         timerFontSize,
+                        taskDatabaseId: selectedTaskDbId,
+                        sessionDatabaseId: selectedSessionDbId,
+                        hideDbSelectors: lockDbSelections,
                       };
+                      if (includeTaskInLink) {
+                        settings.taskId = selectedTaskId;
+                        settings.taskTitle = selectedTaskTitle;
+                      }
                       if (typeof window !== "undefined") {
                         const key = `EMBED_SETTINGS_${selectedPageId || "default"}`;
                         window.localStorage.setItem(key, JSON.stringify(settings));

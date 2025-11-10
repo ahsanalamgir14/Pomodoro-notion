@@ -19,7 +19,12 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       return res.status(401).json({ error: "Invalid credentials" });
     }
 
-    const secureFlag = process.env.NODE_ENV === "production" ? "Secure; " : "";
+    // Only add Secure on HTTPS; localhost over HTTP should not use Secure
+    const forwardedProto = (req.headers["x-forwarded-proto"] as string) || "";
+    const host = req.headers.host || "";
+    const isLocal = host.includes("localhost") || host.startsWith("127.0.0.1");
+    const isHttps = forwardedProto === "https";
+    const secureFlag = isHttps && !isLocal ? "Secure; " : "";
     res.setHeader(
       "Set-Cookie",
       `session_user=${encodeURIComponent(e)}; Path=/; HttpOnly; ${secureFlag}SameSite=Lax; Max-Age=${60 * 60 * 24 * 30}`

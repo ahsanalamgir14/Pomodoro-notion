@@ -1,6 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Head from "next/head";
 import { trpc } from "../../utils/trpc";
+import QuestSelection from "../../Components/QuestSelection";
+import NotionTags from "../../Components/NotionTags";
 import { savePomoSessionToNotion, startQuestWork, updateQuestStatus } from "../../utils/apis/notion/client";
 
 type EmbedSettings = {
@@ -12,6 +14,13 @@ type EmbedSettings = {
   inputBorderColor?: string;
   timerColor?: string;
   timerFontSize?: number;
+  taskDatabaseId?: string;
+  sessionDatabaseId?: string;
+  taskId?: string;
+  taskTitle?: string;
+  // Back-compat: hideSelectors from earlier version; new flag hides only DB selectors
+  hideSelectors?: boolean;
+  hideDbSelectors?: boolean;
 };
 
 function decodeConfigParam() {
@@ -28,6 +37,14 @@ function decodeConfigParam() {
   }
 }
 
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return decodeURIComponent(parts.pop()!.split(";").shift()!);
+  return null;
+}
+
 export default function EmbedWidget() {
   const [config, setConfig] = useState<EmbedSettings | null>(null);
   const [selectedDbId, setSelectedDbId] = useState<string>("");
@@ -40,6 +57,8 @@ export default function EmbedWidget() {
   const [selectedTaskId, setSelectedTaskId] = useState<string>("");
   const [selectedTaskTitle, setSelectedTaskTitle] = useState<string>("");
   const [linkedQuestIds, setLinkedQuestIds] = useState<string[]>([]);
+  const [selectedQuests, setSelectedQuests] = useState<Array<{ label: string; value: string }>>([]);
+  const [selectedTags, setSelectedTags] = useState<Array<{ label: string; value: string; color: string }>>([]);
 
   // Timer state
   const [running, setRunning] = useState<boolean>(false);
@@ -50,10 +69,31 @@ export default function EmbedWidget() {
   useEffect(() => {
     const cfg = decodeConfigParam();
     setConfig(cfg);
+    if (cfg?.taskDatabaseId) {
+      setSelectedDbId((prev) => prev || cfg.taskDatabaseId);
+    }
+    if (cfg?.sessionDatabaseId) {
+      setTrackingDbId((prev) => prev || cfg.sessionDatabaseId);
+    }
+    if (cfg?.taskId) {
+      setSelectedTaskId((prev) => prev || cfg.taskId);
+    }
+    if (cfg?.taskTitle) {
+      setSelectedTaskTitle((prev) => prev || cfg.taskTitle);
+    }
+  }, []);
+
+  // Determine which identifier to use for Notion access
+  // Prefer logged-in session email; fallback to "notion-user"
+  const [userIdentifier, setUserIdentifier] = useState<string>("notion-user");
+  useEffect(() => {
+    const email = getCookie("session_user");
+    if (email && email.trim() !== "") {
+      setUserIdentifier(email);
+    }
   }, []);
 
   // Fetch databases via tRPC (same as home page style)
-  const userIdentifier = "notion-user";
   const { data: dbData } = trpc.private.getDatabases.useQuery(
     { email: userIdentifier },
     { refetchOnWindowFocus: false, retry: false }
@@ -62,18 +102,24 @@ export default function EmbedWidget() {
   useEffect(() => {
     if (dbData?.databases?.results && dbData.databases.results.length > 0) {
       const firstId = dbData.databases.results[0].id;
-      setSelectedDbId((prev) => prev || firstId);
+      setSelectedDbId((prev) => prev || config?.taskDatabaseId || firstId);
       // Try to pick a Time Tracking database by name; fallback to first
       const trackingCandidate = dbData.databases.results.find((d: any) => {
         const name = (d?.title && d?.title[0]?.plain_text) || "";
         return /time|tracking|timesheet|log/i.test(name);
       })?.id || firstId;
-      setTrackingDbId((prev) => prev || trackingCandidate);
+      setTrackingDbId((prev) => prev || config?.sessionDatabaseId || trackingCandidate);
     }
-  }, [dbData]);
+  }, [dbData, config?.taskDatabaseId, config?.sessionDatabaseId]);
 
   // Fetch tasks (pages) for selected database
   const { data: dbQueryData } = trpc.private.queryDatabase.useQuery(
+    { email: userIdentifier, databaseId: selectedDbId },
+    { enabled: !!selectedDbId, refetchOnWindowFocus: false, retry: false }
+  );
+
+  // Fetch database detail to get schema (e.g., Tags options)
+  const { data: dbDetailData } = trpc.private.getDatabaseDetail.useQuery(
     { email: userIdentifier, databaseId: selectedDbId },
     { enabled: !!selectedDbId, refetchOnWindowFocus: false, retry: false }
   );
@@ -115,10 +161,62 @@ export default function EmbedWidget() {
           : Object.entries(props).find(([k, p]: any) => k?.toLowerCase?.().includes("quest") && p?.type === "relation")?.[0];
       const relations: any[] = questsRelProp ? (props[questsRelProp] as any)?.relation || [] : [];
       const ids = relations.map((r) => r?.id).filter(Boolean);
-      setLinkedQuestIds(ids);
+      // Only auto-derive if user hasn't selected explicitly
+      if (!selectedQuests || selectedQuests.length === 0) {
+        setLinkedQuestIds(ids);
+      }
     } catch (e) {
       console.warn("Failed to derive linked quest IDs", e);
       setLinkedQuestIds([]);
+    }
+  }, [dbQueryData, selectedTaskId, selectedQuests]);
+
+  // Auto-populate selected quests options with current relations when task changes (fetch titles)
+  useEffect(() => {
+    const populateQuests = async () => {
+      if (!selectedTaskId) return;
+      if (selectedQuests && selectedQuests.length > 0) return; // respect manual selection
+      try {
+        const qs = new URLSearchParams({ userId: "notion-user", pageId: selectedTaskId, relationName: "Quests" });
+        const resp = await fetch(`/api/notion/page-relations?${qs.toString()}`);
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const items: Array<{ id: string; title: string }> = data?.items || [];
+        // Prefill selection with current relations
+        const values = items.map(i => ({ label: i.title, value: i.id }));
+        setSelectedQuests(values);
+        setLinkedQuestIds(values.map(v => v.value));
+      } catch (e) {
+        // ignore
+      }
+    };
+    populateQuests();
+  }, [selectedTaskId]);
+
+  // Derive available tag options from database schema (prefer Tags multi_select)
+  const availableTags = useMemo(() => {
+    const props: Record<string, any> = dbDetailData?.db?.properties || {};
+    const tagsProp = props?.["Tags"]?.type === "multi_select"
+      ? props["Tags"]
+      : Object.values(props).find((p: any) => p?.type === "multi_select") as any;
+    const options: any[] = tagsProp?.multi_select?.options || [];
+    return options.map((o: any) => ({ label: o?.name || "", value: o?.id || o?.name || "", color: o?.color || "default" }));
+  }, [dbDetailData?.db?.properties]);
+
+  // Prefill selected tags from the chosen task page's properties
+  useEffect(() => {
+    try {
+      const results: any[] = dbQueryData?.database?.results || [];
+      const page = results.find((r: any) => r?.id === selectedTaskId);
+      const props: Record<string, any> = page?.properties || {};
+      const tagPropName = props?.["Tags"]?.type === "multi_select"
+        ? "Tags"
+        : Object.entries(props).find(([, p]: any) => p?.type === "multi_select")?.[0];
+      const selected = tagPropName ? (props?.[tagPropName] as any)?.multi_select || [] : [];
+      const values = selected.map((m: any) => ({ label: m?.name || "", value: m?.id || m?.name || "", color: m?.color || "default" }));
+      setSelectedTags(values);
+    } catch (e) {
+      setSelectedTags([]);
     }
   }, [dbQueryData, selectedTaskId]);
 
@@ -173,22 +271,26 @@ export default function EmbedWidget() {
               <label className="block mb-1">Session Title</label>
               <input className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" value={title} onChange={(e) => setTitle(e.target.value)} />
               <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="block mb-1">Selected Table</label>
-                  <select className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" value={selectedDbId} onChange={(e) => setSelectedDbId(e.target.value)}>
-                    {dbData?.databases?.results?.map((d: any) => (
-                      <option key={d.id} value={d.id}>{(d?.title && d?.title[0]?.plain_text) || d.id}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block mb-1">Time Tracking Database</label>
-                  <select className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" value={trackingDbId} onChange={(e) => setTrackingDbId(e.target.value)}>
-                    {dbData?.databases?.results?.map((d: any) => (
-                      <option key={d.id} value={d.id}>{(d?.title && d?.title[0]?.plain_text) || d.id}</option>
-                    ))}
-                  </select>
-                </div>
+                {!(config?.hideDbSelectors ?? config?.hideSelectors) && (
+                  <>
+                    <div>
+                      <label className="block mb-1">Selected Table</label>
+                      <select className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" value={selectedDbId} onChange={(e) => setSelectedDbId(e.target.value)}>
+                        {dbData?.databases?.results?.map((d: any) => (
+                          <option key={d.id} value={d.id}>{(d?.title && d?.title[0]?.plain_text) || d.id}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <label className="block mb-1">Time Tracking Database</label>
+                      <select className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" value={trackingDbId} onChange={(e) => setTrackingDbId(e.target.value)}>
+                        {dbData?.databases?.results?.map((d: any) => (
+                          <option key={d.id} value={d.id}>{(d?.title && d?.title[0]?.plain_text) || d.id}</option>
+                        ))}
+                      </select>
+                    </div>
+                  </>
+                )}
                 <div>
                   <label className="block mb-1">Task</label>
                   <select
@@ -206,9 +308,29 @@ export default function EmbedWidget() {
                     ))}
                   </select>
                 </div>
+                <div className="sm:col-span-2">
+                  <label className="block mb-1">Quests (relation)</label>
+                  <QuestSelection
+                    disabled={!selectedTaskId}
+                    projectId={selectedTaskId || null}
+                    values={selectedQuests}
+                    onChange={(opts: any[]) => {
+                      const arr = (opts || []) as Array<{ label: string; value: string }>;
+                      setSelectedQuests(arr);
+                      setLinkedQuestIds(arr.map((o) => o.value));
+                    }}
+                  />
+                </div>
                 <div>
-                  <label className="block mb-1">Tags (comma separated)</label>
-                  <input className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" value={tagsStr} onChange={(e) => setTagsStr(e.target.value)} placeholder="e.g., Focus, Coding" />
+                  <label className="block mb-1">Tags</label>
+                  <NotionTags
+                    options={availableTags}
+                    disabled={!selectedDbId}
+                    selectedOptions={selectedTags}
+                    handleSelect={(vals: Array<{ label: string; value: string; color: string }>) => {
+                      setSelectedTags(vals || []);
+                    }}
+                  />
                 </div>
               </div>
               <label className="mt-3 block mb-1">Notes</label>
@@ -227,7 +349,9 @@ export default function EmbedWidget() {
                       onClick={async () => {
                         // Update task status to In Progress when starting
                         const userId = "notion-user";
-                        const targets = linkedQuestIds.length > 0 ? linkedQuestIds : [];
+                        const targets = (selectedQuests?.map(q => q.value) || []).length > 0
+                          ? selectedQuests.map(q => q.value)
+                          : (linkedQuestIds.length > 0 ? linkedQuestIds : []);
                         if (targets.length === 0) {
                           console.warn("No linked quests found on selected tracker entry.");
                         }
@@ -304,7 +428,7 @@ export default function EmbedWidget() {
                           if (intervalRef.current) window.clearInterval(intervalRef.current);
                           const endTimeMs = Date.now();
                           const userId = "notion-user";
-                          const tags = tagsStr.split(",").map((t) => t.trim()).filter(Boolean);
+                          const tags = (selectedTags || []).map(t => t.label).filter(Boolean);
                           // Save to Time Tracking database with exact fields
                           if (!trackingDbId) {
                             setErrorMsg("Please select a Time Tracking database.");
@@ -325,9 +449,12 @@ export default function EmbedWidget() {
                             status: "Completed",
                             notes,
                             tags,
+                            questPageIds: (selectedQuests || []).map(q => q.value),
                           });
                           // Update task status to Completed in selected table
-                          const targets = linkedQuestIds.length > 0 ? linkedQuestIds : [];
+                          const targets = (selectedQuests?.map(q => q.value) || []).length > 0
+                            ? selectedQuests.map(q => q.value)
+                            : (linkedQuestIds.length > 0 ? linkedQuestIds : []);
                           for (const qid of targets) {
                             await updateQuestStatus({
                               userId,

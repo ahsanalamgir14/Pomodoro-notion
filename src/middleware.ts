@@ -13,6 +13,12 @@ const anonymousRoutes = [
 export default function middleware(req: NextRequest) {
   const pathname = req.nextUrl.pathname;
 
+  // Allow bypassing auth for testing when Firebase/auth is disabled
+  const disableAuth = process.env.NEXT_PUBLIC_DISABLE_FIREBASE === "true" || process.env.NEXT_PUBLIC_DISABLE_AUTH === "true";
+  if (disableAuth) {
+    return NextResponse.next();
+  }
+
   // Skip middleware for ignored routes (privacy, terms, about, static assets) and all API endpoints
   if (shouldIgnore(pathname) || pathname.startsWith("/api")) {
     return NextResponse.next();
