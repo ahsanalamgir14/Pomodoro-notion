@@ -335,6 +335,62 @@ export default function EmbedWidget() {
               </div>
               <label className="mt-3 block mb-1">Notes</label>
               <textarea className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+              {/* Start button duplicated in the config card above */}
+              {!running && (
+                <div className="mt-3 flex items-center gap-3">
+                  <button
+                    className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
+                    onClick={async () => {
+                      const userId = "notion-user";
+                      const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
+                      if (taskPageId) {
+                        try {
+                          await updateTaskStatus({ userId, pageId: taskPageId, status: "In Progress" });
+                        } catch (e) {
+                          console.warn("Failed to set task status In Progress", e);
+                        }
+                      }
+                      const targets = (selectedQuests?.map(q => q.value) || []).length > 0
+                        ? selectedQuests.map(q => q.value)
+                        : (linkedQuestIds.length > 0 ? linkedQuestIds : []);
+                      if (targets.length === 0) {
+                        console.warn("No linked quests found on selected tracker entry.");
+                      }
+                      for (const qid of targets) {
+                        try {
+                          await startQuestWork({
+                            userId,
+                            questPageId: qid,
+                            projectTitle: selectedTaskTitle || title || "Task",
+                            adventurePageId: config?.pageId,
+                          });
+                          await updateQuestStatus({
+                            userId,
+                            questPageId: qid,
+                            status: "In Progress",
+                            targetDatabaseId: selectedDbId,
+                            adventurePageId: config?.pageId,
+                          });
+                        } catch (err) {
+                          console.error("Failed to start quest", err);
+                          setErrorMsg("Failed to update task status on start.");
+                        }
+                      }
+                      setRunning(true);
+                      const now = Date.now();
+                      setStartTime(now);
+                      setElapsedMs(0);
+                      if (intervalRef.current) window.clearInterval(intervalRef.current);
+                      intervalRef.current = window.setInterval(() => {
+                        setElapsedMs((prev) => prev + 1000);
+                      }, 1000);
+                    }}
+                  >
+                    Start
+                  </button>
+                  <span className="text-xs opacity-70">Tracking time…</span>
+                </div>
+              )}
             </div>
 
             {/* Widget */}
@@ -342,7 +398,6 @@ export default function EmbedWidget() {
               {/* Start/Running State */}
               {!running && (
                 <>
-                  <input style={inputStyle} placeholder="Task / Notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
                   <div className="mt-3 flex items-center gap-3">
                     <button
                       className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
