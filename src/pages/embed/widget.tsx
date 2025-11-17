@@ -47,6 +47,7 @@ function getCookie(name: string): string | null {
 
 export default function EmbedWidget() {
   const [config, setConfig] = useState<EmbedSettings | null>(null);
+  const [isSystemDark, setIsSystemDark] = useState<boolean>(false);
   const [selectedDbId, setSelectedDbId] = useState<string>("");
   const [trackingDbId, setTrackingDbId] = useState<string>("");
   const [title, setTitle] = useState<string>("Widget Session");
@@ -81,6 +82,16 @@ export default function EmbedWidget() {
     if (cfg?.taskTitle) {
       setSelectedTaskTitle((prev) => prev || cfg.taskTitle);
     }
+  }, []);
+
+  // Detect system dark preference for 'system' theme
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+    const update = () => setIsSystemDark(!!mq?.matches);
+    update();
+    mq?.addEventListener?.('change', update);
+    return () => mq?.removeEventListener?.('change', update);
   }, []);
 
   // Determine which identifier to use for Notion access
@@ -269,7 +280,7 @@ export default function EmbedWidget() {
   }, [config]);
 
   return (
-    <div className={`min-h-screen ${containerClasses}`}> 
+    <div className={`min-h-screen ${containerClasses} ${(config?.theme === 'dark' || (config?.theme === 'system' && isSystemDark)) ? 'dark' : ''}`}> 
       <Head>
         <title>Pomodoro Embed Widget</title>
       </Head>
