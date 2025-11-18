@@ -202,31 +202,10 @@ export const createNotionEntry = async ({
     properties["Notes"] = { rich_text: [{ type: "text", text: { content: notes || "" } }] };
 
     if (tags && tags.length > 0) {
-      let tagsPropName: string | undefined = undefined;
-      if (dbProps["Tags"]?.type) {
-        tagsPropName = "Tags";
-      } else {
-        const preferredName = Object.entries(dbProps).find(([k, p]: any) => (
-          (p?.type === "multi_select" || p?.type === "select" || p?.type === "rich_text") && (/tag|tags|label|labels|category|categories/i.test(k))
-        ))?.[0] as string | undefined;
-        tagsPropName = preferredName;
-      }
-
-      if (tagsPropName) {
-        const t = dbProps[tagsPropName]?.type;
-        if (t === "multi_select") {
-          properties[tagsPropName] = { multi_select: tags.map(name => ({ name })) };
-        } else if (t === "select") {
-          properties[tagsPropName] = { select: { name: tags[0] } };
-        } else if (t === "rich_text") {
-          properties[tagsPropName] = { rich_text: [{ type: "text", text: { content: tags.join(", ") } }] };
-        }
-      }
-    }
-
-    if (tags && tags.length > 0 && dbProps["Tags"]?.type === "multi_select") {
       properties["Tags"] = { multi_select: tags.map(name => ({ name })) };
     }
+
+
 
     let targetPageId: string | null = null;
     try {
