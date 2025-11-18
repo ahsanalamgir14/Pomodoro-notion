@@ -199,13 +199,7 @@ export const createNotionEntry = async ({
 
     properties["Quests"] = { rich_text: [{ type: "text", text: { content: questsTextContent || projectTitle } }] };
 
-    if (dbProps["Notes"]?.type === "rich_text") {
-      properties["Notes"] = {
-        rich_text: [
-          { type: "text", text: { content: `Session: ${timerMinutes} min | Start: ${startDate.toLocaleString()} | End: ${endDate.toLocaleString()}` } },
-        ],
-      };
-    }
+    properties["Notes"] = { rich_text: [{ type: "text", text: { content: notes || "" } }] };
 
     if (tags && tags.length > 0) {
       let tagsPropName: string | undefined = undefined;
