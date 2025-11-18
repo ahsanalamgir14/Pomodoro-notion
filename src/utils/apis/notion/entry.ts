@@ -78,24 +78,6 @@ export const createNotionEntry = async ({
       ? Object.entries(dbProps).find(([, p]: any) => p?.type === "date")?.[0]
       : undefined;
 
-    const durationPropName = dbProps["Duration"]?.type
-      ? "Duration"
-      : dbProps["Duration (minutes)"]?.type
-        ? "Duration (minutes)"
-        : dbProps["Time Worked"]?.type
-          ? "Time Worked"
-          : dbProps["Time Tracking"]?.type
-            ? "Time Tracking"
-            : dbProps["Time Spent"]?.type
-              ? "Time Spent"
-              : dbProps["Elapsed"]?.type
-                ? "Elapsed"
-                : dbProps["Total Time"]?.type
-                  ? "Total Time"
-                  : Object.entries(dbProps).find(([k, p]: any) => (
-                      (k.toLowerCase().includes("duration") || k.toLowerCase().includes("time") || k.toLowerCase().includes("elapsed"))
-                      && (p?.type === "number" || p?.type === "rich_text")
-                    ))?.[0];
 
     let questRelationPropName = dbProps["Quest"]?.type === "relation"
       ? "Quest"
@@ -223,47 +205,7 @@ export const createNotionEntry = async ({
     }
 
     // Duration: explicitly map numeric minutes
-    if (durationPropName) {
-      const propType = dbProps[durationPropName]?.type;
-      if (propType === "number") {
-        properties[durationPropName] = { number: timerMinutes };
-      } else if (propType === "rich_text") {
-        properties[durationPropName] = { rich_text: [{ type: "text", text: { content: String(timerMinutes) } }] };
-      }
-    }
-    if (dbProps["Duration (minutes)"]?.type === "number") {
-      properties["Duration (minutes)"] = { number: timerMinutes };
-    }
-    if (dbProps["Duration"]?.type === "number") {
-      properties["Duration"] = { number: timerMinutes };
-    }
-    if (dbProps["Duration"]?.type === "rich_text") {
-      properties["Duration"] = { rich_text: [{ type: "text", text: { content: String(timerMinutes) } }] };
-    }
-    if (dbProps["Time Tracking"]?.type === "number") {
-      properties["Time Tracking"] = { number: timerMinutes };
-    }
-    if (dbProps["Time Tracking"]?.type === "rich_text") {
-      properties["Time Tracking"] = { rich_text: [{ type: "text", text: { content: String(timerMinutes) } }] };
-    }
-    if (dbProps["Time Spent"]?.type === "number") {
-      properties["Time Spent"] = { number: timerMinutes };
-    }
-    if (dbProps["Time Spent"]?.type === "rich_text") {
-      properties["Time Spent"] = { rich_text: [{ type: "text", text: { content: String(timerMinutes) } }] };
-    }
-    if (dbProps["Elapsed"]?.type === "number") {
-      properties["Elapsed"] = { number: timerMinutes };
-    }
-    if (dbProps["Elapsed"]?.type === "rich_text") {
-      properties["Elapsed"] = { rich_text: [{ type: "text", text: { content: String(timerMinutes) } }] };
-    }
-    if (dbProps["Total Time"]?.type === "number") {
-      properties["Total Time"] = { number: timerMinutes };
-    }
-    if (dbProps["Total Time"]?.type === "rich_text") {
-      properties["Total Time"] = { rich_text: [{ type: "text", text: { content: String(timerMinutes) } }] };
-    }
+    properties["Duration"] = { rich_text: [{ type: "text", text: { content: String(timerMinutes) } }] };
 
     // Determine relation target ids
     // Prefer explicit quest page ids for quest relations.
