@@ -216,6 +216,43 @@ export default function CreateEmbedPage() {
       .slice(0, 6);
   }, [sessionDbDetail]);
 
+  const trackingStatusPropName = useMemo(() => {
+    const props: any = sessionDbDetail?.db?.properties || {};
+    if (props["Status"]?.type === "status" || props["Status"]?.type === "select") return "Status";
+    const found = Object.entries(props).find(([, p]: any) => p?.type === "status" || p?.type === "select")?.[0] as string | undefined;
+    return found;
+  }, [sessionDbDetail]);
+  const trackingStartPropName = useMemo(() => {
+    const props: any = sessionDbDetail?.db?.properties || {};
+    if (props["Start Time"]?.type === "date") return "Start Time";
+    if (props["Start Date"]?.type === "date") return "Start Date";
+    const found = Object.entries(props).find(([k, p]: any) => (k.toLowerCase().includes("start") || k.toLowerCase().includes("begin")) && p?.type === "date")?.[0] as string | undefined;
+    return found;
+  }, [sessionDbDetail]);
+  const trackingEndPropName = useMemo(() => {
+    const props: any = sessionDbDetail?.db?.properties || {};
+    if (props["End Time"]?.type === "date") return "End Time";
+    if (props["End Date"]?.type === "date") return "End Date";
+    if (props["Due Date"]?.type === "date") return "Due Date";
+    const found = Object.entries(props).find(([k, p]: any) => (k.toLowerCase().includes("end") || k.toLowerCase().includes("finish") || k.toLowerCase().includes("due")) && p?.type === "date")?.[0] as string | undefined;
+    return found;
+  }, [sessionDbDetail]);
+  const trackingDurationPropName = useMemo(() => {
+    const props: any = sessionDbDetail?.db?.properties || {};
+    if (props["Duration"]?.type) return "Duration";
+    if (props["Duration (minutes)"]?.type) return "Duration (minutes)";
+    if (props["Time Worked"]?.type) return "Time Worked";
+    if (props["Time Tracking"]?.type) return "Time Tracking";
+    if (props["Time Spent"]?.type) return "Time Spent";
+    if (props["Elapsed"]?.type) return "Elapsed";
+    if (props["Total Time"]?.type) return "Total Time";
+    const found = Object.entries(props).find(([k, p]: any) => (
+      (k.toLowerCase().includes("duration") || k.toLowerCase().includes("time") || k.toLowerCase().includes("elapsed"))
+      && (p?.type === "number" || p?.type === "rich_text")
+    ))?.[0] as string | undefined;
+    return found;
+  }, [sessionDbDetail]);
+
   // Preview card adopts embed options with theme-aware fallbacks
   const previewCardStyle: React.CSSProperties = {
     backgroundColor: widgetBg || (theme === "dark" ? "#111827" : "#ffffff"),
@@ -606,6 +643,27 @@ export default function CreateEmbedPage() {
                         ))
                       ) : (
                         <span className="opacity-60">No selectable properties</span>
+                      )}
+                    </div>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block mb-1 text-sm">Tracking Schema</label>
+                    <div className="rounded-md border border-neutral-300 p-2 text-xs dark:border-neutral-700 dark:bg-neutral-800">
+                      {trackingStatusPropName ? (
+                        <span className="mr-2 inline-flex rounded bg-neutral-200 px-2 py-1 dark:bg-neutral-700 dark:text-white">Status: {trackingStatusPropName}</span>
+                      ) : (
+                        <span className="mr-2 opacity-60">Status: not found</span>
+                      )}
+                      {trackingDurationPropName ? (
+                        <span className="mr-2 inline-flex rounded bg-neutral-200 px-2 py-1 dark:bg-neutral-700 dark:text-white">Duration: {trackingDurationPropName}</span>
+                      ) : (
+                        <span className="mr-2 opacity-60">Duration: not found</span>
+                      )}
+                      {trackingStartPropName && (
+                        <span className="mr-2 inline-flex rounded bg-neutral-200 px-2 py-1 dark:bg-neutral-700 dark:text-white">Start: {trackingStartPropName}</span>
+                      )}
+                      {trackingEndPropName && (
+                        <span className="mr-2 inline-flex rounded bg-neutral-200 px-2 py-1 dark:bg-neutral-700 dark:text-white">End: {trackingEndPropName}</span>
                       )}
                     </div>
                   </div>
