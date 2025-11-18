@@ -295,7 +295,7 @@ export default function EmbedWidget() {
             {/* Controls / Timer Card */}
             {!running ? (
               <div className="mb-4 rounded-lg border border-neutral-200 p-4 text-sm dark:border-neutral-800">
-                <div className="mb-2">Notion Page: <span className="opacity-70">{config.pageId || "(not set)"}</span></div>
+                
                 <label className="block mb-1">Session Title</label>
                 <input className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" value={title} onChange={(e) => setTitle(e.target.value)} />
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
