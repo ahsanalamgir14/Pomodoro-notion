@@ -79,37 +79,7 @@ export const createNotionEntry = async ({
       : undefined;
 
 
-    let questRelationPropName = dbProps["Quest"]?.type === "relation"
-      ? "Quest"
-      : dbProps["Quests"]?.type === "relation"
-        ? "Quests"
-        : dbProps["Quest Name"]?.type === "relation"
-          ? "Quest Name"
-          : Object.entries(dbProps).find(([k, p]: any) => (k.toLowerCase().includes("quest") || k.toLowerCase().includes("project")) && p?.type === "relation")?.[0];
 
-    // Prefer matching the tracker relation property to the actual Quest pages' parent database
-    // This ensures we relate to the correct database instead of accidentally matching the source (Adventure) DB
-    try {
-      const firstQuestId = (questPageIds && questPageIds.length > 0) ? questPageIds[0] : (questPageId || undefined);
-      if (firstQuestId) {
-        const qPage = await notion.pages.retrieve({ page_id: firstQuestId });
-        const qParent = (qPage as any)?.parent;
-        const questDbId = qParent?.type === "database_id" ? qParent?.database_id : undefined;
-        if (questDbId) {
-          const relToQuestDb = Object.entries(dbProps).find(([, p]: any) => p?.type === "relation" && p?.relation?.database_id === questDbId);
-          if (relToQuestDb) questRelationPropName = relToQuestDb[0] as string;
-        }
-      }
-    } catch (_) { }
-
-    // As a fallback, if we didn't find a relation to the Quest DB, try matching to the source DB
-    // (useful when the tracker relates directly to the Adventure/Project)
-    if (projectId && sourceDatabaseId && !questRelationPropName) {
-      try {
-        const relMatch = Object.entries(dbProps).find(([, p]: any) => p?.type === "relation" && p?.relation?.database_id === sourceDatabaseId);
-        if (relMatch) questRelationPropName = relMatch[0] as string;
-      } catch (_) { }
-    }
 
     const properties: any = {};
 
@@ -172,8 +142,7 @@ export const createNotionEntry = async ({
     const durationText = `${Math.floor(durationSeconds / 60)}:${String(durationSeconds % 60).padStart(2, "0")}`;
     properties["Duration"] = { rich_text: [{ type: "text", text: { content: durationText } }] };
 
-    // Determine relation target ids
-    // Prefer explicit quest page ids for quest relations.
+    // Determine quest ids for text derivation
     let rawRelationIds = (questPageIds && questPageIds.length > 0)
       ? questPageIds
       : (questPageId ? [questPageId] : []);
@@ -195,40 +164,7 @@ export const createNotionEntry = async ({
       } catch (_) { /* ignore */ }
     }
 
-    // Filter relation ids to match relation's database_id when available
-    let filteredRelationIds = rawRelationIds;
-    try {
-      if (questRelationPropName && rawRelationIds.length > 0) {
-        const expectedDbId: string | undefined = dbProps[questRelationPropName]?.relation?.database_id;
-        if (expectedDbId) {
-          const checks = await Promise.all(rawRelationIds.map(async (id) => {
-            try {
-              const page = await notion.pages.retrieve({ page_id: id });
-              const parent = (page as any)?.parent;
-              const parentDbId = parent?.type === "database_id" ? parent?.database_id : undefined;
-              return parentDbId === expectedDbId ? id : null;
-            } catch (_) {
-              return null;
-            }
-          }));
-          filteredRelationIds = checks.filter(Boolean) as string[];
-        }
-      }
-    } catch (_) { }
 
-    if (questRelationPropName) {
-      if (filteredRelationIds.length > 0) {
-        properties[questRelationPropName] = { relation: filteredRelationIds.map(id => ({ id })) };
-      } else if (rawRelationIds.length > 0) {
-        // Fallback: attempt to set relation with provided quest ids even if filtering produced no matches.
-        // Notion will reject unmatched ids; this ensures we still write when database_id could not be resolved.
-        properties[questRelationPropName] = { relation: rawRelationIds.map(id => ({ id })) };
-      }
-    }
-
-    if (rawRelationIds.length > 0 && dbProps["Quests"]?.type === "relation") {
-      properties["Quests"] = { relation: rawRelationIds.map(id => ({ id })) };
-    }
 
     // Do NOT set "Quest Name" relation with projectId; only quest ids should populate quest relations
 
@@ -240,40 +176,28 @@ export const createNotionEntry = async ({
       }
     }
 
-    const questsTextPropName = (
-      dbProps["Quests"]?.type === "rich_text"
-        ? "Quests"
-        : dbProps["Quest Name"]?.type === "rich_text"
-          ? "Quest Name"
-          : dbProps["Project Name"]?.type === "rich_text"
-            ? "Project Name"
-            : (Object.entries(dbProps).find(([k, p]: any) => p?.type === "rich_text" && /quest|quests|task|tasks/i.test(k))?.[0] as string | undefined)
-    );
-
-    if (questsTextPropName) {
-      let questsTextContent = projectTitle;
-      try {
-        const idsForText = rawRelationIds.length > 0 ? rawRelationIds : [];
-        if (idsForText.length > 0) {
-          const titles = await Promise.all(idsForText.map(async (id) => {
-            try {
-              const q = await notion.pages.retrieve({ page_id: id });
-              const props: any = (q as any)?.properties || {};
-              const titleKey = Object.entries(props).find(([, p]: any) => p?.type === "title")?.[0];
-              const titleArr = titleKey ? (props[titleKey]?.title || []) : [];
-              const text = (titleArr[0]?.plain_text) || (titleArr[0]?.text?.content) || "";
-              return text.trim();
-            } catch (_) { return ""; }
-          }));
-          const names = titles.filter(Boolean);
-          if (names.length > 0) {
-            questsTextContent = names.join(", ");
-          }
+    let questsTextContent = "";
+    try {
+      const idsForText = rawRelationIds.length > 0 ? rawRelationIds : [];
+      if (idsForText.length > 0) {
+        const titles = await Promise.all(idsForText.map(async (id) => {
+          try {
+            const q = await notion.pages.retrieve({ page_id: id });
+            const props: any = (q as any)?.properties || {};
+            const titleKey = Object.entries(props).find(([, p]: any) => p?.type === "title")?.[0];
+            const titleArr = titleKey ? (props[titleKey]?.title || []) : [];
+            const text = (titleArr[0]?.plain_text) || (titleArr[0]?.text?.content) || "";
+            return text.trim();
+          } catch (_) { return ""; }
+        }));
+        const names = titles.filter(Boolean);
+        if (names.length > 0) {
+          questsTextContent = names.join(", ");
         }
-      } catch (_) { /* ignore text build errors */ }
+      }
+    } catch (_) { }
 
-      properties[questsTextPropName] = { rich_text: [{ type: "text", text: { content: questsTextContent } }] };
-    }
+    properties["Quests"] = { rich_text: [{ type: "text", text: { content: questsTextContent || projectTitle } }] };
 
     if (dbProps["Notes"]?.type === "rich_text") {
       properties["Notes"] = {
@@ -312,18 +236,6 @@ export const createNotionEntry = async ({
 
     let targetPageId: string | null = null;
     try {
-      if (questRelationPropName && projectId) {
-        const propType = (dbProps[questRelationPropName] as any)?.type;
-        if (propType === "relation") {
-          const queryRes = await notion.databases.query({
-            database_id: databaseId,
-            filter: { property: questRelationPropName, relation: { contains: projectId } },
-          });
-          if ((queryRes?.results || []).length > 0) {
-            targetPageId = (queryRes.results[0] as any)?.id || null;
-          }
-        }
-      }
 
       if (!targetPageId) {
         const questsTextPropName2 = dbProps["Quest Name"]?.type === "rich_text"
