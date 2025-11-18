@@ -260,9 +260,11 @@ export default function CreateEmbedPage() {
     border: `1px solid ${inputBorder || (theme === "dark" ? "#374151" : "#d1d5db")}`,
     borderRadius: 12,
     padding: 16,
+    paddingRight: 32,
     width: Math.max(380, (inputWidth || 0) + 64),
     maxWidth: "100%",
     overflowX: "auto",
+    boxSizing: "border-box",
   };
 
   const timerStyle: React.CSSProperties = {
