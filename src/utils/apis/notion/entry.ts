@@ -126,42 +126,7 @@ export const createNotionEntry = async ({
       ],
     };
 
-    if (statusPropName) {
-      const defaultStatus = status || "Completed";
-      const propType = dbProps[statusPropName]?.type;
-      const statusConfig = dbProps[statusPropName]?.status;
-      const options = (propType === "status"
-        ? (statusConfig?.options || [])
-        : (dbProps[statusPropName]?.select?.options || [])) as Array<{ name: string; id?: string; color?: string; group_id?: string }>;
-
-      let resolvedStatus: string | undefined = undefined;
-      resolvedStatus = options?.some(o => o?.name === defaultStatus) ? defaultStatus : undefined;
-      if (!resolvedStatus && propType === "status") {
-        const groups: Array<{ id: string; name: string }> = statusConfig?.groups || [];
-        const completeGroupId = groups.find(g => /done|complete|completed|finished/i.test(g?.name || ""))?.id;
-        if (completeGroupId) {
-          const optionInComplete = options.find(o => o.group_id === completeGroupId)?.name;
-          if (optionInComplete) resolvedStatus = optionInComplete;
-        }
-      }
-      if (!resolvedStatus) {
-        resolvedStatus = options?.find(o => /done|complete|completed|finished/i.test(o?.name || ""))?.name;
-      }
-      if (!resolvedStatus) {
-        resolvedStatus = options?.find(o => /in\s*progress|active|ongoing/i.test(o?.name || ""))?.name || options?.[0]?.name || defaultStatus;
-      }
-
-      if (propType === "status") {
-        properties[statusPropName] = { status: { name: resolvedStatus } };
-      } else if (propType === "select") {
-        properties[statusPropName] = { select: { name: resolvedStatus } };
-      }
-
-      // Force explicit mapping when property exactly named "Status"
-      if (dbProps["Status"]?.type === "status") {
-        properties["Status"] = { status: { name: resolvedStatus } };
-      }
-    }
+    properties["Status"] = { status: { name: status || "Completed" } };
 
     if (startPropName) {
       const startType = dbProps[startPropName]?.type;
@@ -204,8 +169,8 @@ export const createNotionEntry = async ({
       properties[endTextPropName] = { rich_text: [{ type: "text", text: { content: endDate.toLocaleString() } }] };
     }
 
-    // Duration: explicitly map numeric minutes
-    properties["Duration"] = { rich_text: [{ type: "text", text: { content: String(timerMinutes) } }] };
+    const durationText = `${Math.floor(durationSeconds / 60)}:${String(durationSeconds % 60).padStart(2, "0")}`;
+    properties["Duration"] = { rich_text: [{ type: "text", text: { content: durationText } }] };
 
     // Determine relation target ids
     // Prefer explicit quest page ids for quest relations.
