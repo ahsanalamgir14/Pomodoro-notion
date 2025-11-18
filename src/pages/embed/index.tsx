@@ -257,10 +257,12 @@ export default function CreateEmbedPage() {
   const previewCardStyle: React.CSSProperties = {
     backgroundColor: widgetBg || (theme === "dark" ? "#111827" : "#ffffff"),
     color: widgetColor || (theme === "dark" ? "#f9fafb" : "#111827"),
-    border: `1px solid ${theme === "dark" ? "#374151" : (inputBorder || "#d1d5db")}`,
+    border: `1px solid ${inputBorder || (theme === "dark" ? "#374151" : "#d1d5db")}`,
     borderRadius: 12,
     padding: 16,
-    width: 380,
+    width: Math.max(380, (inputWidth || 0) + 64),
+    maxWidth: "100%",
+    overflowX: "auto",
   };
 
   const timerStyle: React.CSSProperties = {
@@ -279,7 +281,7 @@ export default function CreateEmbedPage() {
 
   const inputStyle: React.CSSProperties = {
     width: inputWidth,
-    border: `1px solid ${theme === "dark" ? "#374151" : inputBorder}`,
+    border: `1px solid ${inputBorder || (theme === "dark" ? "#374151" : "#d1d5db")}`,
     borderRadius: 8,
     padding: "8px 12px",
     backgroundColor: theme === "dark" ? "#0a0a0a" : "#ffffff",
@@ -577,7 +579,7 @@ export default function CreateEmbedPage() {
             <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
               <h2 className="mb-3 text-lg font-medium">Start State</h2>
               <div style={previewCardStyle}>
-                <div className="mb-2 text-sm">Notion Page: <span className="opacity-70">{selectedPageId || "(not set)"}</span></div>
+                
                 <label className="block mb-1 text-sm">Session Title</label>
                 <input style={inputStyle} placeholder="Widget Session" />
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">

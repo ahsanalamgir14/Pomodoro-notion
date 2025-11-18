@@ -3,6 +3,7 @@ import PomodoroClient from "../PomoCSR";
 export interface SaveToNotionParams {
   projectId: string;
   projectTitle: string;
+  sessionTitle?: string;
   databaseId: string;
   userId: string;
   timerValue: number;

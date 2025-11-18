@@ -12,6 +12,7 @@ export interface CreateNotionEntryParams {
   sourceDatabaseId?: string; // quest source database to match relation
   projectId: string;
   projectTitle: string;
+  sessionTitle?: string;
   timerValue: number; // in seconds
   startTime: number; // timestamp
   endTime?: number; // timestamp
@@ -28,6 +29,7 @@ export const createNotionEntry = async ({
   sourceDatabaseId,
   projectId,
   projectTitle,
+  sessionTitle,
   timerValue,
   startTime,
   endTime,
@@ -90,11 +92,8 @@ export const createNotionEntry = async ({
       ? "End Time (text)"
       : Object.entries(dbProps).find(([k, p]: any) => /end\s*time|finish/i.test(k) && p?.type === "rich_text")?.[0];
 
-    properties[titlePropName] = {
-      title: [
-        { text: { content: `${projectTitle} Session` } },
-      ],
-    };
+    const finalTitle = (sessionTitle && sessionTitle.trim()) ? sessionTitle.trim() : `${projectTitle} Session`;
+    properties[titlePropName] = { title: [{ text: { content: finalTitle } }] };
 
     properties["Status"] = { status: { name: status || "Completed" } };
 

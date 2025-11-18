@@ -15,6 +15,7 @@ export default async function handler(
       const { 
         projectId, 
         projectTitle,
+        sessionTitle,
         databaseId, 
         userId, 
         timerValue, 
@@ -68,6 +69,7 @@ export default async function handler(
           sourceDatabaseId: databaseId,
           projectId,
           projectTitle,
+          sessionTitle,
           timerValue,
           startTime,
           endTime,

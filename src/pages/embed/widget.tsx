@@ -466,6 +466,7 @@ export default function EmbedWidget() {
                           userId,
                           projectId: selectedTaskId || config?.pageId || "widget",
                           projectTitle: selectedTaskTitle || title || "Widget Session",
+                          sessionTitle: title || "",
                           databaseId: selectedDbId,
                           targetDatabaseId: trackingDbId,
                           timerValue: timerSeconds,
