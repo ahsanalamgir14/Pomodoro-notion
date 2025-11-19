@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Document</title>
+</head>
+
+<body>
+    <!doctype html>
+    <html lang="en">
+
+    <head>
+        <meta charset="utf-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1" />
+        <title>Embed Link Tester</title>
+        <style>
+            :root {
+                color-scheme: light dark;
+            }
+
+            body {
+                font-family: system-ui, -apple-system, Segoe UI, Roboto, sans-serif;
+                margin: 0;
+                padding: 24px;
+            }
+
+            h1 {
+                font-size: 20px;
+                margin: 0 0 12px;
+            }
+
+            .card {
+                border: 1px solid #d1d5db;
+                border-radius: 12px;
+                padding: 16px;
+                max-width: 900px;
+                margin: 0 auto;
+            }
+
+            .controls {
+                display: flex;
+                gap: 8px;
+                align-items: center;
+            }
+
+            input[type="text"] {
+                flex: 1;
+                padding: 8px 10px;
+                border: 1px solid #d1d5db;
+                border-radius: 8px;
+            }
+
+            button {
+                padding: 8px 12px;
+                border: 0;
+                border-radius: 8px;
+                background: #2563eb;
+                color: #fff;
+                cursor: pointer;
+            }
+
+            button:hover {
+                background: #1d4ed8;
+            }
+
+            a.quick {
+                font-size: 12px;
+                color: #2563eb;
+                text-decoration: none;
+            }
+
+            a.quick:hover {
+                text-decoration: underline;
+            }
+
+            .hint {
+                font-size: 12px;
+                opacity: 0.7;
+                margin-top: 6px;
+            }
+
+            .preview {
+                margin-top: 12px;
+            }
+
+            iframe {
+                width: 100%;
+                min-height: 640px;
+                border: 1px solid #e5e7eb;
+                border-radius: 8px;
+            }
+        </style>
+    </head>
+
+    <body>
+        <main class="card">
+            <h1>Embed Link Tester</h1>
+            <div class="controls">
+                <input id="urlInput" type="text"
+                    placeholder="Paste embed URL, e.g. http://localhost:3000/embed/widget?c=..." />
+                <button id="loadBtn">Load Embed</button>
+                <a id="openNew" class="quick" href="#" target="_blank" rel="noopener">Open in new tab</a>
+            </div>
+            <div class="hint">Tip: you can also pass ?u=&lt;embed-url&gt; to prefill and auto-load.</div>
+            <div class="preview">
+                <iframe id="embedFrame" src="" title="Embed Preview"></iframe>
+            </div>
+        </main>
+        <script>
+            (function () {
+                const input = document.getElementById('urlInput');
+                const btn = document.getElementById('loadBtn');
+                const link = document.getElementById('openNew');
+                const frame = document.getElementById('embedFrame');
+
+                function load(url) {
+                    if (!url) return;
+                    try {
+                        // Basic validation; allow http(s) or relative paths
+                        const isHttp = /^https?:\/\//i.test(url);
+                        if (!isHttp && !url.startsWith('/')) {
+                            alert('Please enter a valid embed URL (http(s) or relative /path).');
+                            return;
+                        }
+                        frame.src = url;
+                        link.href = url;
+                    } catch (e) {
+                        console.warn('Failed to set iframe src', e);
+                    }
+                }
+
+                btn.addEventListener('click', () => load(input.value.trim()));
+                input.addEventListener('keydown', (e) => { if (e.key === 'Enter') load(input.value.trim()); });
+
+                // Optional: auto-load from ?u=
+                try {
+                    const params = new URLSearchParams(window.location.search);
+                    const u = params.get('u');
+                    if (u) {
+                        input.value = u;
+                        load(u);
+                    }
+                } catch { }
+            })();
+        </script>
+    </body>
+
+    </html>
+
+</html>

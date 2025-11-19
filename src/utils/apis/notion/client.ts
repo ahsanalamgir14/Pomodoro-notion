@@ -3,6 +3,7 @@ import PomodoroClient from "../PomoCSR";
 export interface SaveToNotionParams {
   projectId: string;
   projectTitle: string;
+  sessionTitle?: string;
   databaseId: string;
   userId: string;
   timerValue: number;
@@ -87,6 +88,16 @@ export const updateQuestStatus = async (params: { userId: string; status: string
     return response.data;
   } catch (error) {
     console.error("Error updating quest status:", error);
+    throw error;
+  }
+};
+
+export const updateTaskStatus = async (params: { userId: string; pageId: string; status: string }) => {
+  try {
+    const response = await PomodoroClient.post("/api/pomo/task-status", params);
+    return response.data;
+  } catch (error) {
+    console.error("Error updating task status:", error);
     throw error;
   }
 };

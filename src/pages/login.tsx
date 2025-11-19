@@ -1,5 +1,6 @@
 /* eslint-disable react/no-unescaped-entities */
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
+import type { GetServerSidePropsContext } from "next";
 import Link from "next/link";
 import Footer from "../Components/Footer";
 import GoogleButton from "../Components/GoogleButton";
@@ -36,11 +37,31 @@ export default function Login() {
       }
       setSuccess('Signed in successfully');
       const redirectTarget = (router.query.redirect as string) || '/';
-      router.push(redirectTarget);
+      router.replace(redirectTarget);
     } catch (err) {
       setError('Login failed');
     }
   };
+
+  // If already authenticated (session cookie present), auto-redirect
+  useEffect(() => {
+    let mounted = true;
+    const checkSession = async () => {
+      try {
+        const res = await fetch('/api/session', { method: 'GET' });
+        const json = await res.json().catch(() => ({}));
+        if (mounted && json?.isAuthenticated) {
+          const redirectTarget = (router.query.redirect as string) || '/';
+          router.replace(redirectTarget);
+        }
+      } catch {}
+    };
+    // Only run when router is ready to read query params
+    if (router.isReady) {
+      checkSession();
+    }
+    return () => { mounted = false; };
+  }, [router.isReady, router.query.redirect, router]);
 
   return (
     <main className="container mx-auto flex min-h-screen flex-col items-center p-4">
@@ -129,4 +150,24 @@ export default function Login() {
       </section>
     </main>
   );
+}
+
+// Server-side: if a valid session exists, redirect before rendering
+export async function getServerSideProps(ctx: GetServerSidePropsContext) {
+  const cookieHeader = ctx.req.headers.cookie || "";
+  const cookies = Object.fromEntries(cookieHeader.split(";").map((c) => {
+    const [k, v] = c.trim().split("=");
+    return [k, v];
+  }));
+  const sessionUser = cookies["session_user"] ? decodeURIComponent(cookies["session_user"]) : null;
+  if (sessionUser) {
+    const redirect = (ctx.query?.redirect as string) || "/";
+    return {
+      redirect: {
+        destination: redirect,
+        permanent: false,
+      },
+    };
+  }
+  return { props: {} };
 }

@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Head from "next/head";
 import { trpc } from "../../utils/trpc";
-import { savePomoSessionToNotion, startQuestWork, updateQuestStatus } from "../../utils/apis/notion/client";
+import QuestSelection from "../../Components/QuestSelection";
+import NotionTags from "../../Components/NotionTags";
+import { savePomoSessionToNotion, startQuestWork, updateQuestStatus, updateTaskStatus } from "../../utils/apis/notion/client";
 
 type EmbedSettings = {
   pageId?: string;
@@ -12,6 +14,13 @@ type EmbedSettings = {
   inputBorderColor?: string;
   timerColor?: string;
   timerFontSize?: number;
+  taskDatabaseId?: string;
+  sessionDatabaseId?: string;
+  taskId?: string;
+  taskTitle?: string;
+  // Back-compat: hideSelectors from earlier version; new flag hides only DB selectors
+  hideSelectors?: boolean;
+  hideDbSelectors?: boolean;
 };
 
 function decodeConfigParam() {
@@ -28,8 +37,17 @@ function decodeConfigParam() {
   }
 }
 
+function getCookie(name: string): string | null {
+  if (typeof document === "undefined") return null;
+  const value = `; ${document.cookie}`;
+  const parts = value.split(`; ${name}=`);
+  if (parts.length === 2) return decodeURIComponent(parts.pop()!.split(";").shift()!);
+  return null;
+}
+
 export default function EmbedWidget() {
   const [config, setConfig] = useState<EmbedSettings | null>(null);
+  const [isSystemDark, setIsSystemDark] = useState<boolean>(false);
   const [selectedDbId, setSelectedDbId] = useState<string>("");
   const [trackingDbId, setTrackingDbId] = useState<string>("");
   const [title, setTitle] = useState<string>("Widget Session");
@@ -40,6 +58,8 @@ export default function EmbedWidget() {
   const [selectedTaskId, setSelectedTaskId] = useState<string>("");
   const [selectedTaskTitle, setSelectedTaskTitle] = useState<string>("");
   const [linkedQuestIds, setLinkedQuestIds] = useState<string[]>([]);
+  const [selectedQuests, setSelectedQuests] = useState<Array<{ label: string; value: string }>>([]);
+  const [selectedTags, setSelectedTags] = useState<Array<{ label: string; value: string; color: string }>>([]);
 
   // Timer state
   const [running, setRunning] = useState<boolean>(false);
@@ -50,10 +70,41 @@ export default function EmbedWidget() {
   useEffect(() => {
     const cfg = decodeConfigParam();
     setConfig(cfg);
+    if (cfg?.taskDatabaseId) {
+      setSelectedDbId((prev) => prev || cfg.taskDatabaseId);
+    }
+    if (cfg?.sessionDatabaseId) {
+      setTrackingDbId((prev) => prev || cfg.sessionDatabaseId);
+    }
+    if (cfg?.taskId) {
+      setSelectedTaskId((prev) => prev || cfg.taskId);
+    }
+    if (cfg?.taskTitle) {
+      setSelectedTaskTitle((prev) => prev || cfg.taskTitle);
+    }
+  }, []);
+
+  // Detect system dark preference for 'system' theme
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+    const update = () => setIsSystemDark(!!mq?.matches);
+    update();
+    mq?.addEventListener?.('change', update);
+    return () => mq?.removeEventListener?.('change', update);
+  }, []);
+
+  // Determine which identifier to use for Notion access
+  // Prefer logged-in session email; fallback to "notion-user"
+  const [userIdentifier, setUserIdentifier] = useState<string>("notion-user");
+  useEffect(() => {
+    const email = getCookie("session_user");
+    if (email && email.trim() !== "") {
+      setUserIdentifier(email);
+    }
   }, []);
 
   // Fetch databases via tRPC (same as home page style)
-  const userIdentifier = "notion-user";
   const { data: dbData } = trpc.private.getDatabases.useQuery(
     { email: userIdentifier },
     { refetchOnWindowFocus: false, retry: false }
@@ -62,18 +113,24 @@ export default function EmbedWidget() {
   useEffect(() => {
     if (dbData?.databases?.results && dbData.databases.results.length > 0) {
       const firstId = dbData.databases.results[0].id;
-      setSelectedDbId((prev) => prev || firstId);
+      setSelectedDbId((prev) => prev || config?.taskDatabaseId || firstId);
       // Try to pick a Time Tracking database by name; fallback to first
       const trackingCandidate = dbData.databases.results.find((d: any) => {
         const name = (d?.title && d?.title[0]?.plain_text) || "";
         return /time|tracking|timesheet|log/i.test(name);
       })?.id || firstId;
-      setTrackingDbId((prev) => prev || trackingCandidate);
+      setTrackingDbId((prev) => prev || config?.sessionDatabaseId || trackingCandidate);
     }
-  }, [dbData]);
+  }, [dbData, config?.taskDatabaseId, config?.sessionDatabaseId]);
 
   // Fetch tasks (pages) for selected database
   const { data: dbQueryData } = trpc.private.queryDatabase.useQuery(
+    { email: userIdentifier, databaseId: selectedDbId },
+    { enabled: !!selectedDbId, refetchOnWindowFocus: false, retry: false }
+  );
+
+  // Fetch database detail to get schema (e.g., Tags options)
+  const { data: dbDetailData } = trpc.private.getDatabaseDetail.useQuery(
     { email: userIdentifier, databaseId: selectedDbId },
     { enabled: !!selectedDbId, refetchOnWindowFocus: false, retry: false }
   );
@@ -115,28 +172,85 @@ export default function EmbedWidget() {
           : Object.entries(props).find(([k, p]: any) => k?.toLowerCase?.().includes("quest") && p?.type === "relation")?.[0];
       const relations: any[] = questsRelProp ? (props[questsRelProp] as any)?.relation || [] : [];
       const ids = relations.map((r) => r?.id).filter(Boolean);
-      setLinkedQuestIds(ids);
+      // Only auto-derive if user hasn't selected explicitly
+      if (!selectedQuests || selectedQuests.length === 0) {
+        setLinkedQuestIds(ids);
+      }
     } catch (e) {
       console.warn("Failed to derive linked quest IDs", e);
       setLinkedQuestIds([]);
     }
+  }, [dbQueryData, selectedTaskId, selectedQuests]);
+
+  // Auto-populate selected quests options with current relations when task changes (fetch titles)
+  useEffect(() => {
+    const populateQuests = async () => {
+      if (!selectedTaskId) return;
+      if (selectedQuests && selectedQuests.length > 0) return; // respect manual selection
+      try {
+        const qs = new URLSearchParams({ userId: "notion-user", pageId: selectedTaskId, relationName: "Quests" });
+        const resp = await fetch(`/api/notion/page-relations?${qs.toString()}`);
+        if (!resp.ok) return;
+        const data = await resp.json();
+        const items: Array<{ id: string; title: string }> = data?.items || [];
+        // Prefill selection with current relations
+        const values = items.map(i => ({ label: i.title, value: i.id }));
+        setSelectedQuests(values);
+        setLinkedQuestIds(values.map(v => v.value));
+      } catch (e) {
+        // ignore
+      }
+    };
+    populateQuests();
+  }, [selectedTaskId]);
+
+  // Derive available tag options from database schema (prefer Tags multi_select)
+  const availableTags = useMemo(() => {
+    const props: Record<string, any> = dbDetailData?.db?.properties || {};
+    const tagsProp = props?.["Tags"]?.type === "multi_select"
+      ? props["Tags"]
+      : Object.values(props).find((p: any) => p?.type === "multi_select") as any;
+    const options: any[] = tagsProp?.multi_select?.options || [];
+    return options.map((o: any) => ({ label: o?.name || "", value: o?.id || o?.name || "", color: o?.color || "default" }));
+  }, [dbDetailData?.db?.properties]);
+
+  // Prefill selected tags from the chosen task page's properties
+  useEffect(() => {
+    try {
+      const results: any[] = dbQueryData?.database?.results || [];
+      const page = results.find((r: any) => r?.id === selectedTaskId);
+      const props: Record<string, any> = page?.properties || {};
+      const tagPropName = props?.["Tags"]?.type === "multi_select"
+        ? "Tags"
+        : Object.entries(props).find(([, p]: any) => p?.type === "multi_select")?.[0];
+      const selected = tagPropName ? (props?.[tagPropName] as any)?.multi_select || [] : [];
+      const values = selected.map((m: any) => ({ label: m?.name || "", value: m?.id || m?.name || "", color: m?.color || "default" }));
+      setSelectedTags(values);
+    } catch (e) {
+      setSelectedTags([]);
+    }
   }, [dbQueryData, selectedTaskId]);
 
   const previewCardStyle: React.CSSProperties = useMemo(() => ({
-    backgroundColor: config?.widgetBgColor || (config?.theme === "dark" ? "#111827" : "#ffffff"),
-    color: config?.widgetTextColor || (config?.theme === "dark" ? "#f9fafb" : "#111827"),
+    backgroundColor: (config?.widgetBgColor ?? config?.widgetBg) || (config?.theme === "dark" ? "#111827" : "#ffffff"),
+    color: (config?.widgetTextColor ?? config?.widgetColor) || (config?.theme === "dark" ? "#f9fafb" : "#111827"),
+    border: `1px solid ${config?.theme === "dark" ? "#374151" : ((config?.inputBorderColor ?? config?.inputBorder) || "#d1d5db")}`,
     borderRadius: 12,
     padding: 16,
-    boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
+    paddingRight: 32,
+    width: Math.max(380, ((config?.inputWidth ?? 0) as number) + 64),
+    maxWidth: "100%",
+    overflowX: "auto",
+    boxSizing: "border-box",
   }), [config]);
 
   const inputStyle: React.CSSProperties = useMemo(() => ({
-    width: config?.inputWidth ? `${config.inputWidth}%` : "100%",
-    border: `1px solid ${config?.inputBorderColor || (config?.theme === "dark" ? "#374151" : "#d1d5db")}`,
+    width: (config?.inputWidth ?? 0) > 0 ? (config!.inputWidth as number) : "100%",
+    border: `1px solid ${((config?.inputBorderColor ?? config?.inputBorder) || (config?.theme === "dark" ? "#374151" : "#d1d5db"))}`,
     padding: "8px 10px",
     borderRadius: 8,
     backgroundColor: config?.theme === "dark" ? "#111827" : "#ffffff",
-    color: config?.widgetTextColor || (config?.theme === "dark" ? "#f9fafb" : "#111827"),
+    color: (config?.widgetTextColor ?? config?.widgetColor) || (config?.theme === "dark" ? "#f9fafb" : "#111827"),
     outline: "none",
   }), [config]);
 
@@ -144,7 +258,23 @@ export default function EmbedWidget() {
     color: config?.timerColor || (config?.theme === "dark" ? "#93c5fd" : "#2563eb"),
     fontSize: config?.timerFontSize || 48,
     fontWeight: 700,
-    letterSpacing: 1,
+    fontVariantNumeric: "tabular-nums",
+  }), [config]);
+
+  const previewTitleStyle: React.CSSProperties = useMemo(() => ({
+    fontSize: 12,
+    fontWeight: 500,
+    color: config?.theme === "dark" ? "#9ca3af" : "#6b7280",
+    marginBottom: 4,
+  }), [config]);
+
+  const secondaryButtonStyle: React.CSSProperties = useMemo(() => ({
+    backgroundColor: config?.theme === "dark" ? "#374151" : "#e5e7eb",
+    color: config?.theme === "dark" ? "#f9fafb" : "#111827",
+    border: `1px solid ${config?.theme === "dark" ? "#4b5563" : "#d1d5db"}`,
+    borderRadius: 8,
+    padding: "8px 12px",
+    fontWeight: 500,
   }), [config]);
 
   const containerClasses = useMemo(() => {
@@ -154,12 +284,21 @@ export default function EmbedWidget() {
     return "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white";
   }, [config]);
 
+  const effectiveTheme = useMemo(() => {
+    const t = config?.theme || "system";
+    if (t === "dark") return "dark";
+    if (t === "system") return isSystemDark ? "dark" : "light";
+    return "light";
+  }, [config?.theme, isSystemDark]);
+
+  const cardWidth = useMemo(() => Math.max(380, ((config?.inputWidth ?? 0) as number) + 64), [config?.inputWidth]);
+
   return (
-    <div className={`min-h-screen ${containerClasses}`}> 
+    <div className={`min-h-screen ${containerClasses} ${(config?.theme === 'dark' || (config?.theme === 'system' && isSystemDark)) ? 'dark' : ''}`}> 
       <Head>
         <title>Pomodoro Embed Widget</title>
       </Head>
-      <div className="mx-auto max-w-xl px-4 py-6">
+      <div className="mx-auto px-4 py-6" style={{ maxWidth: cardWidth }}>
         {!config && (
           <div className="rounded-lg border border-neutral-200 p-4 text-sm opacity-75 dark:border-neutral-800">
             No config provided. Pass base64 config via query param `c`.
@@ -167,191 +306,231 @@ export default function EmbedWidget() {
         )}
         {config && (
           <div>
-            {/* Controls */}
-            <div className="mb-4 rounded-lg border border-neutral-200 p-4 text-sm dark:border-neutral-800">
-              <div className="mb-2">Notion Page: <span className="opacity-70">{config.pageId || "(not set)"}</span></div>
-              <label className="block mb-1">Session Title</label>
-              <input className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" value={title} onChange={(e) => setTitle(e.target.value)} />
-              <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                <div>
-                  <label className="block mb-1">Selected Table</label>
-                  <select className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" value={selectedDbId} onChange={(e) => setSelectedDbId(e.target.value)}>
-                    {dbData?.databases?.results?.map((d: any) => (
-                      <option key={d.id} value={d.id}>{(d?.title && d?.title[0]?.plain_text) || d.id}</option>
-                    ))}
-                  </select>
+            {/* Controls / Timer Card */}
+            {!running ? (
+              <div style={{ ...previewCardStyle, marginBottom: 16 }}>
+                
+                <label className="block mb-1">Session Title</label>
+                <input style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} />
+                <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
+                  {!(config?.hideDbSelectors ?? config?.hideSelectors) && (
+                    <>
+                      <div>
+                        <label className="block mb-1">Selected Table</label>
+                        <select className="w-full rounded-md border border-neutral-300 p-2 text-neutral-900 dark:text-white dark:border-neutral-700 dark:bg-neutral-800" value={selectedDbId} onChange={(e) => setSelectedDbId(e.target.value)}>
+                          {dbData?.databases?.results?.map((d: any) => (
+                            <option key={d.id} value={d.id}>{(d?.title && d?.title[0]?.plain_text) || d.id}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block mb-1">Time Tracking Database</label>
+                        <select className="w-full rounded-md border border-neutral-300 p-2 text-neutral-900 dark:text-white dark:border-neutral-700 dark:bg-neutral-800" value={trackingDbId} onChange={(e) => setTrackingDbId(e.target.value)}>
+                          {dbData?.databases?.results?.map((d: any) => (
+                            <option key={d.id} value={d.id}>{(d?.title && d?.title[0]?.plain_text) || d.id}</option>
+                          ))}
+                        </select>
+                      </div>
+                    </>
+                  )}
+                  <div>
+                    <label className="block mb-1">Task</label>
+                    <select
+                      style={inputStyle as React.CSSProperties}
+                      value={selectedTaskId}
+                      onChange={(e) => {
+                        const id = e.target.value;
+                        setSelectedTaskId(id);
+                        const found = taskItems.find((t) => t.id === id);
+                        setSelectedTaskTitle(found?.title || "");
+                      }}
+                    >
+                      {taskItems.map((t) => (
+                        <option key={t.id} value={t.id}>{t.title}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className="sm:col-span-2">
+                    <label className="block mb-1">Quests (relation)</label>
+                    <QuestSelection
+                      disabled={!selectedTaskId}
+                      projectId={selectedTaskId || null}
+                      values={selectedQuests}
+                      theme={effectiveTheme as any}
+                      width={(config?.inputWidth ?? 0) > 0 ? (config!.inputWidth as number) : undefined}
+                      onChange={(opts: any[]) => {
+                        const arr = (opts || []) as Array<{ label: string; value: string }>;
+                        setSelectedQuests(arr);
+                        setLinkedQuestIds(arr.map((o) => o.value));
+                      }}
+                    />
+                  </div>
+                  <div>
+                    <label className="block mb-1">Tags</label>
+                    <NotionTags
+                      options={availableTags}
+                      disabled={!selectedDbId}
+                      selectedOptions={selectedTags}
+                      theme={effectiveTheme as any}
+                      width={(config?.inputWidth ?? 0) > 0 ? (config!.inputWidth as number) : undefined}
+                      handleSelect={(vals: Array<{ label: string; value: string; color: string }>) => {
+                        setSelectedTags(vals || []);
+                      }}
+                    />
+                  </div>
                 </div>
-                <div>
-                  <label className="block mb-1">Time Tracking Database</label>
-                  <select className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" value={trackingDbId} onChange={(e) => setTrackingDbId(e.target.value)}>
-                    {dbData?.databases?.results?.map((d: any) => (
-                      <option key={d.id} value={d.id}>{(d?.title && d?.title[0]?.plain_text) || d.id}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block mb-1">Task</label>
-                  <select
-                    className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800"
-                    value={selectedTaskId}
-                    onChange={(e) => {
-                      const id = e.target.value;
-                      setSelectedTaskId(id);
-                      const found = taskItems.find((t) => t.id === id);
-                      setSelectedTaskTitle(found?.title || "");
+                <label className="mt-3 block mb-1">Notes</label>
+                <textarea style={{ ...inputStyle, height: 64 }} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+                <div className="mt-3 flex items-center gap-3">
+                  <button
+                    className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
+                    onClick={() => {
+                      setSavingMsg("");
+                      setErrorMsg("");
+                      const now = Date.now();
+                      setRunning(true);
+                      setStartTime(now);
+                      setElapsedMs(0);
+                      if (intervalRef.current) window.clearInterval(intervalRef.current);
+                      intervalRef.current = window.setInterval(() => {
+                        setElapsedMs((prev) => prev + 1000);
+                      }, 1000);
+                      const userId = "notion-user";
+                      const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
+                      const targets = (selectedQuests?.map(q => q.value) || []).length > 0
+                        ? selectedQuests.map(q => q.value)
+                        : (linkedQuestIds.length > 0 ? linkedQuestIds : []);
+                      const ops: Promise<any>[] = [];
+                      if (taskPageId) {
+                        ops.push(updateTaskStatus({ userId, pageId: taskPageId, status: "In Progress" }));
+                      }
+                      targets.forEach((qid) => {
+                        ops.push(startQuestWork({
+                          userId,
+                          questPageId: qid,
+                          projectTitle: selectedTaskTitle || title || "Task",
+                          adventurePageId: config?.pageId,
+                        }));
+                        ops.push(updateQuestStatus({
+                          userId,
+                          questPageId: qid,
+                          status: "In Progress",
+                          targetDatabaseId: selectedDbId,
+                          adventurePageId: config?.pageId,
+                        }));
+                      });
+                      void Promise.all(ops).catch(() => {
+                        setErrorMsg("Failed to update task status on start.");
+                      });
                     }}
                   >
-                    {taskItems.map((t) => (
-                      <option key={t.id} value={t.id}>{t.title}</option>
-                    ))}
-                  </select>
-                </div>
-                <div>
-                  <label className="block mb-1">Tags (comma separated)</label>
-                  <input className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" value={tagsStr} onChange={(e) => setTagsStr(e.target.value)} placeholder="e.g., Focus, Coding" />
+                    Start
+                  </button>
                 </div>
               </div>
-              <label className="mt-3 block mb-1">Notes</label>
-              <textarea className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
-            </div>
-
-            {/* Widget */}
-            <div style={previewCardStyle}>
-              {/* Start/Running State */}
-              {!running && (
-                <>
-                  <input style={inputStyle} placeholder="Task / Notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
-                  <div className="mt-3 flex items-center gap-3">
-                    <button
-                      className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
-                      onClick={async () => {
-                        // Update task status to In Progress when starting
-                        const userId = "notion-user";
-                        const targets = linkedQuestIds.length > 0 ? linkedQuestIds : [];
-                        if (targets.length === 0) {
-                          console.warn("No linked quests found on selected tracker entry.");
-                        }
-                        for (const qid of targets) {
-                          try {
-                            await startQuestWork({
-                              userId,
-                              questPageId: qid,
-                              projectTitle: selectedTaskTitle || title || "Task",
-                              adventurePageId: config?.pageId,
-                            });
-                            await updateQuestStatus({
-                              userId,
-                              questPageId: qid,
-                              status: "In Progress",
-                              targetDatabaseId: selectedDbId,
-                              adventurePageId: config?.pageId,
-                            });
-                          } catch (err) {
-                            console.error("Failed to start quest", err);
-                            setErrorMsg("Failed to update task status on start.");
-                          }
-                        }
-                        setRunning(true);
-                        const now = Date.now();
-                        setStartTime(now);
-                        setElapsedMs(0);
-                        if (intervalRef.current) window.clearInterval(intervalRef.current);
-                        intervalRef.current = window.setInterval(() => {
-                          setElapsedMs((prev) => prev + 1000);
-                        }, 1000);
-                      }}
-                    >
-                      Start
-                    </button>
-                    <span className="text-xs opacity-70">Tracking time…</span>
-                  </div>
-                </>
-              )}
-              {running && (
-                <>
-                  <div style={timerStyle}>{new Date(elapsedMs).toISOString().substr(14, 5)}</div>
-                  <div className="mt-3 flex items-center gap-3">
-                    <button
-                      className="rounded-md bg-neutral-200 px-4 py-2 text-sm font-medium text-neutral-900 hover:bg-neutral-300"
-                      onClick={() => {
+            ) : (
+              <div style={previewCardStyle}>
+                <div style={previewTitleStyle}>Timer Running</div>
+                <div style={timerStyle}>{new Date(elapsedMs).toISOString().substr(14, 5)}</div>
+                <div className="mt-3 flex items-center gap-3">
+                  <button
+                    style={secondaryButtonStyle}
+                    onClick={() => {
+                      setRunning(false);
+                      if (intervalRef.current) window.clearInterval(intervalRef.current);
+                      const userId = "notion-user";
+                      const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
+                      if (taskPageId) {
+                        updateTaskStatus({ userId, pageId: taskPageId, status: "Paused" }).catch((e) => {
+                          console.warn("Failed to set task status Paused", e);
+                        });
+                      }
+                      const targets = linkedQuestIds.length > 0 ? linkedQuestIds : [];
+                      targets.forEach((qid) => {
+                        updateQuestStatus({
+                          userId,
+                          questPageId: qid,
+                          status: "Paused",
+                          targetDatabaseId: selectedDbId,
+                          adventurePageId: config?.pageId,
+                        }).catch((err) => {
+                          console.error("Failed to pause quest", err);
+                          setErrorMsg("Failed to update task status on pause.");
+                        });
+                      });
+                    }}
+                  >
+                    Pause
+                  </button>
+                  <button
+                    className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
+                    onClick={async () => {
+                      try {
+                        setSavingMsg("");
+                        setErrorMsg("");
                         setRunning(false);
                         if (intervalRef.current) window.clearInterval(intervalRef.current);
+                        const endTimeMs = Date.now();
                         const userId = "notion-user";
-                        const targets = linkedQuestIds.length > 0 ? linkedQuestIds : [];
-                        targets.forEach((qid) => {
-                          updateQuestStatus({
+                        const tags = (selectedTags || []).map(t => t.label).filter(Boolean);
+                        if (!trackingDbId) {
+                          setErrorMsg("Please select a Time Tracking database.");
+                          return;
+                        }
+                        const timerSeconds = Math.max(60, Math.floor(elapsedMs / 1000));
+                        const startSeconds = Math.floor((startTime ?? endTimeMs) / 1000);
+                        const endSeconds = Math.floor(endTimeMs / 1000);
+                        await savePomoSessionToNotion({
+                          userId,
+                          projectId: selectedTaskId || config?.pageId || "widget",
+                          projectTitle: selectedTaskTitle || title || "Widget Session",
+                          sessionTitle: title || "",
+                          databaseId: selectedDbId,
+                          targetDatabaseId: trackingDbId,
+                          timerValue: timerSeconds,
+                          startTime: startSeconds,
+                          endTime: endSeconds,
+                          status: "Completed",
+                          notes,
+                          tags,
+                          questPageIds: (selectedQuests || []).map(q => q.value),
+                        });
+                        const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
+                        if (taskPageId) {
+                          try {
+                            await updateTaskStatus({ userId, pageId: taskPageId, status: "Completed" });
+                          } catch (e) {
+                            console.warn("Failed to set task status Completed", e);
+                          }
+                        }
+                        const targets = (selectedQuests?.map(q => q.value) || []).length > 0
+                          ? selectedQuests.map(q => q.value)
+                          : (linkedQuestIds.length > 0 ? linkedQuestIds : []);
+                        for (const qid of targets) {
+                          await updateQuestStatus({
                             userId,
                             questPageId: qid,
-                            status: "Paused",
+                            status: "Completed",
                             targetDatabaseId: selectedDbId,
                             adventurePageId: config?.pageId,
-                          }).catch((err) => {
-                            console.error("Failed to pause quest", err);
-                            setErrorMsg("Failed to update task status on pause.");
                           });
-                        });
-                      }}
-                    >
-                      Pause
-                    </button>
-                    <button
-                      className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
-                      onClick={async () => {
-                        try {
-                          setSavingMsg("");
-                          setErrorMsg("");
-                          setRunning(false);
-                          if (intervalRef.current) window.clearInterval(intervalRef.current);
-                          const endTimeMs = Date.now();
-                          const userId = "notion-user";
-                          const tags = tagsStr.split(",").map((t) => t.trim()).filter(Boolean);
-                          // Save to Time Tracking database with exact fields
-                          if (!trackingDbId) {
-                            setErrorMsg("Please select a Time Tracking database.");
-                            return;
-                          }
-                          const timerSeconds = Math.max(60, Math.floor(elapsedMs / 1000));
-                          const startSeconds = Math.floor((startTime ?? endTimeMs) / 1000);
-                          const endSeconds = Math.floor(endTimeMs / 1000);
-                          await savePomoSessionToNotion({
-                            userId,
-                            projectId: selectedTaskId || config?.pageId || "widget",
-                            projectTitle: selectedTaskTitle || title || "Widget Session",
-                            databaseId: selectedDbId,
-                            targetDatabaseId: trackingDbId,
-                            timerValue: timerSeconds,
-                            startTime: startSeconds,
-                            endTime: endSeconds,
-                            status: "Completed",
-                            notes,
-                            tags,
-                          });
-                          // Update task status to Completed in selected table
-                          const targets = linkedQuestIds.length > 0 ? linkedQuestIds : [];
-                          for (const qid of targets) {
-                            await updateQuestStatus({
-                              userId,
-                              questPageId: qid,
-                              status: "Completed",
-                              targetDatabaseId: selectedDbId,
-                              adventurePageId: config?.pageId,
-                            });
-                          }
-                          setSavingMsg("Time Tracking entry saved and status updated.");
-                          setElapsedMs(0);
-                          setStartTime(null);
-                        } catch (err) {
-                          console.error("Widget completion error", err);
-                          setErrorMsg("Failed to save tracking entry or update status.");
                         }
-                      }}
-                    >
-                      Complete
-                    </button>
-                  </div>
-                </>
-              )}
-            </div>
+                        setSavingMsg("Time Tracking entry saved and status updated.");
+                        setElapsedMs(0);
+                        setStartTime(null);
+                      } catch (err) {
+                        console.error("Widget completion error", err);
+                        setErrorMsg("Failed to save tracking entry or update status.");
+                      }
+                    }}
+                  >
+                    Complete
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {/* Removed duplicate Widget card; Start button is now in the config card above */}
 
             {(savingMsg || errorMsg) && (
               <div className="mt-3 text-sm">

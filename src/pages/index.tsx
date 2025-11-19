@@ -93,8 +93,8 @@ function Home() {
   // Use a simple identifier for Notion connection - no user accounts needed
   const userIdentifier = sessionEmail || "notion-user";
   
-  // Only fetch from API if we don't have cached data and user is connected
-  const shouldFetch = isConnected && !cachedData;
+  // Fetch when we have a session (cookie) or cached connection, and no cached data yet
+  const shouldFetch = !cachedData && (!!sessionEmail || isConnected);
   
   const { data, isFetching, error } = trpc.private.getDatabases.useQuery(
     { email: userIdentifier },
@@ -126,11 +126,11 @@ function Home() {
   // Use cached data if available, otherwise use fresh API data
   const displayData = cachedData || data;
   
-  // Determine if we should show the databases (either we have data or we're connected and fetching)
-  const shouldShowDatabases = isConnected && (displayData || isFetching);
+  // Determine if we should show the databases (either we have data or we're currently fetching)
+  const shouldShowDatabases = !!displayData || isFetching;
   
   // Single source of truth for loading state
-  const isLoadingDatabases = isConnected && isFetching && !displayData;
+  const isLoadingDatabases = isFetching && !displayData;
 
   return (
     <>

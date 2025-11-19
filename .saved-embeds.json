@@ -16,5 +16,121 @@
       },
       "createdAt": 1761752229718
     }
+  ],
+  "ahsanalamgir14@gmail.com": [
+    {
+      "id": "28b83b1b-345b-80e9-8956-e44cc657a09f",
+      "title": "Promo App Test",
+      "link": "http://localhost:3000/embed/widget?c=eyJwYWdlSWQiOiIyOGI4M2IxYi0zNDViLTgwZTktODk1Ni1lNDRjYzY1N2EwOWYiLCJ0aGVtZSI6ImxpZ2h0Iiwid2lkZ2V0QmciOiIjZmZmZmZmIiwid2lkZ2V0Q29sb3IiOiIjMTExMTExIiwiaW5wdXRXaWR0aCI6NjAwLCJpbnB1dEJvcmRlciI6IiMwMDAwMDAiLCJ0aW1lckNvbG9yIjoiI2VmNDQ0NCIsInRpbWVyRm9udFNpemUiOjQ4LCJ0YXNrRGF0YWJhc2VJZCI6IjI3YzgzYjFiLTM0NWItODA1Yy1iYmFkLWUwNjViOTQ4ZDU0MiIsInNlc3Npb25EYXRhYmFzZUlkIjoiMjdjODNiMWItMzQ1Yi04MDAzLWFkMDItZjE0ODZhNDQ4NGJiIiwiaGlkZURiU2VsZWN0b3JzIjp0cnVlfQ%3D%3D",
+      "config": {
+        "pageId": "28b83b1b-345b-80e9-8956-e44cc657a09f",
+        "theme": "light",
+        "widgetBg": "#ffffff",
+        "widgetColor": "#111111",
+        "inputWidth": 600,
+        "inputBorder": "#000000",
+        "timerColor": "#ef4444",
+        "timerFontSize": 48,
+        "taskDatabaseId": "27c83b1b-345b-805c-bbad-e065b948d542",
+        "sessionDatabaseId": "27c83b1b-345b-8003-ad02-f1486a4484bb",
+        "hideDbSelectors": true
+      },
+      "createdAt": 1763513614976
+    },
+    {
+      "id": "28b83b1b-345b-80e9-8956-e44cc657a09f",
+      "title": "Promo App Test",
+      "link": "http://localhost:3000/embed/widget?c=eyJwYWdlSWQiOiIyOGI4M2IxYi0zNDViLTgwZTktODk1Ni1lNDRjYzY1N2EwOWYiLCJ0aGVtZSI6ImxpZ2h0Iiwid2lkZ2V0QmciOiIjZmZmZmZmIiwid2lkZ2V0Q29sb3IiOiIjMTExMTExIiwiaW5wdXRXaWR0aCI6MzIwLCJpbnB1dEJvcmRlciI6IiMwMDAwMDAiLCJ0aW1lckNvbG9yIjoiI2VmNDQ0NCIsInRpbWVyRm9udFNpemUiOjQ4LCJ0YXNrRGF0YWJhc2VJZCI6IjI3YzgzYjFiLTM0NWItODA1Yy1iYmFkLWUwNjViOTQ4ZDU0MiIsInNlc3Npb25EYXRhYmFzZUlkIjoiMjdjODNiMWItMzQ1Yi04MDAzLWFkMDItZjE0ODZhNDQ4NGJiIiwiaGlkZURiU2VsZWN0b3JzIjp0cnVlfQ%3D%3D",
+      "config": {
+        "pageId": "28b83b1b-345b-80e9-8956-e44cc657a09f",
+        "theme": "light",
+        "widgetBg": "#ffffff",
+        "widgetColor": "#111111",
+        "inputWidth": 320,
+        "inputBorder": "#000000",
+        "timerColor": "#ef4444",
+        "timerFontSize": 48,
+        "taskDatabaseId": "27c83b1b-345b-805c-bbad-e065b948d542",
+        "sessionDatabaseId": "27c83b1b-345b-8003-ad02-f1486a4484bb",
+        "hideDbSelectors": true
+      },
+      "createdAt": 1763512650613
+    },
+    {
+      "id": "27c83b1b-345b-804b-b7a5-f5e80f6e7672",
+      "title": "Pacific Coast Highway Road Trip 27c83b1b345b804bb7a5f5e80f6e7672",
+      "link": "http://localhost:3000/embed/widget?c=eyJwYWdlSWQiOiIyN2M4M2IxYi0zNDViLTgwNGItYjdhNS1mNWU4MGY2ZTc2NzIiLCJ0aGVtZSI6ImxpZ2h0Iiwid2lkZ2V0QmciOiIjZmZmZmZmIiwid2lkZ2V0Q29sb3IiOiIjMTExMTExIiwiaW5wdXRXaWR0aCI6MzIwLCJpbnB1dEJvcmRlciI6IiNkMWQ1ZGIiLCJ0aW1lckNvbG9yIjoiI2VmNDQ0NCIsInRpbWVyRm9udFNpemUiOjQ4LCJ0YXNrRGF0YWJhc2VJZCI6IjI3YzgzYjFiLTM0NWItODA1Yy1iYmFkLWUwNjViOTQ4ZDU0MiIsInNlc3Npb25EYXRhYmFzZUlkIjoiMjdjODNiMWItMzQ1Yi04MDAzLWFkMDItZjE0ODZhNDQ4NGJiIiwiaGlkZURiU2VsZWN0b3JzIjp0cnVlfQ%3D%3D",
+      "config": {
+        "pageId": "27c83b1b-345b-804b-b7a5-f5e80f6e7672",
+        "theme": "light",
+        "widgetBg": "#ffffff",
+        "widgetColor": "#111111",
+        "inputWidth": 320,
+        "inputBorder": "#d1d5db",
+        "timerColor": "#ef4444",
+        "timerFontSize": 48,
+        "taskDatabaseId": "27c83b1b-345b-805c-bbad-e065b948d542",
+        "sessionDatabaseId": "27c83b1b-345b-8003-ad02-f1486a4484bb",
+        "hideDbSelectors": true
+      },
+      "createdAt": 1763383070169
+    },
+    {
+      "id": "27c83b1b-345b-8078-9c69-dea59f838abf",
+      "title": "Find the Lost Amulet 27c83b1b345b80789c69dea59f838abf",
+      "link": "http://localhost:3000/embed/widget?c=eyJwYWdlSWQiOiIyN2M4M2IxYi0zNDViLTgwNzgtOWM2OS1kZWE1OWY4MzhhYmYiLCJ0aGVtZSI6ImxpZ2h0Iiwid2lkZ2V0QmciOiIjZmZmZmZmIiwid2lkZ2V0Q29sb3IiOiIjMTExMTExIiwiaW5wdXRXaWR0aCI6MzIwLCJpbnB1dEJvcmRlciI6IiNkMWQ1ZGIiLCJ0aW1lckNvbG9yIjoiI2VmNDQ0NCIsInRpbWVyRm9udFNpemUiOjQ4LCJ0YXNrRGF0YWJhc2VJZCI6IjI3YzgzYjFiLTM0NWItODA1Yy1iYmFkLWUwNjViOTQ4ZDU0MiIsInNlc3Npb25EYXRhYmFzZUlkIjoiMjdjODNiMWItMzQ1Yi04MDAzLWFkMDItZjE0ODZhNDQ4NGJiIiwiaGlkZURiU2VsZWN0b3JzIjp0cnVlfQ%3D%3D",
+      "config": {
+        "pageId": "27c83b1b-345b-8078-9c69-dea59f838abf",
+        "theme": "light",
+        "widgetBg": "#ffffff",
+        "widgetColor": "#111111",
+        "inputWidth": 320,
+        "inputBorder": "#d1d5db",
+        "timerColor": "#ef4444",
+        "timerFontSize": 48,
+        "taskDatabaseId": "27c83b1b-345b-805c-bbad-e065b948d542",
+        "sessionDatabaseId": "27c83b1b-345b-8003-ad02-f1486a4484bb",
+        "hideDbSelectors": true
+      },
+      "createdAt": 1762801990987
+    },
+    {
+      "id": "27c83b1b-345b-8078-9c69-dea59f838abf",
+      "title": "Find the Lost Amulet 27c83b1b345b80789c69dea59f838abf",
+      "link": "http://localhost:3000/embed/widget?c=eyJwYWdlSWQiOiIyN2M4M2IxYi0zNDViLTgwNzgtOWM2OS1kZWE1OWY4MzhhYmYiLCJ0aGVtZSI6ImxpZ2h0Iiwid2lkZ2V0QmciOiIjZmZmZmZmIiwid2lkZ2V0Q29sb3IiOiIjMTExMTExIiwiaW5wdXRXaWR0aCI6MzIwLCJpbnB1dEJvcmRlciI6IiNkMWQ1ZGIiLCJ0aW1lckNvbG9yIjoiI2VmNDQ0NCIsInRpbWVyRm9udFNpemUiOjQ4LCJ0YXNrRGF0YWJhc2VJZCI6IjI3YzgzYjFiLTM0NWItODAwMy1hZDAyLWYxNDg2YTQ0ODRiYiIsInNlc3Npb25EYXRhYmFzZUlkIjoiMjdjODNiMWItMzQ1Yi04MDAzLWFkMDItZjE0ODZhNDQ4NGJiIiwiaGlkZURiU2VsZWN0b3JzIjp0cnVlfQ%3D%3D",
+      "config": {
+        "pageId": "27c83b1b-345b-8078-9c69-dea59f838abf",
+        "theme": "light",
+        "widgetBg": "#ffffff",
+        "widgetColor": "#111111",
+        "inputWidth": 320,
+        "inputBorder": "#d1d5db",
+        "timerColor": "#ef4444",
+        "timerFontSize": 48,
+        "taskDatabaseId": "27c83b1b-345b-8003-ad02-f1486a4484bb",
+        "sessionDatabaseId": "27c83b1b-345b-8003-ad02-f1486a4484bb",
+        "hideDbSelectors": true
+      },
+      "createdAt": 1762801958598
+    },
+    {
+      "id": "27c83b1b-345b-8078-9c69-dea59f838abf",
+      "title": "Find the Lost Amulet 27c83b1b345b80789c69dea59f838abf",
+      "link": "http://localhost:3000/embed/widget?c=eyJwYWdlSWQiOiIyN2M4M2IxYi0zNDViLTgwNzgtOWM2OS1kZWE1OWY4MzhhYmYiLCJ0aGVtZSI6ImRhcmsiLCJ3aWRnZXRCZyI6IiNmZmZmZmYiLCJ3aWRnZXRDb2xvciI6IiMwYTA2MDYiLCJpbnB1dFdpZHRoIjozMjAsImlucHV0Qm9yZGVyIjoiI2QxZDVkYiIsInRpbWVyQ29sb3IiOiIjZWY0NDQ0IiwidGltZXJGb250U2l6ZSI6NDgsInRhc2tEYXRhYmFzZUlkIjoiMjdjODNiMWItMzQ1Yi04MDVjLWJiYWQtZTA2NWI5NDhkNTQyIiwic2Vzc2lvbkRhdGFiYXNlSWQiOiIyN2M4M2IxYi0zNDViLTgwMDMtYWQwMi1mMTQ4NmE0NDg0YmIiLCJoaWRlRGJTZWxlY3RvcnMiOnRydWV9",
+      "config": {
+        "pageId": "27c83b1b-345b-8078-9c69-dea59f838abf",
+        "theme": "dark",
+        "widgetBg": "#ffffff",
+        "widgetColor": "#0a0606",
+        "inputWidth": 320,
+        "inputBorder": "#d1d5db",
+        "timerColor": "#ef4444",
+        "timerFontSize": 48,
+        "taskDatabaseId": "27c83b1b-345b-805c-bbad-e065b948d542",
+        "sessionDatabaseId": "27c83b1b-345b-8003-ad02-f1486a4484bb",
+        "hideDbSelectors": true
+      },
+      "createdAt": 1762795509768
+    }
   ]
 }
