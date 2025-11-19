@@ -237,10 +237,15 @@ export default function EmbedWidget() {
     border: `1px solid ${config?.theme === "dark" ? "#374151" : ((config?.inputBorderColor ?? config?.inputBorder) || "#d1d5db")}`,
     borderRadius: 12,
     padding: 16,
+    paddingRight: 32,
+    width: Math.max(380, ((config?.inputWidth ?? 0) as number) + 64),
+    maxWidth: "100%",
+    overflowX: "auto",
+    boxSizing: "border-box",
   }), [config]);
 
   const inputStyle: React.CSSProperties = useMemo(() => ({
-    width: config?.inputWidth ? `${config.inputWidth}%` : "100%",
+    width: (config?.inputWidth ?? 0) > 0 ? (config!.inputWidth as number) : "100%",
     border: `1px solid ${((config?.inputBorderColor ?? config?.inputBorder) || (config?.theme === "dark" ? "#374151" : "#d1d5db"))}`,
     padding: "8px 10px",
     borderRadius: 8,
@@ -279,12 +284,21 @@ export default function EmbedWidget() {
     return "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white";
   }, [config]);
 
+  const effectiveTheme = useMemo(() => {
+    const t = config?.theme || "system";
+    if (t === "dark") return "dark";
+    if (t === "system") return isSystemDark ? "dark" : "light";
+    return "light";
+  }, [config?.theme, isSystemDark]);
+
+  const cardWidth = useMemo(() => Math.max(380, ((config?.inputWidth ?? 0) as number) + 64), [config?.inputWidth]);
+
   return (
     <div className={`min-h-screen ${containerClasses} ${(config?.theme === 'dark' || (config?.theme === 'system' && isSystemDark)) ? 'dark' : ''}`}> 
       <Head>
         <title>Pomodoro Embed Widget</title>
       </Head>
-      <div className="mx-auto max-w-xl px-4 py-6">
+      <div className="mx-auto px-4 py-6" style={{ maxWidth: cardWidth }}>
         {!config && (
           <div className="rounded-lg border border-neutral-200 p-4 text-sm opacity-75 dark:border-neutral-800">
             No config provided. Pass base64 config via query param `c`.
@@ -294,10 +308,10 @@ export default function EmbedWidget() {
           <div>
             {/* Controls / Timer Card */}
             {!running ? (
-              <div className="mb-4 rounded-lg border border-neutral-200 p-4 text-sm dark:border-neutral-800">
+              <div style={{ ...previewCardStyle, marginBottom: 16 }}>
                 
                 <label className="block mb-1">Session Title</label>
-                <input className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" value={title} onChange={(e) => setTitle(e.target.value)} />
+                <input style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} />
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {!(config?.hideDbSelectors ?? config?.hideSelectors) && (
                     <>
@@ -342,6 +356,7 @@ export default function EmbedWidget() {
                       disabled={!selectedTaskId}
                       projectId={selectedTaskId || null}
                       values={selectedQuests}
+                      theme={effectiveTheme as any}
                       onChange={(opts: any[]) => {
                         const arr = (opts || []) as Array<{ label: string; value: string }>;
                         setSelectedQuests(arr);
@@ -355,6 +370,7 @@ export default function EmbedWidget() {
                       options={availableTags}
                       disabled={!selectedDbId}
                       selectedOptions={selectedTags}
+                      theme={effectiveTheme as any}
                       handleSelect={(vals: Array<{ label: string; value: string; color: string }>) => {
                         setSelectedTags(vals || []);
                       }}
@@ -362,7 +378,7 @@ export default function EmbedWidget() {
                   </div>
                 </div>
                 <label className="mt-3 block mb-1">Notes</label>
-                <textarea className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+                <textarea style={{ ...inputStyle, height: 64 }} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
                 <div className="mt-3 flex items-center gap-3">
                   <button
                     className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
