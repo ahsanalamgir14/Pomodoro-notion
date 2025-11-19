@@ -303,7 +303,7 @@ export default function EmbedWidget() {
                     <>
                       <div>
                         <label className="block mb-1">Selected Table</label>
-                        <select className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" value={selectedDbId} onChange={(e) => setSelectedDbId(e.target.value)}>
+                        <select className="w-full rounded-md border border-neutral-300 p-2 text-neutral-900 dark:text-white dark:border-neutral-700 dark:bg-neutral-800" value={selectedDbId} onChange={(e) => setSelectedDbId(e.target.value)}>
                           {dbData?.databases?.results?.map((d: any) => (
                             <option key={d.id} value={d.id}>{(d?.title && d?.title[0]?.plain_text) || d.id}</option>
                           ))}
@@ -311,7 +311,7 @@ export default function EmbedWidget() {
                       </div>
                       <div>
                         <label className="block mb-1">Time Tracking Database</label>
-                        <select className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800" value={trackingDbId} onChange={(e) => setTrackingDbId(e.target.value)}>
+                        <select className="w-full rounded-md border border-neutral-300 p-2 text-neutral-900 dark:text-white dark:border-neutral-700 dark:bg-neutral-800" value={trackingDbId} onChange={(e) => setTrackingDbId(e.target.value)}>
                           {dbData?.databases?.results?.map((d: any) => (
                             <option key={d.id} value={d.id}>{(d?.title && d?.title[0]?.plain_text) || d.id}</option>
                           ))}
@@ -322,7 +322,7 @@ export default function EmbedWidget() {
                   <div>
                     <label className="block mb-1">Task</label>
                     <select
-                      className="w-full rounded-md border border-neutral-300 p-2 dark:border-neutral-700 dark:bg-neutral-800"
+                      className="w-full rounded-md border border-neutral-300 p-2 text-neutral-900 dark:text-white dark:border-neutral-700 dark:bg-neutral-800"
                       value={selectedTaskId}
                       onChange={(e) => {
                         const id = e.target.value;

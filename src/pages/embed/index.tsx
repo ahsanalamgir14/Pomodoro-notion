@@ -4,6 +4,8 @@ import Link from "next/link";
 import { getConnectedPages } from "../../utils/apis/notion/client";
 import { NotionCache } from "../../utils/notionCache";
 import { trpc } from "../../utils/trpc";
+import QuestSelection from "../../Components/QuestSelection";
+import NotionTags from "../../Components/NotionTags";
 
 type ThemeType = "light" | "dark";
 
@@ -137,6 +139,8 @@ export default function CreateEmbedPage() {
   const [previewSelectedTaskId, setPreviewSelectedTaskId] = useState<string>("");
   const [previewSelectedTaskTitle, setPreviewSelectedTaskTitle] = useState<string>("");
   const [previewQuestChips, setPreviewQuestChips] = useState<Array<{ label: string; value: string }>>([]);
+  const [previewSelectedQuests, setPreviewSelectedQuests] = useState<Array<{ label: string; value: string }>>([]);
+  const [previewSelectedTags, setPreviewSelectedTags] = useState<Array<{ label: string; value: string; color: string }>>([]);
   useEffect(() => {
     if (previewTaskItems.length > 0) {
       setPreviewSelectedTaskId((prev) => prev || previewTaskItems[0].id);
@@ -146,6 +150,22 @@ export default function CreateEmbedPage() {
       setPreviewSelectedTaskTitle("");
     }
   }, [previewTaskItems]);
+
+  const previewQuestsRelProp = useMemo(() => {
+    try {
+      const results: any[] = (taskDbQuery as any)?.database?.results || [];
+      const page = results.find((r: any) => r?.id === previewSelectedTaskId);
+      const props: Record<string, any> = page?.properties || {};
+      const rel = props?.["Quests"]?.type === "relation"
+        ? "Quests"
+        : props?.["Quest"]?.type === "relation"
+          ? "Quest"
+          : Object.entries(props).find(([k, p]: any) => k?.toLowerCase?.().includes("quest") && p?.type === "relation")?.[0];
+      return rel || "Quests";
+    } catch (e) {
+      return "Quests";
+    }
+  }, [taskDbQuery, previewSelectedTaskId]);
   useEffect(() => {
     try {
       const results: any[] = (taskDbQuery as any)?.database?.results || [];
@@ -156,19 +176,22 @@ export default function CreateEmbedPage() {
         : props?.["Quest"]?.type === "relation"
           ? "Quest"
           : Object.entries(props).find(([k, p]: any) => k?.toLowerCase?.().includes("quest") && p?.type === "relation")?.[0];
-      if (!questsRelProp) { setPreviewQuestChips([]); return; }
+      if (!questsRelProp) { setPreviewQuestChips([]); if (previewSelectedQuests.length === 0) setPreviewSelectedQuests([]); return; }
       const qs = new URLSearchParams({ userId: "notion-user", pageId: previewSelectedTaskId, relationName: questsRelProp });
       fetch(`/api/notion/page-relations?${qs.toString()}`)
         .then((r) => r.ok ? r.json() : null)
         .then((data) => {
           const items: Array<{ id: string; title: string }> = data?.items || [];
           setPreviewQuestChips(items.map(i => ({ label: i.title, value: i.id })));
+          if (previewSelectedQuests.length === 0) {
+            setPreviewSelectedQuests(items.map(i => ({ label: i.title, value: i.id })));
+          }
         })
         .catch(() => setPreviewQuestChips([]));
     } catch (e) {
       setPreviewQuestChips([]);
     }
-  }, [taskDbQuery, previewSelectedTaskId]);
+  }, [taskDbQuery, previewSelectedTaskId, previewSelectedQuests.length]);
 
   const taskDbName = useMemo(() => {
     const t = taskDbDetail?.db?.title;
@@ -201,13 +224,14 @@ export default function CreateEmbedPage() {
       .map(([n]) => n)
       .slice(0, 6);
   }, [taskDbDetail]);
-  const taskTagProps = useMemo(() => {
-    const props: any = taskDbDetail?.db?.properties || {};
-    return Object.entries(props)
-      .filter(([, def]: any) => ["multi_select", "select"].includes(def?.type))
-      .map(([n]) => n)
-      .slice(0, 6);
-  }, [taskDbDetail]);
+  const availableTagsPreview = useMemo(() => {
+    const props: Record<string, any> = taskDbDetail?.db?.properties || {};
+    const tagsProp = props?.["Tags"]?.type === "multi_select"
+      ? props["Tags"]
+      : Object.values(props).find((p: any) => p?.type === "multi_select") as any;
+    const options: any[] = tagsProp?.multi_select?.options || [];
+    return options.map((o: any) => ({ label: o?.name || "", value: o?.id || o?.name || "", color: o?.color || "default" }));
+  }, [taskDbDetail?.db?.properties]);
   const sessionTagProps = useMemo(() => {
     const props: any = sessionDbDetail?.db?.properties || {};
     return Object.entries(props)
@@ -253,15 +277,29 @@ export default function CreateEmbedPage() {
     return found;
   }, [sessionDbDetail]);
 
-  // Preview card adopts embed options with theme-aware fallbacks
-  const previewCardStyle: React.CSSProperties = {
+  const cardWidth = Math.max(380, (inputWidth || 0) + 64);
+
+  const previewCardStyleStart: React.CSSProperties = {
     backgroundColor: widgetBg || (theme === "dark" ? "#111827" : "#ffffff"),
     color: widgetColor || (theme === "dark" ? "#f9fafb" : "#111827"),
     border: `1px solid ${inputBorder || (theme === "dark" ? "#374151" : "#d1d5db")}`,
     borderRadius: 12,
     padding: 16,
     paddingRight: 32,
-    width: Math.max(380, (inputWidth || 0) + 64),
+    width: cardWidth,
+    maxWidth: "100%",
+    overflowX: "auto",
+    boxSizing: "border-box",
+  };
+
+  const previewCardStyleTimer: React.CSSProperties = {
+    backgroundColor: theme === "dark" ? "#111827" : (widgetBg || "#ffffff"),
+    color: theme === "dark" ? "#f9fafb" : (widgetColor || "#111827"),
+    border: `1px solid ${theme === "dark" ? "#374151" : (inputBorder || "#d1d5db")}`,
+    borderRadius: 12,
+    padding: 16,
+    paddingRight: 32,
+    width: cardWidth,
     maxWidth: "100%",
     overflowX: "auto",
     boxSizing: "border-box",
@@ -373,7 +411,7 @@ export default function CreateEmbedPage() {
               {/* Notion Page selection */}
               <label className="block text-sm font-medium mb-1">Notion Page</label>
               <select
-                className="w-full rounded-md border border-neutral-300 bg-white p-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+                className="w-full rounded-md border border-neutral-300 bg-white p-2 text-sm text-neutral-900 dark:text-white dark:border-neutral-700 dark:bg-neutral-800"
                 value={selectedPageId}
                 onChange={(e) => setSelectedPageId(e.target.value)}
               >
@@ -417,7 +455,7 @@ export default function CreateEmbedPage() {
                 <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
                   <div>
                     <label className="block text-sm font-medium mb-1">Task Database</label>
-                    <select className="w-full rounded-md border border-neutral-300 bg-white p-2 text-sm dark:border-neutral-700 dark:bg-neutral-800" value={selectedTaskDbId} onChange={(e) => setSelectedTaskDbId(e.target.value)}>
+                    <select className="w-full rounded-md border border-neutral-300 bg-white p-2 text-sm text-neutral-900 dark:text-white dark:border-neutral-700 dark:bg-neutral-800" value={selectedTaskDbId} onChange={(e) => setSelectedTaskDbId(e.target.value)}>
                       {dbs?.databases?.results?.map((d: any) => (
                         <option key={d.id} value={d.id}>{(d?.title && d?.title[0]?.plain_text) || d.id}</option>
                       ))}
@@ -425,7 +463,7 @@ export default function CreateEmbedPage() {
                   </div>
                   <div>
                     <label className="block text-sm font-medium mb-1">Session Database</label>
-                    <select className="w-full rounded-md border border-neutral-300 bg-white p-2 text-sm dark:border-neutral-700 dark:bg-neutral-800" value={selectedSessionDbId} onChange={(e) => setSelectedSessionDbId(e.target.value)}>
+                    <select className="w-full rounded-md border border-neutral-300 bg-white p-2 text-sm text-neutral-900 dark:text-white dark:border-neutral-700 dark:bg-neutral-800" value={selectedSessionDbId} onChange={(e) => setSelectedSessionDbId(e.target.value)}>
                       {dbs?.databases?.results?.map((d: any) => (
                         <option key={d.id} value={d.id}>{(d?.title && d?.title[0]?.plain_text) || d.id}</option>
                       ))}
@@ -580,7 +618,7 @@ export default function CreateEmbedPage() {
           <div className={`space-y-4 ${theme === "dark" ? "dark" : ""}`}>
             <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
               <h2 className="mb-3 text-lg font-medium">Start State</h2>
-              <div style={previewCardStyle}>
+              <div style={previewCardStyleStart}>
                 
                 <label className="block mb-1 text-sm">Session Title</label>
                 <input style={inputStyle} placeholder="Widget Session" />
@@ -600,13 +638,14 @@ export default function CreateEmbedPage() {
                   <div className="sm:col-span-2">
                     <label className="block mb-1 text-sm">Task</label>
                     <select
-                      className="w-full rounded-md border border-neutral-300 p-2 text-sm dark:border-neutral-700 dark:bg-neutral-800"
+                      className="w-full rounded-md border border-neutral-300 p-2 text-sm text-neutral-900 dark:text-white dark:border-neutral-700 dark:bg-neutral-800"
                       value={previewSelectedTaskId}
                       onChange={(e) => {
                         const id = e.target.value;
                         setPreviewSelectedTaskId(id);
                         const found = previewTaskItems.find((t) => t.id === id);
                         setPreviewSelectedTaskTitle(found?.title || "");
+                        setPreviewSelectedQuests([]);
                       }}
                     >
                       {previewTaskItems.map((t) => (
@@ -616,40 +655,32 @@ export default function CreateEmbedPage() {
                   </div>
                   <div className="sm:col-span-2">
                     <label className="block mb-1 text-sm">Quests (relation)</label>
-                    <div className="rounded-md border border-neutral-300 p-2 text-xs dark:border-neutral-700 dark:bg-neutral-800">
-                      {previewQuestChips.length > 0 ? (
-                        previewQuestChips.map((q) => (
-                          <span key={q.value} className="mr-2 inline-flex rounded bg-neutral-200 px-2 py-1 dark:bg-neutral-700 dark:text-white">{q.label}</span>
-                        ))
-                      ) : (
-                        <span className="opacity-60">No quests linked</span>
-                      )}
-                    </div>
+                    <QuestSelection
+                      key={previewSelectedTaskId || "quest-select-preview"}
+                      disabled={!previewSelectedTaskId}
+                      projectId={previewSelectedTaskId || null}
+                      values={previewSelectedQuests}
+                      theme={theme}
+                      relationName={previewQuestsRelProp}
+                      onChange={(opts: any[]) => {
+                        const arr = (opts || []) as Array<{ label: string; value: string }>;
+                        setPreviewSelectedQuests(arr);
+                      }}
+                    />
                   </div>
-                  <div>
+                  <div className="sm:col-span-2">
                     <label className="block mb-1 text-sm">Tags</label>
-                    <div className="rounded-md border border-neutral-300 p-2 text-xs dark:border-neutral-700 dark:bg-neutral-800">
-                      {taskTagProps.length > 0 ? (
-                        taskTagProps.map((p) => (
-                          <span key={p} className="mr-2 inline-flex rounded bg-neutral-200 px-2 py-1 dark:bg-neutral-700 dark:text-white">{p}</span>
-                        ))
-                      ) : (
-                        <span className="opacity-60">No tag properties</span>
-                      )}
-                    </div>
+                    <NotionTags
+                      options={availableTagsPreview}
+                      disabled={!selectedTaskDbId}
+                      selectedOptions={previewSelectedTags}
+                      theme={theme}
+                      handleSelect={(vals: Array<{ label: string; value: string; color: string }>) => {
+                        setPreviewSelectedTags(vals || []);
+                      }}
+                    />
                   </div>
-                  <div>
-                    <label className="block mb-1 text-sm">Time Tracking Properties</label>
-                    <div className="rounded-md border border-neutral-300 p-2 text-xs dark:border-neutral-700 dark:bg-neutral-800">
-                      {sessionTagProps.length > 0 ? (
-                        sessionTagProps.map((p) => (
-                          <span key={p} className="mr-2 inline-flex rounded bg-neutral-200 px-2 py-1 dark:bg-neutral-700 dark:text-white">{p}</span>
-                        ))
-                      ) : (
-                        <span className="opacity-60">No selectable properties</span>
-                      )}
-                    </div>
-                  </div>
+                  
                   <div className="sm:col-span-2">
                     <label className="block mb-1 text-sm">Tracking Schema</label>
                     <div className="rounded-md border border-neutral-300 p-2 text-xs dark:border-neutral-700 dark:bg-neutral-800">
@@ -682,7 +713,7 @@ export default function CreateEmbedPage() {
 
             <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
               <h2 className="mb-3 text-lg font-medium">Timer Running</h2>
-              <div style={previewCardStyle}>
+              <div style={previewCardStyleTimer}>
                 <div style={previewTitleStyle}>Timer Running</div>
                 <div style={timerStyle}>24:37</div>
                 <div className="mt-3 flex items-center gap-3">
@@ -692,21 +723,7 @@ export default function CreateEmbedPage() {
               </div>
             </div>
             
-            {embedLink && (
-              <div className="rounded-lg border border-neutral-200 p-4 dark:border-neutral-800">
-                <h2 className="mb-3 text-lg font-medium">Live Widget Preview</h2>
-                <iframe
-                  src={embedLink}
-                  style={{
-                    width: 400,
-                    height: 360,
-                    borderRadius: 12,
-                    border: `1px solid ${theme === "dark" ? "#374151" : (inputBorder || "#d1d5db")}`,
-                  }}
-                  title="Embed Widget Preview"
-                />
-              </div>
-            )}
+            
           </div>
         </div>
       </div>

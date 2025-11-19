@@ -10,15 +10,17 @@ type Props = {
   disabled: boolean;
   handleSelect: (e: any) => void;
   selectedOptions?: Array<{ label: string; value: string; color: string }>;
+  theme?: "light" | "dark";
 };
 
-export default function NotionTags({ options, disabled, handleSelect, selectedOptions }: Props) {
+export default function NotionTags({ options, disabled, handleSelect, selectedOptions, theme = "light" }: Props) {
   return (
     <MultiSelect
       disabled={disabled}
       handleSelect={handleSelect}
       options={options}
       selectedOptions={selectedOptions}
+      theme={theme}
     />
   );
 }
