@@ -8,4 +8,7 @@
 [build.environment]
   NODE_VERSION = "18"
   SECRETS_SCAN_OMIT_KEYS = "NODE_ENV,NEXT_PUBLIC_NOTION_AUTH_CLIENT_ID,NEXT_PUBLIC_NOTION_AUTH_REDIRECT_URI"
-  SECRETS_SCAN_OMIT_PATHS = ".netlify/functions-internal/**"
+  SECRETS_SCAN_OMIT_PATHS = ".netlify/functions-internal/**"
+  NPM_CONFIG_PRODUCTION = "false"
+  NPM_FLAGS = "--include=dev"
+  YARN_FLAGS = "--production=false"
