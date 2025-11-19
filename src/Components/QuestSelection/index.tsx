@@ -16,6 +16,7 @@ type Props = {
   values: Option[];
   onChange: (opts: Option[]) => void;
   theme?: "light" | "dark";
+  width?: number | string;
 };
 
 const colourStyles = ({
@@ -28,6 +29,7 @@ const colourStyles = ({
   controlFontWeight = 400,
   whiteBackground = "white",
   minHeight = "48px",
+  controlWidth,
 }) => {
   return {
     menuPortal: (base: any) => {
@@ -38,7 +40,7 @@ const colourStyles = ({
       return {
         ...styles,
         fontWeight: controlFontWeight,
-        width: "100%",
+        width: controlWidth ?? "100%",
         boxShadow: "unset",
         cursor: "pointer",
         margin,
@@ -72,7 +74,7 @@ const colourStyles = ({
   };
 };
 
-export default function QuestSelection({ disabled = false, projectId, relationName = "Quests", values, onChange, theme = "light" }: Props) {
+export default function QuestSelection({ disabled = false, projectId, relationName = "Quests", values, onChange, theme = "light", width }: Props) {
   const loadOptions = useCallback(async (): Promise<Option[]> => {
     if (!projectId) return [];
     try {
@@ -104,6 +106,7 @@ export default function QuestSelection({ disabled = false, projectId, relationNa
         border: theme === "dark" ? "1px solid #4b5563" : "1px solid #DAE6EF",
         borderRadius: "8px",
         minHeight: "40px",
+        controlWidth: width,
       })}
       menuPortalTarget={typeof window !== 'undefined' ? document.body : undefined}
       instanceId="quest-select"

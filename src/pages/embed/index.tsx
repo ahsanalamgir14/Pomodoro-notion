@@ -638,7 +638,7 @@ export default function CreateEmbedPage() {
                   <div className="sm:col-span-2">
                     <label className="block mb-1 text-sm">Task</label>
                     <select
-                      className="w-full rounded-md border border-neutral-300 p-2 text-sm text-neutral-900 dark:text-white dark:border-neutral-700 dark:bg-neutral-800"
+                      style={inputStyle as React.CSSProperties}
                       value={previewSelectedTaskId}
                       onChange={(e) => {
                         const id = e.target.value;
@@ -662,6 +662,7 @@ export default function CreateEmbedPage() {
                       values={previewSelectedQuests}
                       theme={theme}
                       relationName={previewQuestsRelProp}
+                      width={inputWidth}
                       onChange={(opts: any[]) => {
                         const arr = (opts || []) as Array<{ label: string; value: string }>;
                         setPreviewSelectedQuests(arr);
@@ -675,6 +676,7 @@ export default function CreateEmbedPage() {
                       disabled={!selectedTaskDbId}
                       selectedOptions={previewSelectedTags}
                       theme={theme}
+                      width={inputWidth}
                       handleSelect={(vals: Array<{ label: string; value: string; color: string }>) => {
                         setPreviewSelectedTags(vals || []);
                       }}

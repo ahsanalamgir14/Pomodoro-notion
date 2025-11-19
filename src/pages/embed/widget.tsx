@@ -336,7 +336,7 @@ export default function EmbedWidget() {
                   <div>
                     <label className="block mb-1">Task</label>
                     <select
-                      className="w-full rounded-md border border-neutral-300 p-2 text-neutral-900 dark:text-white dark:border-neutral-700 dark:bg-neutral-800"
+                      style={inputStyle as React.CSSProperties}
                       value={selectedTaskId}
                       onChange={(e) => {
                         const id = e.target.value;
@@ -357,6 +357,7 @@ export default function EmbedWidget() {
                       projectId={selectedTaskId || null}
                       values={selectedQuests}
                       theme={effectiveTheme as any}
+                      width={(config?.inputWidth ?? 0) > 0 ? (config!.inputWidth as number) : undefined}
                       onChange={(opts: any[]) => {
                         const arr = (opts || []) as Array<{ label: string; value: string }>;
                         setSelectedQuests(arr);
@@ -371,6 +372,7 @@ export default function EmbedWidget() {
                       disabled={!selectedDbId}
                       selectedOptions={selectedTags}
                       theme={effectiveTheme as any}
+                      width={(config?.inputWidth ?? 0) > 0 ? (config!.inputWidth as number) : undefined}
                       handleSelect={(vals: Array<{ label: string; value: string; color: string }>) => {
                         setSelectedTags(vals || []);
                       }}

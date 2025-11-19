@@ -11,12 +11,12 @@ export interface ColourOption {
 
 import Select, { StylesConfig } from "react-select";
 
-const colourStyles = (theme: "light" | "dark" = "light"): StylesConfig<ColourOption, true> => ({
+const colourStyles = (theme: "light" | "dark" = "light", controlWidth?: number | string): StylesConfig<ColourOption, true> => ({
   control: (styles) => {
     return {
       ...styles,
       fontWeight: 400,
-      width: "100%",
+      width: controlWidth ?? "100%",
       boxShadow: "unset",
       cursor: "pointer",
       margin: "unset",
@@ -121,6 +121,7 @@ interface Props {
   handleSelect: (e: any) => void;
   selectedOptions?: ColourOption[];
   theme?: "light" | "dark";
+  width?: number | string;
 }
 
 export default function MultiSelect({
@@ -129,6 +130,7 @@ export default function MultiSelect({
   handleSelect,
   selectedOptions,
   theme = "light",
+  width,
 }: Props) {
   return (
     <Select
@@ -136,7 +138,7 @@ export default function MultiSelect({
       isMulti
       options={options}
       value={selectedOptions}
-      styles={colourStyles(theme)}
+      styles={colourStyles(theme, width)}
       isDisabled={disabled}
       id="notion-tags-select"
       instanceId="notion-tags-select"
