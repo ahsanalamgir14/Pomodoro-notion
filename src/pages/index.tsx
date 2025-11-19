@@ -232,6 +232,7 @@ function Home() {
                     setIsConnected(false);
                     setCachedData(null);
                     console.log('🚪 Disconnected from Notion');
+                    window.location.reload();
                   }}
                   className="text-sm text-red-600 hover:text-red-800 underline"
                 >
