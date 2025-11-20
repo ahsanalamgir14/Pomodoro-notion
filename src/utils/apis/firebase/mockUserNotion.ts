@@ -106,3 +106,17 @@ export const createNotionUser = async ({
   console.log("✅ Real Notion token stored successfully");
   return uid;
 };
+
+export const disconnectNotionUser = async (email: string) => {
+  await new Promise(resolve => setTimeout(resolve, 100));
+  const existingUser = mockUsers[email];
+  if (!existingUser) return false;
+  mockUsers[email] = {
+    ...existingUser,
+    accessToken: null,
+    workspace: null,
+    updatedAt: new Date().toISOString(),
+  };
+  savePersistentData();
+  return true;
+};

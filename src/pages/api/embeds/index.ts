@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { addEmbed, deleteEmbed, getEmbedsFor, SavedEmbed } from "../../../utils/serverSide/embedsStore";
+import { verifyJWT } from "../../../utils/serverSide/jwt";
 
 function getSessionEmail(req: NextApiRequest): string | null {
   const cookieHeader = req.headers.cookie || "";
@@ -7,6 +8,12 @@ function getSessionEmail(req: NextApiRequest): string | null {
     const [k, v] = c.trim().split("=");
     return [k, v];
   }));
+  const token = cookies["session_token"];
+  if (token) {
+    const secret = process.env.NEXTAUTH_SECRET || process.env.SESSION_SECRET || "dev-secret";
+    const payload = verifyJWT(token, secret);
+    if (payload?.email) return String(payload.email);
+  }
   return cookies["session_user"] ? decodeURIComponent(cookies["session_user"]) : null;
 }
 

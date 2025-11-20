@@ -1,16 +1,29 @@
 import axios, { AxiosError } from "axios";
 import { NextApiRequest, NextApiResponse } from "next";
+import { verifyJWT } from "../../../../utils/serverSide/jwt";
 import { showError } from "../../../../utils/apis";
 // Use mock implementation for development to avoid Firebase setup
 import { createNotionUser } from "../../../../utils/apis/firebase/mockUserNotion";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../../auth/[...nextauth]";
 
 // Helper to read current session email if the user is logged in
-function getSessionEmail(req: NextApiRequest): string | null {
+async function getSessionEmail(req: NextApiRequest, res: NextApiResponse): Promise<string | null> {
+  const session = await getServerSession(req as any, res as any, authOptions);
+  if (session?.user?.email) {
+    return String(session.user.email);
+  }
   const cookieHeader = req.headers.cookie || "";
   const cookies = Object.fromEntries(cookieHeader.split(";").map((c) => {
     const [k, v] = c.trim().split("=");
     return [k, v];
   }));
+  const token = cookies["session_token"];
+  if (token) {
+    const secret = process.env.NEXTAUTH_SECRET || process.env.SESSION_SECRET || "dev-secret";
+    const payload = verifyJWT(token, secret);
+    if (payload?.email) return String(payload.email);
+  }
   return cookies["session_user"] ? decodeURIComponent(cookies["session_user"]) : null;
 }
 
@@ -85,7 +98,7 @@ export default async function handler(
       const { access_token, ...workspaceData } = data;
       
       // Prefer the logged-in user's email; otherwise fallback to simplified identifier
-      const existingEmail = getSessionEmail(req);
+      const existingEmail = await getSessionEmail(req, res);
       const userEmail = existingEmail || "notion-user";
       
       console.log("Creating Notion user in Firebase...");

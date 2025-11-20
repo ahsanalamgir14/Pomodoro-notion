@@ -15,6 +15,21 @@ function Home() {
   const [isConnected, setIsConnected] = useState(false);
   const router = useRouter();
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+  const createDemoWorkspace = () => {
+    const makeTitle = (t: string) => ([{ type: "text", text: { content: t, link: null }, annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: "default" }, plain_text: t, href: null }]);
+    const baseProps = { Name: { id: "title", name: "Name", type: "title", title: {} } } as any;
+    const dbs = {
+      object: "list",
+      results: [
+        { object: "database", id: "demo-adventure", cover: null, icon: { type: "emoji", emoji: "🗺️" }, created_time: "2024-01-01T00:00:00.000Z", created_by: { object: "user", id: "demo-user" }, last_edited_by: { object: "user", id: "demo-user" }, last_edited_time: "2024-01-01T00:00:00.000Z", title: makeTitle("Adventure"), description: [], is_inline: false, properties: baseProps, parent: { type: "page_id", page_id: "demo-page" }, url: "https://notion.so/demo-adventure", archived: false },
+        { object: "database", id: "demo-quests", cover: null, icon: { type: "emoji", emoji: "🧩" }, created_time: "2024-01-01T00:00:00.000Z", created_by: { object: "user", id: "demo-user" }, last_edited_by: { object: "user", id: "demo-user" }, last_edited_time: "2024-01-01T00:00:00.000Z", title: makeTitle("Quests"), description: [], is_inline: false, properties: baseProps, parent: { type: "page_id", page_id: "demo-page" }, url: "https://notion.so/demo-quests", archived: false },
+        { object: "database", id: "demo-time-tracking", cover: null, icon: { type: "emoji", emoji: "⏱️" }, created_time: "2024-01-01T00:00:00.000Z", created_by: { object: "user", id: "demo-user" }, last_edited_by: { object: "user", id: "demo-user" }, last_edited_time: "2024-01-01T00:00:00.000Z", title: makeTitle("Time Tracking"), description: [], is_inline: false, properties: baseProps, parent: { type: "page_id", page_id: "demo-page" }, url: "https://notion.so/demo-time-tracking", archived: false },
+      ],
+      next_cursor: null,
+      has_more: false,
+    } as any;
+    setCachedData({ databases: dbs, workspace: { workspace_icon: "🧭" } });
+  };
 
   // Handle OAuth callback and cache data
   useEffect(() => {
@@ -90,11 +105,11 @@ function Home() {
     return () => { mounted = false; };
   }, []);
 
-  // Use a simple identifier for Notion connection - no user accounts needed
-  const userIdentifier = sessionEmail || "notion-user";
+  // Prefer the email saved during OAuth, then session email, otherwise fallback
+  const userIdentifier = (NotionCache.getUserData()?.email) || sessionEmail || "notion-user";
   
-  // Fetch when we have a session (cookie) or cached connection, and no cached data yet
-  const shouldFetch = !cachedData && (!!sessionEmail || isConnected);
+  // Fetch only when Notion is connected and we don't already have cached data
+  const shouldFetch = !cachedData && isConnected;
   
   const { data, isFetching, error } = trpc.private.getDatabases.useQuery(
     { email: userIdentifier },
@@ -228,11 +243,14 @@ function Home() {
                 </a>
                 <button
                   onClick={() => {
-                    NotionCache.clearUserData();
-                    setIsConnected(false);
-                    setCachedData(null);
-                    console.log('🚪 Disconnected from Notion');
-                    window.location.reload();
+                    fetch('/api/notion/disconnect', { method: 'POST' }).finally(() => {
+                      NotionCache.clearUserData();
+                      NotionCache.clearDatabaseCache();
+                      setIsConnected(false);
+                      setCachedData(null);
+                      console.log('🚪 Disconnected from Notion');
+                      window.location.reload();
+                    });
                   }}
                   className="text-sm text-red-600 hover:text-red-800 underline"
                 >
@@ -267,6 +285,20 @@ function Home() {
                   <p className="mt-4 text-center text-gray-600">
                     Try refreshing or check Notion permissions for databases.
                   </p>
+                  <div className="mt-8 w-full max-w-2xl border rounded-md p-4">
+                    <div className="text-center text-gray-700 font-medium mb-3">Demo tables and relations</div>
+                    <div className="flex items-center justify-center gap-4">
+                      <div className="rounded-md border px-3 py-2">Adventure</div>
+                      <div>↔</div>
+                      <div className="rounded-md border px-3 py-2">Quests</div>
+                      <div>↔</div>
+                      <div className="rounded-md border px-3 py-2">Time Tracking</div>
+                    </div>
+                    <div className="mt-3 text-center text-sm text-gray-600">Adventure links to Quests; Quests link to Time Tracking</div>
+                    <div className="text-center">
+                      <button onClick={createDemoWorkspace} className="mt-5 rounded bg-indigo-600 py-2 px-4 font-bold text-white hover:bg-indigo-500">Create demo workspace</button>
+                    </div>
+                  </div>
                   <section className="mt-10">
                     <Footer showCredit={false} />
                   </section>

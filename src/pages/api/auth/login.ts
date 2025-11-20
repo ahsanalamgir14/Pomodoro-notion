@@ -1,5 +1,6 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { normalizeEmail, validatePassword } from "../../../utils/serverSide/usersStore";
+import { signJWT } from "../../../utils/serverSide/jwt";
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -25,9 +26,11 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     const isLocal = host.includes("localhost") || host.startsWith("127.0.0.1");
     const isHttps = forwardedProto === "https";
     const secureFlag = isHttps && !isLocal ? "Secure; " : "";
+    const secret = process.env.NEXTAUTH_SECRET || process.env.SESSION_SECRET || "dev-secret";
+    const token = signJWT({ email: e }, secret, 60 * 60 * 24 * 7);
     res.setHeader(
       "Set-Cookie",
-      `session_user=${encodeURIComponent(e)}; Path=/; HttpOnly; ${secureFlag}SameSite=Lax; Max-Age=${60 * 60 * 24 * 30}`
+      `session_token=${token}; Path=/; HttpOnly; ${secureFlag}SameSite=Strict; Max-Age=${60 * 60 * 24 * 7}`
     );
 
     return res.status(200).json({ success: true, email: e });

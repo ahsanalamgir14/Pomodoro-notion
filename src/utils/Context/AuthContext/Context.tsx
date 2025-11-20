@@ -1,5 +1,6 @@
 // src/utils/Context/AuthContext/Context.tsx
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { signOut } from 'next-auth/react';
 
 interface User {
   username: string;
@@ -26,36 +27,50 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  // Check for existing session on load
   useEffect(() => {
-    const savedUser = localStorage.getItem('auth_user');
-    if (savedUser) {
-      setUser(JSON.parse(savedUser));
-    }
-    setIsLoading(false);
+    fetch('/api/session')
+      .then(r => r.json())
+      .then(data => {
+        if (data?.isAuthenticated && data?.email) {
+          const email = String(data.email);
+          const username = email.split('@')[0];
+          setUser({ username, email });
+        } else {
+          setUser(null);
+        }
+        setIsLoading(false);
+      })
+      .catch(() => {
+        setUser(null);
+        setIsLoading(false);
+      });
   }, []);
 
   const login = async (username: string, password: string): Promise<boolean> => {
-    // Simulate API call delay
-    await new Promise(resolve => setTimeout(resolve, 500));
-    
-    const foundUser = USERS.find(
-      u => u.username === username && u.password === password
-    );
-
-    if (foundUser) {
-      const user = { username: foundUser.username, email: foundUser.email };
-      setUser(user);
-      localStorage.setItem('auth_user', JSON.stringify(user));
+    try {
+      const resp = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: username, password }),
+      });
+      if (!resp.ok) return false;
+      const data = await resp.json();
+      const email = String(data?.email || username);
+      const uname = email.split('@')[0];
+      setUser({ username: uname, email });
       return true;
+    } catch {
+      return false;
     }
-    
-    return false;
   };
 
   const logout = () => {
-    setUser(null);
-    localStorage.removeItem('auth_user');
+    Promise.allSettled([
+      fetch('/api/auth/logout', { method: 'POST' }),
+      signOut({ redirect: false }),
+    ]).finally(() => {
+      setUser(null);
+    });
   };
 
   return (

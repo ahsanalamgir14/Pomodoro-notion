@@ -98,10 +98,14 @@ export default function EmbedWidget() {
   // Prefer logged-in session email; fallback to "notion-user"
   const [userIdentifier, setUserIdentifier] = useState<string>("notion-user");
   useEffect(() => {
-    const email = getCookie("session_user");
-    if (email && email.trim() !== "") {
-      setUserIdentifier(email);
-    }
+    fetch('/api/session')
+      .then(r => r.json())
+      .then(data => {
+        if (data?.isAuthenticated && data?.email) {
+          setUserIdentifier(String(data.email));
+        }
+      })
+      .catch(() => {});
   }, []);
 
   // Fetch databases via tRPC (same as home page style)
