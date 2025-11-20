@@ -25,7 +25,6 @@ function init(db: DB) {
 }
 
 export function getDb(): DB | null {
-  if (process.env.USE_SQLITE !== "true") return null;
   const mod = loadModule();
   if (!mod) return null;
   const dbPath = path.join(process.cwd(), ".data.db");

@@ -15,20 +15,32 @@ function Home() {
   const [isConnected, setIsConnected] = useState(false);
   const router = useRouter();
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
-  const createDemoWorkspace = () => {
-    const makeTitle = (t: string) => ([{ type: "text", text: { content: t, link: null }, annotations: { bold: false, italic: false, strikethrough: false, underline: false, code: false, color: "default" }, plain_text: t, href: null }]);
-    const baseProps = { Name: { id: "title", name: "Name", type: "title", title: {} } } as any;
-    const dbs = {
-      object: "list",
-      results: [
-        { object: "database", id: "demo-adventure", cover: null, icon: { type: "emoji", emoji: "🗺️" }, created_time: "2024-01-01T00:00:00.000Z", created_by: { object: "user", id: "demo-user" }, last_edited_by: { object: "user", id: "demo-user" }, last_edited_time: "2024-01-01T00:00:00.000Z", title: makeTitle("Adventure"), description: [], is_inline: false, properties: baseProps, parent: { type: "page_id", page_id: "demo-page" }, url: "https://notion.so/demo-adventure", archived: false },
-        { object: "database", id: "demo-quests", cover: null, icon: { type: "emoji", emoji: "🧩" }, created_time: "2024-01-01T00:00:00.000Z", created_by: { object: "user", id: "demo-user" }, last_edited_by: { object: "user", id: "demo-user" }, last_edited_time: "2024-01-01T00:00:00.000Z", title: makeTitle("Quests"), description: [], is_inline: false, properties: baseProps, parent: { type: "page_id", page_id: "demo-page" }, url: "https://notion.so/demo-quests", archived: false },
-        { object: "database", id: "demo-time-tracking", cover: null, icon: { type: "emoji", emoji: "⏱️" }, created_time: "2024-01-01T00:00:00.000Z", created_by: { object: "user", id: "demo-user" }, last_edited_by: { object: "user", id: "demo-user" }, last_edited_time: "2024-01-01T00:00:00.000Z", title: makeTitle("Time Tracking"), description: [], is_inline: false, properties: baseProps, parent: { type: "page_id", page_id: "demo-page" }, url: "https://notion.so/demo-time-tracking", archived: false },
-      ],
-      next_cursor: null,
-      has_more: false,
-    } as any;
-    setCachedData({ databases: dbs, workspace: { workspace_icon: "🧭" } });
+  const [creatingDemo, setCreatingDemo] = useState(false);
+  const createDemoWorkspace = async () => {
+    try {
+      setCreatingDemo(true);
+      const userId = (NotionCache.getUserData()?.email) || sessionEmail || 'notion-user';
+      const resp = await fetch('/api/notion/create-demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+      const json = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        console.error('Failed to create demo workspace', json);
+        setErrorMessage(json?.error || 'Failed to create demo workspace');
+        return;
+      }
+      if (json?.databases && json?.workspace) {
+        NotionCache.saveDatabaseList(json.databases, json.workspace);
+        setCachedData({ databases: json.databases, workspace: json.workspace });
+        setIsConnected(true);
+      }
+    } catch (e) {
+      setErrorMessage('Failed to create demo workspace');
+    } finally {
+      setCreatingDemo(false);
+    }
   };
 
   // Handle OAuth callback and cache data
@@ -108,10 +120,9 @@ function Home() {
   // Prefer the email saved during OAuth, then session email, otherwise fallback
   const userIdentifier = (NotionCache.getUserData()?.email) || sessionEmail || "notion-user";
   
-  // Fetch only when Notion is connected and we don't already have cached data
-  const shouldFetch = !cachedData && isConnected;
+  const shouldFetch = !cachedData && (!!sessionEmail || isConnected);
   
-  const { data, isFetching, error } = trpc.private.getDatabases.useQuery(
+  const { data, isFetching, error, refetch } = trpc.private.getDatabases.useQuery(
     { email: userIdentifier },
     {
       refetchOnWindowFocus: false,
@@ -230,6 +241,7 @@ function Home() {
                     NotionCache.clearDatabaseCache();
                     setCachedData(null);
                     console.log('🔄 Cache cleared, will fetch fresh data');
+                    refetch();
                   }}
                   className="text-sm text-blue-600 hover:text-blue-800 underline"
                 >
@@ -296,7 +308,13 @@ function Home() {
                     </div>
                     <div className="mt-3 text-center text-sm text-gray-600">Adventure links to Quests; Quests link to Time Tracking</div>
                     <div className="text-center">
-                      <button onClick={createDemoWorkspace} className="mt-5 rounded bg-indigo-600 py-2 px-4 font-bold text-white hover:bg-indigo-500">Create demo workspace</button>
+                      <button
+                        onClick={createDemoWorkspace}
+                        disabled={creatingDemo}
+                        className={`mt-5 rounded py-2 px-4 font-bold text-white ${creatingDemo ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500'}`}
+                      >
+                        {creatingDemo ? 'Creating…' : 'Create demo workspace'}
+                      </button>
                     </div>
                   </div>
                   <section className="mt-10">
