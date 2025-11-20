@@ -313,3 +313,20 @@ function Home() {
 }
 
 export default Home;
+
+export async function getServerSideProps(ctx: any) {
+  const cookieHeader = ctx.req?.headers?.cookie || "";
+  const cookies = Object.fromEntries((cookieHeader || "").split(";").map((c: string) => {
+    const [k, v] = c.trim().split("=");
+    return [k, v];
+  }));
+  const hasNextAuth = cookies["next-auth.session-token"] || cookies["__Secure-next-auth.session-token"];
+  const hasJwt = cookies["session_token"];
+  const hasLegacy = cookies["session_user"];
+  const isAuthenticated = !!(hasNextAuth || hasJwt || hasLegacy);
+  if (!isAuthenticated) {
+    const dest = "/login?redirect=" + encodeURIComponent(ctx.resolvedUrl || "/");
+    return { redirect: { destination: dest, permanent: false } };
+  }
+  return { props: {} };
+}

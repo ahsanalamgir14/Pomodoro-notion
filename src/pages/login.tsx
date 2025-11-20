@@ -8,7 +8,7 @@ import GoogleButton from "../Components/GoogleButton";
 import { useRouter } from "next/router";
 import { signIn } from "next-auth/react";
 
-export default function Login() {
+export default function Login({ disableGoogle = false }: { disableGoogle?: boolean }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -146,9 +146,11 @@ export default function Login() {
           </div>
         </form>
 
-        <div className="mt-4">
-          <GoogleButton />
-        </div>
+        {!disableGoogle && (
+          <div className="mt-4">
+            <GoogleButton />
+          </div>
+        )}
       </div>
 
       <section className="mt-10 w-full max-w-md">
@@ -178,5 +180,6 @@ export async function getServerSideProps(ctx: GetServerSidePropsContext) {
       },
     };
   }
-  return { props: {} };
+  const disableGoogle = (process.env.NEXT_PUBLIC_DISABLE_FIREBASE === "true") || (process.env.DISABLE_FIREBASE === "true") || (process.env.NEXT_PUBLIC_DISABLE_AUTH === "true");
+  return { props: { disableGoogle } };
 }
