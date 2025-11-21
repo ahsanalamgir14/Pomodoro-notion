@@ -298,7 +298,7 @@ function Home() {
                     Try refreshing or check Notion permissions for databases.
                   </p>
                   <div className="mt-8 w-full max-w-2xl border rounded-md p-4">
-                    <div className="text-center text-gray-700 font-medium mb-3">Demo tables and relations</div>
+                    <div className="text-center text-gray-700 font-medium mb-3">Manual Notion setup</div>
                     <div className="flex items-center justify-center gap-4">
                       <div className="rounded-md border px-3 py-2">Adventure</div>
                       <div>↔</div>
@@ -307,14 +307,25 @@ function Home() {
                       <div className="rounded-md border px-3 py-2">Time Tracking</div>
                     </div>
                     <div className="mt-3 text-center text-sm text-gray-600">Adventure links to Quests; Quests link to Time Tracking</div>
-                    <div className="text-center">
-                      <button
-                        onClick={createDemoWorkspace}
-                        disabled={creatingDemo}
-                        className={`mt-5 rounded py-2 px-4 font-bold text-white ${creatingDemo ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500'}`}
-                      >
-                        {creatingDemo ? 'Creating…' : 'Create demo workspace'}
-                      </button>
+                    <div className="mt-4 text-sm text-gray-700">
+                      <div className="font-medium mb-2 text-center">Create these databases in Notion:</div>
+                      <ul className="list-disc pl-5 space-y-1 text-left">
+                        <li>Quests: Name (title), Status (select), Start Date (date), Due Date (date)</li>
+                        <li>Time Tracking: Name, Status, Start Time, End Time, Duration (number), Notes (rich_text), Tags (multi_select), Quests (relation → Quests)</li>
+                        <li>Adventure: Name, Status, Tags, Quests (relation → Quests)</li>
+                      </ul>
+                      <div className="mt-2">Then open each database → Share → invite your integration.</div>
+                      {/*
+                      <div className="text-center">
+                        <button
+                          onClick={createDemoWorkspace}
+                          disabled={creatingDemo}
+                          className={`mt-5 rounded py-2 px-4 font-bold text-white ${creatingDemo ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500'}`}
+                        >
+                          {creatingDemo ? 'Creating…' : 'Create demo workspace'}
+                        </button>
+                      </div>
+                      */}
                     </div>
                   </div>
                   <section className="mt-10">
