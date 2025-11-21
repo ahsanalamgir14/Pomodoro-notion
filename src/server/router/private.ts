@@ -16,32 +16,23 @@ export const privateRouter = router({
       })
     )
     .query(async ({ input: { email } }) => {
-      console.log("🔍 Fetching user data for email:", email);
-      
       try {
-        // Get the user's stored access token from Firebase
-        const userData = await fetchNotionUser(email);
-        
-        if (!userData || !userData.accessToken) {
-          console.log("❌ No user data or access token found for email:", email);
+        let userData = await fetchNotionUser(email);
+        if ((!userData || !userData.accessToken) && email !== "notion-user") {
+          userData = await fetchNotionUser("notion-user");
+        }
+        const token = userData?.accessToken || process.env.NOTION_TOKEN;
+        if (!token) {
           return {
-            databases: {
-              results: [],
-            },
+            databases: { results: [] },
             workspace: null,
             error: "User not found or not connected to Notion",
           };
         }
-
-        console.log("🔑 Access token found for user");
-        console.log("📡 Making API call to list databases...");
-        
-        const databases = await listDatabases(true, userData.accessToken);
-        console.log("✅ API call successful");
-        
+        const databases = await listDatabases(true, token);
         return {
           databases,
-          workspace: userData.workspace || { name: "Default Workspace" },
+          workspace: userData?.workspace || { name: "Default Workspace" },
         };
       } catch (error: any) {
         console.log("❌ API call failed:", error.message);
@@ -73,22 +64,20 @@ export const privateRouter = router({
       })
     )
     .query(async ({ input: { databaseId, email } }) => {
-      console.log("🔍 Fetching database detail for:", databaseId, "user:", email);
-      
-      // Get the user's stored access token from Firebase
-      const userData = await fetchNotionUser(email);
-      
-      if (!userData || !userData.accessToken) {
+      let userData = await fetchNotionUser(email);
+      if ((!userData || !userData.accessToken) && email !== "notion-user") {
+        userData = await fetchNotionUser("notion-user");
+      }
+      const token = userData?.accessToken || process.env.NOTION_TOKEN;
+      if (!token) {
         throw new Error("User not found or not connected to Notion");
       }
-
       const [database, db] = await Promise.all([
-        queryDatabase(databaseId, true, userData.accessToken),
-        retrieveDatabase(databaseId, true, userData.accessToken),
+        queryDatabase(databaseId, true, token),
+        retrieveDatabase(databaseId, true, token),
       ]);
-
       return {
-        userId: userData.id || "demo-user",
+        userId: userData?.id || "demo-user",
         database,
         db,
       };
@@ -101,23 +90,15 @@ export const privateRouter = router({
       })
     )
     .query(async ({ input: { databaseId, email } }) => {
-      console.log("🔍 Querying database:", databaseId, "for user:", email);
-      
-      // Get the user's stored access token from Firebase
-      const userData = await fetchNotionUser(email);
-      
-      if (!userData || !userData.accessToken) {
+      let userData = await fetchNotionUser(email);
+      if ((!userData || !userData.accessToken) && email !== "notion-user") {
+        userData = await fetchNotionUser("notion-user");
+      }
+      const token = userData?.accessToken || process.env.NOTION_TOKEN;
+      if (!token) {
         throw new Error("User not found or not connected to Notion");
       }
-
-      const database = await queryDatabase(
-        databaseId as string,
-        true,
-        userData.accessToken
-      );
-
-      return {
-        database,
-      };
+      const database = await queryDatabase(databaseId as string, true, token);
+      return { database };
     }),
 });
