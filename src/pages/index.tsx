@@ -120,7 +120,7 @@ function Home() {
   // Prefer the email saved during OAuth, then session email, otherwise fallback
   const userIdentifier = (NotionCache.getUserData()?.email) || sessionEmail || "notion-user";
   
-  const shouldFetch = !cachedData && (!!sessionEmail || isConnected);
+  const shouldFetch = !cachedData && isConnected;
   
   const { data, isFetching, error, refetch } = trpc.private.getDatabases.useQuery(
     { email: userIdentifier },
@@ -152,8 +152,8 @@ function Home() {
   // Use cached data if available, otherwise use fresh API data
   const displayData = cachedData || data;
   
-  // Determine if we should show the databases (either we have data or we're currently fetching)
-  const shouldShowDatabases = !!displayData || isFetching;
+  // Show databases view only when connected
+  const shouldShowDatabases = isConnected && (!!displayData || isFetching);
   
   // Single source of truth for loading state
   const isLoadingDatabases = isFetching && !displayData;
