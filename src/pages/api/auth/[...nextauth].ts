@@ -29,7 +29,7 @@ export const authOptions = {
     }),
   ],
   secret: process.env.NEXTAUTH_SECRET,
-  adapter: FirestoreAdapter(db),
+  ...(db ? { adapter: FirestoreAdapter(db as any) } : {}),
   session: { strategy: "jwt" },
   pages: { signIn: "/login" },
 };
