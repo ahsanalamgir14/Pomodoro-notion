@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import Head from "next/head";
 import { trpc } from "../../utils/trpc";
+import { NotionCache } from "../../utils/notionCache";
 import QuestSelection from "../../Components/QuestSelection";
 import NotionTags from "../../Components/NotionTags";
 import { savePomoSessionToNotion, startQuestWork, updateQuestStatus, updateTaskStatus } from "../../utils/apis/notion/client";
@@ -96,12 +97,24 @@ export default function EmbedWidget() {
 
   // Determine which identifier to use for Notion access
   // Prefer logged-in session email; fallback to "notion-user"
-  const [userIdentifier, setUserIdentifier] = useState<string>("notion-user");
+  const [userIdentifier, setUserIdentifier] = useState<string>(typeof window !== 'undefined' ? (NotionCache.getUserData()?.email || 'notion-user') : 'notion-user');
   useEffect(() => {
-    const email = getCookie("session_user");
-    if (email && email.trim() !== "") {
-      setUserIdentifier(email);
-    }
+    fetch('/api/session')
+      .then(r => r.json())
+      .then(data => {
+        if (data?.isAuthenticated && data?.email) {
+          setUserIdentifier(String(data.email));
+        } else if (typeof window !== 'undefined') {
+          const cached = NotionCache.getUserData()?.email;
+          if (cached) setUserIdentifier(cached);
+        }
+      })
+      .catch(() => {
+        if (typeof window !== 'undefined') {
+          const cached = NotionCache.getUserData()?.email;
+          if (cached) setUserIdentifier(cached);
+        }
+      });
   }, []);
 
   // Fetch databases via tRPC (same as home page style)
@@ -395,7 +408,7 @@ export default function EmbedWidget() {
                       intervalRef.current = window.setInterval(() => {
                         setElapsedMs((prev) => prev + 1000);
                       }, 1000);
-                      const userId = "notion-user";
+                      const userId = userIdentifier;
                       const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
                       const targets = (selectedQuests?.map(q => q.value) || []).length > 0
                         ? selectedQuests.map(q => q.value)
@@ -438,7 +451,7 @@ export default function EmbedWidget() {
                     onClick={() => {
                       setRunning(false);
                       if (intervalRef.current) window.clearInterval(intervalRef.current);
-                      const userId = "notion-user";
+                      const userId = userIdentifier;
                       const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
                       if (taskPageId) {
                         updateTaskStatus({ userId, pageId: taskPageId, status: "Paused" }).catch((e) => {
@@ -471,7 +484,7 @@ export default function EmbedWidget() {
                         setRunning(false);
                         if (intervalRef.current) window.clearInterval(intervalRef.current);
                         const endTimeMs = Date.now();
-                        const userId = "notion-user";
+                        const userId = userIdentifier;
                         const tags = (selectedTags || []).map(t => t.label).filter(Boolean);
                         if (!trackingDbId) {
                           setErrorMsg("Please select a Time Tracking database.");

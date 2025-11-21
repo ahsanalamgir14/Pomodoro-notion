@@ -1,12 +1,14 @@
 /* eslint-disable react/no-unescaped-entities */
 import React, { useEffect, useState } from "react";
 import type { GetServerSidePropsContext } from "next";
+import { verifyJWT } from "../utils/serverSide/jwt";
 import Link from "next/link";
 import Footer from "../Components/Footer";
 import GoogleButton from "../Components/GoogleButton";
 import { useRouter } from "next/router";
+import { signIn } from "next-auth/react";
 
-export default function Login() {
+export default function Login({ disableGoogle = false }: { disableGoogle?: boolean }) {
   const router = useRouter();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -25,15 +27,19 @@ export default function Login() {
     }
 
     try {
-      const res = await fetch('/api/auth/login', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ email, password })
-      });
-      const json = await res.json().catch(() => ({}));
-      if (!res.ok) {
-        setError(json?.error || 'Login failed');
-        return;
+      const res = await signIn('credentials', { email, password, redirect: false });
+      if (res?.error) {
+        // Fallback to legacy cookie login
+        const legacy = await fetch('/api/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email, password })
+        });
+        const json = await legacy.json().catch(() => ({}));
+        if (!legacy.ok) {
+          setError(res.error || json?.error || 'Login failed');
+          return;
+        }
       }
       setSuccess('Signed in successfully');
       const redirectTarget = (router.query.redirect as string) || '/';
@@ -140,9 +146,11 @@ export default function Login() {
           </div>
         </form>
 
-        <div className="mt-4">
-          <GoogleButton />
-        </div>
+        {!disableGoogle && (
+          <div className="mt-4">
+            <GoogleButton />
+          </div>
+        )}
       </div>
 
       <section className="mt-10 w-full max-w-md">
@@ -159,7 +167,10 @@ export async function getServerSideProps(ctx: GetServerSidePropsContext) {
     const [k, v] = c.trim().split("=");
     return [k, v];
   }));
-  const sessionUser = cookies["session_user"] ? decodeURIComponent(cookies["session_user"]) : null;
+  const token = cookies["session_token"];
+  const secret = process.env.NEXTAUTH_SECRET || process.env.SESSION_SECRET || "dev-secret";
+  const payload = token ? verifyJWT(token, secret) : null;
+  const sessionUser = payload?.email || (cookies["session_user"] ? decodeURIComponent(cookies["session_user"]) : null);
   if (sessionUser) {
     const redirect = (ctx.query?.redirect as string) || "/";
     return {
@@ -169,5 +180,6 @@ export async function getServerSideProps(ctx: GetServerSidePropsContext) {
       },
     };
   }
-  return { props: {} };
+  const disableGoogle = (process.env.NEXT_PUBLIC_DISABLE_FIREBASE === "true") || (process.env.DISABLE_FIREBASE === "true") || (process.env.NEXT_PUBLIC_DISABLE_AUTH === "true");
+  return { props: { disableGoogle } };
 }

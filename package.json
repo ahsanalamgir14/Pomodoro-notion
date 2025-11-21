@@ -45,6 +45,9 @@
     "use-sound": "^4.0.1",
     "zod": "^3.22.4"
   },
+  "optionalDependencies": {
+    "better-sqlite3": "^9.4.5"
+  },
   "devDependencies": {
     "@svgr/webpack": "^6.5.1",
     "@types/chroma-js": "^2.1.4",

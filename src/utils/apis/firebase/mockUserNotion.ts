@@ -1,6 +1,7 @@
 // Mock implementation for Firebase user functions to avoid offline client errors
 import fs from 'fs';
 import path from 'path';
+import { getDb, sqliteDisconnectNotionUser, sqliteFetchNotionUser, sqliteUpsertNotionUser } from '../../serverSide/sqlite';
 
 // File path for persistent storage
 const DATA_FILE = path.join(process.cwd(), '.notion-user-data.json');
@@ -46,20 +47,15 @@ loadPersistentData();
 export const fetchNotionUser = async (email: string) => {
   // Simulate async operation
   await new Promise(resolve => setTimeout(resolve, 100));
-
+  const db = getDb();
+  if (db) {
+    const u = sqliteFetchNotionUser(db, email);
+    if (!u) return null;
+    return u;
+  }
   const user = mockUsers[email];
-
-  if (!user) {
-    console.log("❌ No user found for email:", email);
-    return null;
-  }
-
-  if (!user.accessToken) {
-    console.log("⚠️ User found but no access token available. Please connect to Notion first.");
-    return null;
-  }
-
-  console.log("✅ User found with valid access token");
+  if (!user) return null;
+  if (!user.accessToken) return null;
   return user;
 };
 
@@ -82,27 +78,28 @@ export const createNotionUser = async ({
 }) => {
   // Simulate async operation
   await new Promise(resolve => setTimeout(resolve, 100));
-
-  console.log("🔄 Storing real Notion token for user:", email);
-  console.log("🔑 Token preview:", accessToken.substring(0, 20) + "...");
-
-  // Update existing user or create new one with real OAuth data
+  const db = getDb();
+  if (db) {
+    sqliteUpsertNotionUser(db, { email, accessToken, workspace });
+    return `notion-user-${Date.now()}`;
+  }
   const existingUser = mockUsers[email];
   const uid = existingUser?.id || `notion-user-${Date.now()}`;
-
-  // Store real OAuth data in mock system
-  mockUsers[email] = {
-    id: uid,
-    email,
-    accessToken, // Real token from Notion OAuth
-    workspace, // Real workspace data from Notion
-    createdAt: existingUser?.createdAt || new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-  };
-
-  // Save to persistent storage
+  mockUsers[email] = { id: uid, email, accessToken, workspace, createdAt: existingUser?.createdAt || new Date().toISOString(), updatedAt: new Date().toISOString() };
   savePersistentData();
-
-  console.log("✅ Real Notion token stored successfully");
   return uid;
+};
+
+export const disconnectNotionUser = async (email: string) => {
+  await new Promise(resolve => setTimeout(resolve, 100));
+  const db = getDb();
+  if (db) {
+    sqliteDisconnectNotionUser(db, email);
+    return true;
+  }
+  const existingUser = mockUsers[email];
+  if (!existingUser) return false;
+  mockUsers[email] = { ...existingUser, accessToken: null, workspace: null, updatedAt: new Date().toISOString() };
+  savePersistentData();
+  return true;
 };

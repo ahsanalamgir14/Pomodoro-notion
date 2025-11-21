@@ -15,6 +15,33 @@ function Home() {
   const [isConnected, setIsConnected] = useState(false);
   const router = useRouter();
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+  const [creatingDemo, setCreatingDemo] = useState(false);
+  const createDemoWorkspace = async () => {
+    try {
+      setCreatingDemo(true);
+      const userId = (NotionCache.getUserData()?.email) || sessionEmail || 'notion-user';
+      const resp = await fetch('/api/notion/create-demo', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ userId })
+      });
+      const json = await resp.json().catch(() => ({}));
+      if (!resp.ok) {
+        console.error('Failed to create demo workspace', json);
+        setErrorMessage(json?.error || 'Failed to create demo workspace');
+        return;
+      }
+      if (json?.databases && json?.workspace) {
+        NotionCache.saveDatabaseList(json.databases, json.workspace);
+        setCachedData({ databases: json.databases, workspace: json.workspace });
+        setIsConnected(true);
+      }
+    } catch (e) {
+      setErrorMessage('Failed to create demo workspace');
+    } finally {
+      setCreatingDemo(false);
+    }
+  };
 
   // Handle OAuth callback and cache data
   useEffect(() => {
@@ -90,13 +117,12 @@ function Home() {
     return () => { mounted = false; };
   }, []);
 
-  // Use a simple identifier for Notion connection - no user accounts needed
-  const userIdentifier = sessionEmail || "notion-user";
+  // Prefer the email saved during OAuth, then session email, otherwise fallback
+  const userIdentifier = (NotionCache.getUserData()?.email) || sessionEmail || "notion-user";
   
-  // Fetch when we have a session (cookie) or cached connection, and no cached data yet
   const shouldFetch = !cachedData && (!!sessionEmail || isConnected);
   
-  const { data, isFetching, error } = trpc.private.getDatabases.useQuery(
+  const { data, isFetching, error, refetch } = trpc.private.getDatabases.useQuery(
     { email: userIdentifier },
     {
       refetchOnWindowFocus: false,
@@ -215,6 +241,7 @@ function Home() {
                     NotionCache.clearDatabaseCache();
                     setCachedData(null);
                     console.log('🔄 Cache cleared, will fetch fresh data');
+                    refetch();
                   }}
                   className="text-sm text-blue-600 hover:text-blue-800 underline"
                 >
@@ -228,10 +255,14 @@ function Home() {
                 </a>
                 <button
                   onClick={() => {
-                    NotionCache.clearUserData();
-                    setIsConnected(false);
-                    setCachedData(null);
-                    console.log('🚪 Disconnected from Notion');
+                    fetch('/api/notion/disconnect', { method: 'POST' }).finally(() => {
+                      NotionCache.clearUserData();
+                      NotionCache.clearDatabaseCache();
+                      setIsConnected(false);
+                      setCachedData(null);
+                      console.log('🚪 Disconnected from Notion');
+                      window.location.reload();
+                    });
                   }}
                   className="text-sm text-red-600 hover:text-red-800 underline"
                 >
@@ -266,6 +297,37 @@ function Home() {
                   <p className="mt-4 text-center text-gray-600">
                     Try refreshing or check Notion permissions for databases.
                   </p>
+                  <div className="mt-8 w-full max-w-2xl border rounded-md p-4">
+                    <div className="text-center text-gray-700 font-medium mb-3">Manual Notion setup</div>
+                    <div className="flex items-center justify-center gap-4">
+                      <div className="rounded-md border px-3 py-2">Adventure</div>
+                      <div>↔</div>
+                      <div className="rounded-md border px-3 py-2">Quests</div>
+                      <div>↔</div>
+                      <div className="rounded-md border px-3 py-2">Time Tracking</div>
+                    </div>
+                    <div className="mt-3 text-center text-sm text-gray-600">Adventure links to Quests; Quests link to Time Tracking</div>
+                    <div className="mt-4 text-sm text-gray-700">
+                      <div className="font-medium mb-2 text-center">Create these databases in Notion:</div>
+                      <ul className="list-disc pl-5 space-y-1 text-left">
+                        <li>Quests: Name (title), Status (select), Start Date (date), Due Date (date)</li>
+                        <li>Time Tracking: Name, Status, Start Time, End Time, Duration (number), Notes (rich_text), Tags (multi_select), Quests (relation → Quests)</li>
+                        <li>Adventure: Name, Status, Tags, Quests (relation → Quests)</li>
+                      </ul>
+                      <div className="mt-2">Then open each database → Share → invite your integration.</div>
+                      {/*
+                      <div className="text-center">
+                        <button
+                          onClick={createDemoWorkspace}
+                          disabled={creatingDemo}
+                          className={`mt-5 rounded py-2 px-4 font-bold text-white ${creatingDemo ? 'bg-indigo-400 cursor-not-allowed' : 'bg-indigo-600 hover:bg-indigo-500'}`}
+                        >
+                          {creatingDemo ? 'Creating…' : 'Create demo workspace'}
+                        </button>
+                      </div>
+                      */}
+                    </div>
+                  </div>
                   <section className="mt-10">
                     <Footer showCredit={false} />
                   </section>
@@ -280,3 +342,20 @@ function Home() {
 }
 
 export default Home;
+
+export async function getServerSideProps(ctx: any) {
+  const cookieHeader = ctx.req?.headers?.cookie || "";
+  const cookies = Object.fromEntries((cookieHeader || "").split(";").map((c: string) => {
+    const [k, v] = c.trim().split("=");
+    return [k, v];
+  }));
+  const hasNextAuth = cookies["next-auth.session-token"] || cookies["__Secure-next-auth.session-token"];
+  const hasJwt = cookies["session_token"];
+  const hasLegacy = cookies["session_user"];
+  const isAuthenticated = !!(hasNextAuth || hasJwt || hasLegacy);
+  if (!isAuthenticated) {
+    const dest = "/login?redirect=" + encodeURIComponent(ctx.resolvedUrl || "/");
+    return { redirect: { destination: dest, permanent: false } };
+  }
+  return { props: {} };
+}

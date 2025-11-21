@@ -13,10 +13,10 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
     const isLocal = host.includes("localhost") || host.startsWith("127.0.0.1");
     const isHttps = forwardedProto === "https";
     const secureFlag = isHttps && !isLocal ? "Secure; " : "";
-    res.setHeader(
-      "Set-Cookie",
-      `session_user=; Path=/; HttpOnly; ${secureFlag}SameSite=Lax; Max-Age=0`
-    );
+    res.setHeader("Set-Cookie", [
+      `session_token=; Path=/; HttpOnly; ${secureFlag}SameSite=Strict; Max-Age=0`,
+      `session_user=; Path=/; HttpOnly; ${secureFlag}SameSite=Lax; Max-Age=0`,
+    ]);
 
     return res.status(200).json({ success: true });
   } catch (error) {

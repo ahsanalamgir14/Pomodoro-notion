@@ -1,5 +1,6 @@
 import dynamic from "next/dynamic";
 import React, { useCallback } from "react";
+import { NotionCache } from "../../utils/notionCache";
 import PlaceHolderLoader from "../PlaceHolderLoader";
 
 const AsyncSelect = dynamic(() => import("react-select/async"), {
@@ -75,10 +76,36 @@ const colourStyles = ({
 };
 
 export default function QuestSelection({ disabled = false, projectId, relationName = "Quests", values, onChange, theme = "light", width }: Props) {
+  const [userIdentifier, setUserIdentifier] = React.useState<string>(() => {
+    if (typeof window !== 'undefined') {
+      try { return (window as any).NotionCache ? (window as any).NotionCache.getUserData()?.email || 'notion-user' : 'notion-user'; } catch { return 'notion-user'; }
+    }
+    return 'notion-user';
+  });
+  React.useEffect(() => {
+    fetch('/api/session')
+      .then(r => r.json())
+      .then(data => {
+        if (data?.isAuthenticated && data?.email) {
+          setUserIdentifier(String(data.email));
+        } else {
+          try {
+            const cached = (NotionCache as any)?.getUserData?.()?.email;
+            if (cached) setUserIdentifier(cached);
+          } catch {}
+        }
+      })
+      .catch(() => {
+        try {
+          const cached = (NotionCache as any)?.getUserData?.()?.email;
+          if (cached) setUserIdentifier(cached);
+        } catch {}
+      });
+  }, []);
   const loadOptions = useCallback(async (): Promise<Option[]> => {
     if (!projectId) return [];
     try {
-      const qs = new URLSearchParams({ userId: "notion-user", pageId: projectId, relationName });
+      const qs = new URLSearchParams({ userId: userIdentifier, pageId: projectId, relationName });
       const resp = await fetch(`/api/notion/page-relations?${qs.toString()}`);
       if (!resp.ok) return [];
       const data = await resp.json();
@@ -87,7 +114,7 @@ export default function QuestSelection({ disabled = false, projectId, relationNa
     } catch (e) {
       return [];
     }
-  }, [projectId, relationName]);
+  }, [projectId, relationName, userIdentifier]);
 
   return (
     <AsyncSelect

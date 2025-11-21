@@ -1,5 +1,7 @@
 import type { NextApiRequest, NextApiResponse } from "next";
 import { addEmbed, deleteEmbed, getEmbedsFor, SavedEmbed } from "../../../utils/serverSide/embedsStore";
+import { verifyJWT } from "../../../utils/serverSide/jwt";
+import { getDb, sqliteAddEmbed, sqliteDeleteEmbed, sqliteGetEmbeds } from "../../../utils/serverSide/sqlite";
 
 function getSessionEmail(req: NextApiRequest): string | null {
   const cookieHeader = req.headers.cookie || "";
@@ -7,6 +9,12 @@ function getSessionEmail(req: NextApiRequest): string | null {
     const [k, v] = c.trim().split("=");
     return [k, v];
   }));
+  const token = cookies["session_token"];
+  if (token) {
+    const secret = process.env.NEXTAUTH_SECRET || process.env.SESSION_SECRET || "dev-secret";
+    const payload = verifyJWT(token, secret);
+    if (payload?.email) return String(payload.email);
+  }
   return cookies["session_user"] ? decodeURIComponent(cookies["session_user"]) : null;
 }
 
@@ -15,9 +23,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
   if (!email) {
     return res.status(401).json({ error: "Not authenticated", message: "Missing session cookie" });
   }
+  const db = getDb();
 
   if (req.method === "GET") {
-    const items = getEmbedsFor(email);
+    const items = db ? sqliteGetEmbeds(db, email) : getEmbedsFor(email);
     return res.status(200).json({ items });
   }
 
@@ -33,7 +42,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       config,
       createdAt: Date.now(),
     };
-    const items = addEmbed(email, item);
+    const items = db ? sqliteAddEmbed(db, email, item) : addEmbed(email, item);
     return res.status(200).json({ items });
   }
 
@@ -42,7 +51,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     if (!link) {
       return res.status(400).json({ error: "Missing link query param" });
     }
-    const items = deleteEmbed(email, link);
+    const items = db ? sqliteDeleteEmbed(db, email, link) : deleteEmbed(email, link);
     return res.status(200).json({ items });
   }
 

@@ -31,7 +31,9 @@ export default function middleware(req: NextRequest) {
 
   // Check cookie-based session
   const sessionUser = req.cookies.get("session_user")?.value;
-  if (!sessionUser) {
+  const sessionToken = req.cookies.get("session_token")?.value;
+  const nextAuthCookie = req.cookies.get("next-auth.session-token")?.value || req.cookies.get("__Secure-next-auth.session-token")?.value;
+  if (!sessionUser && !sessionToken && !nextAuthCookie) {
     const url = req.nextUrl.clone();
     url.pathname = "/login";
     // Preserve intended destination to return post-login

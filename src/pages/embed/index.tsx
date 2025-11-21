@@ -92,7 +92,7 @@ export default function CreateEmbedPage() {
   }, []);
 
   // Databases and tasks for selections
-  const userIdentifier = sessionEmail || (typeof window !== "undefined" ? NotionCache.getUserData()?.email : null) || "notion-user";
+  const userIdentifier = (typeof window !== "undefined" ? NotionCache.getUserData()?.email : null) || sessionEmail || "notion-user";
   const { data: dbs } = trpc.private.getDatabases.useQuery(
     { email: userIdentifier },
     { refetchOnWindowFocus: false, retry: false }
@@ -177,7 +177,7 @@ export default function CreateEmbedPage() {
           ? "Quest"
           : Object.entries(props).find(([k, p]: any) => k?.toLowerCase?.().includes("quest") && p?.type === "relation")?.[0];
       if (!questsRelProp) { setPreviewQuestChips([]); if (previewSelectedQuests.length === 0) setPreviewSelectedQuests([]); return; }
-      const qs = new URLSearchParams({ userId: "notion-user", pageId: previewSelectedTaskId, relationName: questsRelProp });
+      const qs = new URLSearchParams({ userId: userIdentifier, pageId: previewSelectedTaskId, relationName: questsRelProp });
       fetch(`/api/notion/page-relations?${qs.toString()}`)
         .then((r) => r.ok ? r.json() : null)
         .then((data) => {
@@ -191,7 +191,7 @@ export default function CreateEmbedPage() {
     } catch (e) {
       setPreviewQuestChips([]);
     }
-  }, [taskDbQuery, previewSelectedTaskId, previewSelectedQuests.length]);
+  }, [taskDbQuery, previewSelectedTaskId, previewSelectedQuests.length, userIdentifier]);
 
   const taskDbName = useMemo(() => {
     const t = taskDbDetail?.db?.title;

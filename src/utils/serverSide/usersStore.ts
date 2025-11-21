@@ -1,6 +1,7 @@
 import fs from "fs";
 import path from "path";
 import crypto from "crypto";
+import { getDb, sqliteCreateUserRecord, sqliteGetUser } from "./sqlite";
 
 export type UserRecord = {
   email: string;
@@ -51,27 +52,36 @@ export function hashPassword(password: string, salt: string): string {
 }
 
 export function createUser(email: string, password: string): UserRecord {
-  const users = loadUsers();
   const key = normalizeEmail(email);
+  const db = getDb();
+  if (db) {
+    const existing = sqliteGetUser(db, key);
+    if (existing) throw new Error("User already exists");
+    const salt = crypto.randomBytes(16).toString("hex");
+    const passwordHash = hashPassword(password, salt);
+    const record: UserRecord = { email: key, passwordHash, salt, createdAt: Date.now() };
+    sqliteCreateUserRecord(db, record);
+    return record;
+  }
+  const users = loadUsers();
   if (users[key]) {
     throw new Error("User already exists");
   }
   const salt = crypto.randomBytes(16).toString("hex");
   const passwordHash = hashPassword(password, salt);
-  const record: UserRecord = {
-    email: key,
-    passwordHash,
-    salt,
-    createdAt: Date.now(),
-  };
+  const record: UserRecord = { email: key, passwordHash, salt, createdAt: Date.now() };
   users[key] = record;
   saveUsers(users);
   return record;
 }
 
 export function getUser(email: string): UserRecord | null {
-  const users = loadUsers();
   const key = normalizeEmail(email);
+  const db = getDb();
+  if (db) {
+    return sqliteGetUser(db, key);
+  }
+  const users = loadUsers();
   return users[key] || null;
 }
 
