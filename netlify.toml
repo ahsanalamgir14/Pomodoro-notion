@@ -12,3 +12,13 @@
   NPM_CONFIG_PRODUCTION = "false"
   NPM_FLAGS = "--include=dev"
   YARN_FLAGS = "--production=false"
+
+[[headers]]
+  for = "/*"
+  [headers.values]
+    Strict-Transport-Security = "max-age=31536000; includeSubDomains; preload"
+    X-Content-Type-Options = "nosniff"
+    X-Frame-Options = "SAMEORIGIN"
+    Referrer-Policy = "no-referrer-when-downgrade"
+    Permissions-Policy = "geolocation=(), microphone=(), camera=(), fullscreen=(self)"
+    Content-Security-Policy = "default-src 'self'; script-src 'self' 'unsafe-inline' https:; style-src 'self' 'unsafe-inline' https:; img-src 'self' data: https:; font-src 'self' data: https:; connect-src 'self' https:; base-uri 'self'; form-action 'self' https:"
