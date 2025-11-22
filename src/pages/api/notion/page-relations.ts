@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { Client } from "@notionhq/client";
-import { fetchNotionUser } from "../../../utils/apis/firebase/mockUserNotion";
+import { fetchNotionUser } from "../../../utils/apis/firebase/notionUser";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
