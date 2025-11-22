@@ -362,7 +362,7 @@ export default function CreateEmbedPage() {
       const res = await fetch('/api/embeds', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id: selectedPageId || 'default', title, link: embedLink, config: settings }),
+        body: JSON.stringify({ id: selectedPageId || 'default', title, link: embedLink, config: settings, email: sessionEmail || (typeof window !== 'undefined' ? (NotionCache.getUserData()?.email || null) : null) }),
       });
       if (!res.ok) {
         const err = await res.json().catch(() => ({}));

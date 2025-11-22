@@ -2,8 +2,12 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { addEmbed, deleteEmbed, getEmbedsFor, SavedEmbed } from "../../../utils/serverSide/embedsStore";
 import { verifyJWT } from "../../../utils/serverSide/jwt";
 import { getDb, sqliteAddEmbed, sqliteDeleteEmbed, sqliteGetEmbeds } from "../../../utils/serverSide/sqlite";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../auth/[...nextauth]";
 
-function getSessionEmail(req: NextApiRequest): string | null {
+async function resolveEmail(req: NextApiRequest): Promise<string | null> {
+  const session = await getServerSession(req as any, {} as any, authOptions).catch(() => null);
+  if (session?.user?.email) return String(session.user.email);
   const cookieHeader = req.headers.cookie || "";
   const cookies = Object.fromEntries(cookieHeader.split(";").map((c) => {
     const [k, v] = c.trim().split("=");
@@ -15,13 +19,16 @@ function getSessionEmail(req: NextApiRequest): string | null {
     const payload = verifyJWT(token, secret);
     if (payload?.email) return String(payload.email);
   }
-  return cookies["session_user"] ? decodeURIComponent(cookies["session_user"]) : null;
+  if (cookies["session_user"]) return decodeURIComponent(cookies["session_user"]);
+  return null;
 }
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
-  const email = getSessionEmail(req);
+  const override = (req.method === "POST" ? (req.body as any)?.email : (req.method === "GET" ? (req.query as any)?.email : undefined)) as string | undefined;
+  const sessionEmail = await resolveEmail(req);
+  const email = override || sessionEmail;
   if (!email) {
-    return res.status(401).json({ error: "Not authenticated", message: "Missing session cookie" });
+    return res.status(401).json({ error: "Not authenticated", message: "Missing session" });
   }
   const db = getDb();
 
