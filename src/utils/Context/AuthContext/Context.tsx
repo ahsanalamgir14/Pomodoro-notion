@@ -70,6 +70,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       signOut({ redirect: false }),
     ]).finally(() => {
       setUser(null);
+      if (typeof window !== 'undefined') {
+        window.location.replace('/login');
+      }
     });
   };
 
