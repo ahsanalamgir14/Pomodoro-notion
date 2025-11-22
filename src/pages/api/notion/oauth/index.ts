@@ -3,7 +3,7 @@ import { NextApiRequest, NextApiResponse } from "next";
 import { verifyJWT } from "../../../../utils/serverSide/jwt";
 import { showError } from "../../../../utils/apis";
 // Use mock implementation for development to avoid Firebase setup
-import { createNotionUser } from "../../../../utils/apis/firebase/mockUserNotion";
+import { createNotionUser } from "../../../../utils/apis/firebase/notionUser";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../../auth/[...nextauth]";
 

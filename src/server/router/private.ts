@@ -6,7 +6,7 @@ import {
 import { publicProcedure, router } from "../trpc";
 import { z } from "zod";
 // Use mock implementation for development to avoid Firebase setup
-import { fetchNotionUser } from "@/utils/apis/firebase/mockUserNotion";
+import { fetchNotionUser } from "@/utils/apis/firebase/notionUser";
 
 export const privateRouter = router({
   getDatabases: publicProcedure

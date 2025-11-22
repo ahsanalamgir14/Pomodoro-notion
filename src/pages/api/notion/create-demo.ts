@@ -1,7 +1,7 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { Client } from "@notionhq/client";
 import { verifyJWT } from "../../../utils/serverSide/jwt";
-import { fetchNotionUser } from "../../../utils/apis/firebase/mockUserNotion";
+import { fetchNotionUser } from "../../../utils/apis/firebase/notionUser";
 import { listDatabases } from "../../../utils/apis/notion/database";
 
 function getSessionEmail(req: NextApiRequest): string | null {

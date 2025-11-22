@@ -22,6 +22,7 @@ type EmbedSettings = {
   // Back-compat: hideSelectors from earlier version; new flag hides only DB selectors
   hideSelectors?: boolean;
   hideDbSelectors?: boolean;
+  userId?: string;
 };
 
 function decodeConfigParam() {
@@ -82,6 +83,9 @@ export default function EmbedWidget() {
     }
     if (cfg?.taskTitle) {
       setSelectedTaskTitle((prev) => prev || cfg.taskTitle);
+    }
+    if (cfg?.userId) {
+       setUserIdentifier((prev) => prev || String(cfg.userId));
     }
   }, []);
 

@@ -2,7 +2,7 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import { getServerSession } from "next-auth";
 import { authOptions } from "../auth/[...nextauth]";
 import { verifyJWT } from "../../../utils/serverSide/jwt";
-import { fetchNotionUser } from "../../../utils/apis/firebase/mockUserNotion";
+import { fetchNotionUser } from "../../../utils/apis/firebase/notionUser";
 
 function parseCookies(header: string) {
   return Object.fromEntries((header || "").split(";").map((c) => {
