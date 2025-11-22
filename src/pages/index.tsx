@@ -15,6 +15,7 @@ function Home() {
   const [isConnected, setIsConnected] = useState(false);
   const router = useRouter();
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+  const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
   const [creatingDemo, setCreatingDemo] = useState(false);
   const createDemoWorkspace = async () => {
     try {
@@ -117,8 +118,34 @@ function Home() {
     return () => { mounted = false; };
   }, []);
 
+  useEffect(() => {
+    let mounted = true;
+    fetch('/api/user/identifier')
+      .then((r) => r.json())
+      .then((d) => {
+        if (!mounted) return;
+        setResolvedUserId(d?.resolvedUserId || null);
+        if (typeof d?.hasToken === 'boolean') setIsConnected(!!d.hasToken);
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    fetch('/api/user/identifier')
+      .then((r) => r.json())
+      .then((d) => {
+        if (!mounted) return;
+        setResolvedUserId(d?.resolvedUserId || null);
+        if (typeof d?.hasToken === 'boolean') setIsConnected(!!d.hasToken);
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
   // Prefer the email saved during OAuth, then session email, otherwise fallback
-  const userIdentifier = (NotionCache.getUserData()?.email) || sessionEmail || "notion-user";
+  const userIdentifier = resolvedUserId || (NotionCache.getUserData()?.email) || sessionEmail || "notion-user";
   
   const shouldFetch = !cachedData && isConnected;
   
