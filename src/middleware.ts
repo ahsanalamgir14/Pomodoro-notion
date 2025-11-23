@@ -24,8 +24,8 @@ export default function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
-  // Allow anonymous routes like login/signup
-  if (anonymousRoutes.includes(pathname)) {
+  // Allow anonymous routes like login/signup and embed views (iframes have no cookies)
+  if (anonymousRoutes.includes(pathname) || pathname.startsWith("/embed")) {
     return NextResponse.next();
   }
 
