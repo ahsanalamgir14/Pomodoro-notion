@@ -1,8 +1,10 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { showError } from "../../../../utils/apis";
 import { createNotionEntry } from "../../../../utils/apis/notion/entry";
-// Use mock implementation for development to avoid Firebase setup
-import { fetchNotionUser } from "../../../../utils/apis/firebase/mockUserNotion";
+import { fetchNotionUser } from "../../../../utils/apis/firebase/notionUser";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../../auth/[...nextauth]";
+import { verifyJWT } from "../../../../utils/serverSide/jwt";
 
 export default async function handler(
   req: NextApiRequest,
@@ -54,16 +56,25 @@ export default async function handler(
       }
 
       try {
-        // Fetch the user's Notion OAuth token (stored locally via mock or Firebase)
-        const userData = await fetchNotionUser(userId);
-        if (!userData || !userData.accessToken) {
-          return res.status(401).json({
-            error: "Failed to create Notion entry",
-            details: "User is not connected to Notion or token missing.",
-          });
+        const session = await getServerSession(req as any, res as any, authOptions).catch(() => null);
+        const cookieHeader = req.headers.cookie || "";
+        const cookies = Object.fromEntries(cookieHeader.split(";").map((c) => { const [k,v] = c.trim().split("="); return [k,v]; }));
+        const jwt = cookies["session_token"]; const secret = process.env.NEXTAUTH_SECRET || process.env.SESSION_SECRET || "dev-secret";
+        const jwtPayload = jwt ? verifyJWT(jwt, secret) : null;
+        const candidates: string[] = [userId, session?.user?.email, jwtPayload?.email as string, cookies["session_user"] ? decodeURIComponent(cookies["session_user"]) : undefined, "notion-user"].filter(Boolean) as string[];
+        let token: string | null = null; let workspace: any = null;
+        for (const id of candidates) {
+          const u = await fetchNotionUser(id!);
+          if (u?.accessToken) { token = u.accessToken; workspace = u.workspace || null; break; }
+        }
+        if (!token) {
+          const envToken = process.env.NOTION_TOKEN || null;
+          if (!envToken) {
+            return res.status(401).json({ error: "Failed to create Notion entry", details: "User is not connected to Notion or token missing." });
+          }
+          token = envToken;
         }
 
-        // Create entry in the selected Notion database
         const notionEntryId = await createNotionEntry({
           databaseId: targetDatabaseId,
           sourceDatabaseId: databaseId,
@@ -78,7 +89,7 @@ export default async function handler(
           tags,
           questPageId,
           questPageIds,
-          accessToken: userData.accessToken,
+          accessToken: token,
         });
 
         res.status(200).json({
