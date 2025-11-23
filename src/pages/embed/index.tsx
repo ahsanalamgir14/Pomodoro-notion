@@ -357,6 +357,7 @@ export default function CreateEmbedPage() {
         taskDatabaseId: selectedTaskDbId,
         sessionDatabaseId: selectedSessionDbId,
         hideDbSelectors: lockDbSelections,
+        userId: sessionEmail || (typeof window !== 'undefined' ? (NotionCache.getUserData()?.email || 'notion-user') : 'notion-user'),
       };
       // Task selection is handled within the embedded UI; omit taskId/taskTitle
       const res = await fetch('/api/embeds', {
@@ -524,6 +525,7 @@ export default function CreateEmbedPage() {
                         taskDatabaseId: selectedTaskDbId,
                         sessionDatabaseId: selectedSessionDbId,
                         hideDbSelectors: lockDbSelections,
+                        userId: sessionEmail || (typeof window !== 'undefined' ? (NotionCache.getUserData()?.email || 'notion-user') : 'notion-user'),
                       };
                       // Task selection happens in the embedded UI; do not include taskId/taskTitle in link
                       if (typeof window !== "undefined") {
