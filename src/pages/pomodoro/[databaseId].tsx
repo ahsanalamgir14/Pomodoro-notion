@@ -18,7 +18,7 @@ import {
   retrieveDatabase,
   listDatabases,
 } from "../../utils/apis/notion/database";
-import { fetchNotionUser } from "../../utils/apis/firebase/mockUserNotion";
+import { fetchNotionUser } from "../../utils/apis/firebase/notionUser";
 import { getProjectId, getProjectTitle } from "../../utils/notionutils";
 import { actionTypes } from "../../utils/Context/PomoContext/reducer";
 import { actionTypes as userActiontype } from "../../utils/Context/UserContext/reducer";

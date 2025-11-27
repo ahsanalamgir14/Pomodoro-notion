@@ -22,7 +22,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const sessionEmail = session?.user?.email || null;
     const jwtEmail = (jwtPayload?.email as string) || null;
 
-    const candidates = [sessionEmail, legacy, jwtEmail, "notion-user"].filter(Boolean) as string[];
+    const candidates = [sessionEmail, legacy, jwtEmail]
+      .filter(Boolean)
+      .filter((id) => id !== "notion-user") as string[];
     let resolvedUserId: string | null = null;
     let hasToken = false;
     for (const id of candidates) {
@@ -34,11 +36,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
     return res.status(200).json({
-      email: sessionEmail || jwtEmail || legacy || null,
-      resolvedUserId: resolvedUserId || sessionEmail || jwtEmail || legacy || "notion-user",
+      email: sessionEmail || jwtEmail || (legacy && legacy !== "notion-user" ? legacy : null) || null,
+      resolvedUserId: resolvedUserId || sessionEmail || jwtEmail || (legacy && legacy !== "notion-user" ? legacy : null) || null,
       hasToken,
     });
   } catch {
-    return res.status(200).json({ email: null, resolvedUserId: "notion-user", hasToken: false });
+    return res.status(200).json({ email: null, resolvedUserId: null, hasToken: false });
   }
 }

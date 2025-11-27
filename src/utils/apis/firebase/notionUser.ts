@@ -8,3 +8,4 @@ const impl = useMock
 
 export const createNotionUser = impl.createNotionUser as (args: { email: string; accessToken: string; workspace: any }) => Promise<string>;
 export const fetchNotionUser = impl.fetchNotionUser as (email: string) => Promise<any>;
+export const disconnectNotionUser = impl.disconnectNotionUser as (email: string) => Promise<boolean>;
