@@ -417,9 +417,10 @@ export default function Timer({
                 onDatabaseSelect={sessionConfig.setSelectedDatabase}
                 onTrackingDatabaseSelect={sessionConfig.setSelectedTrackingDatabase}
                 isExpanded={sessionConfig.config.isExpanded}
-                  onToggleExpanded={() => sessionConfig.setIsExpanded(!sessionConfig.config.isExpanded)}
-                  disabled={disableControls}
-                />
+                onToggleExpanded={() => sessionConfig.setIsExpanded(!sessionConfig.config.isExpanded)}
+                disabled={disableControls}
+                lockStatusDatabase={true}
+              />
             </div>
           </div>
 

@@ -64,6 +64,7 @@ interface PomoSessionConfigProps {
   disabled?: boolean;
   isExpanded?: boolean;
   onToggleExpanded?: () => void;
+  lockStatusDatabase?: boolean;
 }
 
 export default function PomoSessionConfig({
@@ -82,7 +83,8 @@ export default function PomoSessionConfig({
   onTrackingDatabaseSelect,
   disabled = false,
   isExpanded = false,
-  onToggleExpanded
+  onToggleExpanded,
+  lockStatusDatabase = false
 }: PomoSessionConfigProps) {
   const [internalExpanded, setInternalExpanded] = useState(isExpanded);
   
@@ -158,13 +160,13 @@ export default function PomoSessionConfig({
           {/* Database Selection */}
           <div>
             <DatabaseSelection
-              disabled={disabled}
+              disabled={disabled || lockStatusDatabase}
               value={selectedDatabase}
-              handleSelect={onDatabaseSelect}
+              handleSelect={lockStatusDatabase ? () => {} : onDatabaseSelect}
               databases={availableDatabases}
               placeholder="Select status database (Adventure/Quest)"
               label="Status Database"
-              helperText="Used to find quests and link relations"
+              helperText={lockStatusDatabase ? "Locked to the current selected database" : "Used to find quests and link relations"}
             />
           </div>
 
