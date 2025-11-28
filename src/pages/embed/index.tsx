@@ -536,7 +536,8 @@ export default function CreateEmbedPage() {
                       const json = JSON.stringify(settings);
                       const base64 = typeof window !== "undefined" ? window.btoa(json) : Buffer.from(json).toString("base64");
                       const origin = typeof window !== "undefined" ? window.location.origin : "";
-                      const link = `${origin}/embed/widget?c=${encodeURIComponent(base64)}`;
+                      const uParam = settings.userId ? `&u=${encodeURIComponent(String(settings.userId))}` : "";
+                      const link = `${origin}/embed/widget?c=${encodeURIComponent(base64)}${uParam}`;
                       setEmbedLink(link);
                       setSaveMsg("Settings saved. Embed link generated.");
                     } catch (e) {

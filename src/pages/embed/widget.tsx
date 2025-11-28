@@ -39,6 +39,17 @@ function decodeConfigParam() {
   }
 }
 
+function getUrlUserOverride(): string | null {
+  if (typeof window === "undefined") return null;
+  try {
+    const url = new URL(window.location.href);
+    const u = url.searchParams.get("u") || url.searchParams.get("userId");
+    return u ? String(u) : null;
+  } catch {
+    return null;
+  }
+}
+
 function getCookie(name: string): string | null {
   if (typeof document === "undefined") return null;
   const value = `; ${document.cookie}`;
@@ -61,6 +72,7 @@ export default function EmbedWidget() {
   const [selectedTaskTitle, setSelectedTaskTitle] = useState<string>("");
   const [linkedQuestIds, setLinkedQuestIds] = useState<string[]>([]);
   const [selectedQuests, setSelectedQuests] = useState<Array<{ label: string; value: string }>>([]);
+  const [questOptions, setQuestOptions] = useState<Array<{ label: string; value: string }>>([]);
   const [selectedTags, setSelectedTags] = useState<Array<{ label: string; value: string; color: string }>>([]);
 
   // Timer state
@@ -87,6 +99,13 @@ export default function EmbedWidget() {
     if (cfg?.userId) {
        setUserIdentifier((prev) => prev || String(cfg.userId));
     }
+    try {
+      const url = new URL(window.location.href);
+      const overrideUser = url.searchParams.get("u") || url.searchParams.get("userId");
+      if (overrideUser) {
+        setUserIdentifier(String(overrideUser));
+      }
+    } catch {}
   }, []);
 
   // Detect system dark preference for 'system' theme
@@ -101,30 +120,28 @@ export default function EmbedWidget() {
 
   // Determine which identifier to use for Notion access
   // Prefer logged-in session email; fallback to "notion-user"
-  const [userIdentifier, setUserIdentifier] = useState<string>(typeof window !== 'undefined' ? (NotionCache.getUserData()?.email || 'notion-user') : 'notion-user');
+  const [userIdentifier, setUserIdentifier] = useState<string>(() => {
+    if (typeof window === 'undefined') return 'notion-user';
+    const urlUser = getUrlUserOverride();
+    if (urlUser) return urlUser;
+    const cached = NotionCache.getUserData()?.email;
+    return cached || 'notion-user';
+  });
   useEffect(() => {
     fetch('/api/session')
       .then(r => r.json())
       .then(data => {
         if (data?.isAuthenticated && data?.email) {
           setUserIdentifier(String(data.email));
-        } else if (typeof window !== 'undefined') {
-          const cached = NotionCache.getUserData()?.email;
-          if (cached) setUserIdentifier(cached);
         }
       })
-      .catch(() => {
-        if (typeof window !== 'undefined') {
-          const cached = NotionCache.getUserData()?.email;
-          if (cached) setUserIdentifier(cached);
-        }
-      });
+      .catch(() => {});
   }, []);
 
   // Fetch databases via tRPC (same as home page style)
   const { data: dbData } = trpc.private.getDatabases.useQuery(
     { email: userIdentifier },
-    { refetchOnWindowFocus: false, retry: false }
+    { refetchOnWindowFocus: false, retry: false, enabled: !!userIdentifier }
   );
 
   useEffect(() => {
@@ -205,7 +222,7 @@ export default function EmbedWidget() {
       if (!selectedTaskId) return;
       if (selectedQuests && selectedQuests.length > 0) return; // respect manual selection
       try {
-        const qs = new URLSearchParams({ userId: "notion-user", pageId: selectedTaskId, relationName: "Quests" });
+        const qs = new URLSearchParams({ userId: userIdentifier, pageId: selectedTaskId, relationName: "Quests" });
         const resp = await fetch(`/api/notion/page-relations?${qs.toString()}`);
         if (!resp.ok) return;
         const data = await resp.json();
@@ -214,12 +231,13 @@ export default function EmbedWidget() {
         const values = items.map(i => ({ label: i.title, value: i.id }));
         setSelectedQuests(values);
         setLinkedQuestIds(values.map(v => v.value));
+        setQuestOptions(values);
       } catch (e) {
         // ignore
       }
     };
     populateQuests();
-  }, [selectedTaskId]);
+  }, [selectedTaskId, userIdentifier]);
 
   // Derive available tag options from database schema (prefer Tags multi_select)
   const availableTags = useMemo(() => {
@@ -369,18 +387,19 @@ export default function EmbedWidget() {
                   </div>
                   <div className="sm:col-span-2">
                     <label className="block mb-1">Quests (relation)</label>
-                    <QuestSelection
-                      disabled={!selectedTaskId}
-                      projectId={selectedTaskId || null}
-                      values={selectedQuests}
-                      theme={effectiveTheme as any}
-                      width={(config?.inputWidth ?? 0) > 0 ? (config!.inputWidth as number) : undefined}
-                      onChange={(opts: any[]) => {
-                        const arr = (opts || []) as Array<{ label: string; value: string }>;
-                        setSelectedQuests(arr);
-                        setLinkedQuestIds(arr.map((o) => o.value));
-                      }}
-                    />
+      <QuestSelection
+        disabled={!selectedTaskId}
+        projectId={selectedTaskId || null}
+        values={selectedQuests}
+        theme={effectiveTheme as any}
+        width={(config?.inputWidth ?? 0) > 0 ? (config!.inputWidth as number) : undefined}
+        overrideOptions={questOptions}
+        onChange={(opts: any[]) => {
+          const arr = (opts || []) as Array<{ label: string; value: string }>;
+          setSelectedQuests(arr);
+          setLinkedQuestIds(arr.map((o) => o.value));
+        }}
+      />
                   </div>
                   <div>
                     <label className="block mb-1">Tags</label>

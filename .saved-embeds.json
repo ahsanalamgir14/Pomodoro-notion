@@ -19,6 +19,106 @@
   ],
   "ahsanalamgir14@gmail.com": [
     {
+      "id": "2b983b1b-345b-81c7-a025-f92631a2cce4",
+      "title": "Shadows of Eldoria Session 2b983b1b345b81c7a025f92631a2cce4",
+      "link": "http://localhost:3000/embed/widget?c=eyJwYWdlSWQiOiIyYjk4M2IxYi0zNDViLTgxYzctYTAyNS1mOTI2MzFhMmNjZTQiLCJ0aGVtZSI6ImxpZ2h0Iiwid2lkZ2V0QmciOiIjZmZmZmZmIiwid2lkZ2V0Q29sb3IiOiIjMTExMTExIiwiaW5wdXRXaWR0aCI6MzIwLCJpbnB1dEJvcmRlciI6IiNkMWQ1ZGIiLCJ0aW1lckNvbG9yIjoiI2VmNDQ0NCIsInRpbWVyRm9udFNpemUiOjQ4LCJ0YXNrRGF0YWJhc2VJZCI6IjI3YzgzYjFiLTM0NWItODA1Yy1iYmFkLWUwNjViOTQ4ZDU0MiIsInNlc3Npb25EYXRhYmFzZUlkIjoiMjdjODNiMWItMzQ1Yi04MDAzLWFkMDItZjE0ODZhNDQ4NGJiIiwiaGlkZURiU2VsZWN0b3JzIjp0cnVlLCJ1c2VySWQiOiJhaHNhbmFsYW1naXIxNEBnbWFpbC5jb20ifQ%3D%3D&u=ahsanalamgir14%40gmail.com",
+      "config": {
+        "pageId": "2b983b1b-345b-81c7-a025-f92631a2cce4",
+        "theme": "light",
+        "widgetBg": "#ffffff",
+        "widgetColor": "#111111",
+        "inputWidth": 320,
+        "inputBorder": "#d1d5db",
+        "timerColor": "#ef4444",
+        "timerFontSize": 48,
+        "taskDatabaseId": "27c83b1b-345b-805c-bbad-e065b948d542",
+        "sessionDatabaseId": "27c83b1b-345b-8003-ad02-f1486a4484bb",
+        "hideDbSelectors": true,
+        "userId": "ahsanalamgir14@gmail.com"
+      },
+      "createdAt": 1764363058542
+    },
+    {
+      "id": "28b83b1b-345b-80e9-8956-e44cc657a09f",
+      "title": "Promo App Test",
+      "link": "http://localhost:3000/embed/widget?c=eyJwYWdlSWQiOiIyOGI4M2IxYi0zNDViLTgwZTktODk1Ni1lNDRjYzY1N2EwOWYiLCJ0aGVtZSI6ImxpZ2h0Iiwid2lkZ2V0QmciOiIjZmZmZmZmIiwid2lkZ2V0Q29sb3IiOiIjMTExMTExIiwiaW5wdXRXaWR0aCI6MzIwLCJpbnB1dEJvcmRlciI6IiMyYTUyOGQiLCJ0aW1lckNvbG9yIjoiI2VmNDQ0NCIsInRpbWVyRm9udFNpemUiOjQ4LCJ0YXNrRGF0YWJhc2VJZCI6IjI3YzgzYjFiLTM0NWItODA1Yy1iYmFkLWUwNjViOTQ4ZDU0MiIsInNlc3Npb25EYXRhYmFzZUlkIjoiMjdjODNiMWItMzQ1Yi04MDAzLWFkMDItZjE0ODZhNDQ4NGJiIiwiaGlkZURiU2VsZWN0b3JzIjp0cnVlLCJ1c2VySWQiOiJhaHNhbmFsYW1naXIxNEBnbWFpbC5jb20ifQ%3D%3D",
+      "config": {
+        "pageId": "28b83b1b-345b-80e9-8956-e44cc657a09f",
+        "theme": "light",
+        "widgetBg": "#ffffff",
+        "widgetColor": "#111111",
+        "inputWidth": 320,
+        "inputBorder": "#2a528d",
+        "timerColor": "#ef4444",
+        "timerFontSize": 48,
+        "taskDatabaseId": "27c83b1b-345b-805c-bbad-e065b948d542",
+        "sessionDatabaseId": "27c83b1b-345b-8003-ad02-f1486a4484bb",
+        "hideDbSelectors": true,
+        "userId": "ahsanalamgir14@gmail.com"
+      },
+      "createdAt": 1764355445441
+    },
+    {
+      "id": "28b83b1b-345b-80e9-8956-e44cc657a09f",
+      "title": "Promo App Test",
+      "link": "http://localhost:3000/embed/widget?c=eyJwYWdlSWQiOiIyOGI4M2IxYi0zNDViLTgwZTktODk1Ni1lNDRjYzY1N2EwOWYiLCJ0aGVtZSI6ImxpZ2h0Iiwid2lkZ2V0QmciOiIjZmZmZmZmIiwid2lkZ2V0Q29sb3IiOiIjYzIyZTJlIiwiaW5wdXRXaWR0aCI6MzIwLCJpbnB1dEJvcmRlciI6IiNkMWQ1ZGIiLCJ0aW1lckNvbG9yIjoiI2VmNDQ0NCIsInRpbWVyRm9udFNpemUiOjQ4LCJ0YXNrRGF0YWJhc2VJZCI6IjI3YzgzYjFiLTM0NWItODA1Yy1iYmFkLWUwNjViOTQ4ZDU0MiIsInNlc3Npb25EYXRhYmFzZUlkIjoiMjdjODNiMWItMzQ1Yi04MDAzLWFkMDItZjE0ODZhNDQ4NGJiIiwiaGlkZURiU2VsZWN0b3JzIjp0cnVlLCJ1c2VySWQiOiJhaHNhbmFsYW1naXIxNEBnbWFpbC5jb20ifQ%3D%3D",
+      "config": {
+        "pageId": "28b83b1b-345b-80e9-8956-e44cc657a09f",
+        "theme": "light",
+        "widgetBg": "#ffffff",
+        "widgetColor": "#c22e2e",
+        "inputWidth": 320,
+        "inputBorder": "#d1d5db",
+        "timerColor": "#ef4444",
+        "timerFontSize": 48,
+        "taskDatabaseId": "27c83b1b-345b-805c-bbad-e065b948d542",
+        "sessionDatabaseId": "27c83b1b-345b-8003-ad02-f1486a4484bb",
+        "hideDbSelectors": true,
+        "userId": "ahsanalamgir14@gmail.com"
+      },
+      "createdAt": 1764351424247
+    },
+    {
+      "id": "28b83b1b-345b-80e9-8956-e44cc657a09f",
+      "title": "Promo App Test",
+      "link": "http://localhost:3000/embed/widget?c=eyJwYWdlSWQiOiIyOGI4M2IxYi0zNDViLTgwZTktODk1Ni1lNDRjYzY1N2EwOWYiLCJ0aGVtZSI6ImxpZ2h0Iiwid2lkZ2V0QmciOiIjZmZmZmZmIiwid2lkZ2V0Q29sb3IiOiIjMTExMTExIiwiaW5wdXRXaWR0aCI6MzIwLCJpbnB1dEJvcmRlciI6IiNkMWQ1ZGIiLCJ0aW1lckNvbG9yIjoiI2VmNDQ0NCIsInRpbWVyRm9udFNpemUiOjQ4LCJ0YXNrRGF0YWJhc2VJZCI6IjI3YzgzYjFiLTM0NWItODA1Yy1iYmFkLWUwNjViOTQ4ZDU0MiIsInNlc3Npb25EYXRhYmFzZUlkIjoiMjdjODNiMWItMzQ1Yi04MDAzLWFkMDItZjE0ODZhNDQ4NGJiIiwiaGlkZURiU2VsZWN0b3JzIjp0cnVlLCJ1c2VySWQiOiJhaHNhbmFsYW1naXIxNEBnbWFpbC5jb20ifQ%3D%3D",
+      "config": {
+        "pageId": "28b83b1b-345b-80e9-8956-e44cc657a09f",
+        "theme": "light",
+        "widgetBg": "#ffffff",
+        "widgetColor": "#111111",
+        "inputWidth": 320,
+        "inputBorder": "#d1d5db",
+        "timerColor": "#ef4444",
+        "timerFontSize": 48,
+        "taskDatabaseId": "27c83b1b-345b-805c-bbad-e065b948d542",
+        "sessionDatabaseId": "27c83b1b-345b-8003-ad02-f1486a4484bb",
+        "hideDbSelectors": true,
+        "userId": "ahsanalamgir14@gmail.com"
+      },
+      "createdAt": 1764350346984
+    },
+    {
+      "id": "28b83b1b-345b-80e9-8956-e44cc657a09f",
+      "title": "Promo App Test",
+      "link": "http://localhost:3000/embed/widget?c=eyJwYWdlSWQiOiIyOGI4M2IxYi0zNDViLTgwZTktODk1Ni1lNDRjYzY1N2EwOWYiLCJ0aGVtZSI6ImxpZ2h0Iiwid2lkZ2V0QmciOiIjZmZmZmZmIiwid2lkZ2V0Q29sb3IiOiIjODkxNTE1IiwiaW5wdXRXaWR0aCI6MzIwLCJpbnB1dEJvcmRlciI6IiNkMWQ1ZGIiLCJ0aW1lckNvbG9yIjoiI2VmNDQ0NCIsInRpbWVyRm9udFNpemUiOjQ4LCJ0YXNrRGF0YWJhc2VJZCI6IjI3YzgzYjFiLTM0NWItODA1Yy1iYmFkLWUwNjViOTQ4ZDU0MiIsInNlc3Npb25EYXRhYmFzZUlkIjoiMjdjODNiMWItMzQ1Yi04MDAzLWFkMDItZjE0ODZhNDQ4NGJiIiwiaGlkZURiU2VsZWN0b3JzIjp0cnVlLCJ1c2VySWQiOiJhaHNhbmFsYW1naXIxNEBnbWFpbC5jb20ifQ%3D%3D",
+      "config": {
+        "pageId": "28b83b1b-345b-80e9-8956-e44cc657a09f",
+        "theme": "light",
+        "widgetBg": "#ffffff",
+        "widgetColor": "#891515",
+        "inputWidth": 320,
+        "inputBorder": "#d1d5db",
+        "timerColor": "#ef4444",
+        "timerFontSize": 48,
+        "taskDatabaseId": "27c83b1b-345b-805c-bbad-e065b948d542",
+        "sessionDatabaseId": "27c83b1b-345b-8003-ad02-f1486a4484bb",
+        "hideDbSelectors": true,
+        "userId": "ahsanalamgir14@gmail.com"
+      },
+      "createdAt": 1764350108263
+    },
+    {
       "id": "28b83b1b-345b-80e9-8956-e44cc657a09f",
       "title": "Promo App Test",
       "link": "http://localhost:3000/embed/widget?c=eyJwYWdlSWQiOiIyOGI4M2IxYi0zNDViLTgwZTktODk1Ni1lNDRjYzY1N2EwOWYiLCJ0aGVtZSI6ImxpZ2h0Iiwid2lkZ2V0QmciOiIjZmZmZmZmIiwid2lkZ2V0Q29sb3IiOiIjMTExMTExIiwiaW5wdXRXaWR0aCI6MzIwLCJpbnB1dEJvcmRlciI6IiMxYTUxYTIiLCJ0aW1lckNvbG9yIjoiI2VmNDQ0NCIsInRpbWVyRm9udFNpemUiOjQ4LCJ0YXNrRGF0YWJhc2VJZCI6IjI3YzgzYjFiLTM0NWItODA1Yy1iYmFkLWUwNjViOTQ4ZDU0MiIsInNlc3Npb25EYXRhYmFzZUlkIjoiMjdjODNiMWItMzQ1Yi04MDAzLWFkMDItZjE0ODZhNDQ4NGJiIiwiaGlkZURiU2VsZWN0b3JzIjp0cnVlLCJ1c2VySWQiOiJhaHNhbmFsYW1naXIxNEBnbWFpbC5jb20ifQ%3D%3D",
