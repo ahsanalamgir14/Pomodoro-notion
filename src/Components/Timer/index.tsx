@@ -59,6 +59,38 @@ export default function Timer({
   const [completedSummary, setCompletedSummary] = useState<{ count: number; items: Array<{ id: string; title: string }> } | null>(null);
   const [loadingCompleted, setLoadingCompleted] = useState(false);
 
+  const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+  const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    fetch('/api/session')
+      .then((r) => r.json())
+      .then((data) => {
+        if (!mounted) return;
+        if (data?.isAuthenticated) setSessionEmail(data?.email || null);
+        else setSessionEmail(null);
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    fetch('/api/user/identifier')
+      .then((r) => r.json())
+      .then((d) => {
+        if (!mounted) return;
+        setResolvedUserId(d?.resolvedUserId || null);
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
+  const userIdentifier = (resolvedUserId && resolvedUserId !== 'notion-user')
+    ? resolvedUserId
+    : (sessionEmail || (typeof window !== 'undefined' ? (localStorage.getItem('notion_user_data') ? JSON.parse(localStorage.getItem('notion_user_data') as string)?.email : null) : null) || "");
+
   // Initialize session configuration hook
   const sessionConfig = usePomoSessionConfig({
     projects,
@@ -67,17 +99,18 @@ export default function Timer({
     selectedQuests,
     currentDatabaseId,
     availableDatabases,
+    userId: userIdentifier,
   });
 
   const refreshCompleted = useCallback(async () => {
-    if (!sessionConfig.config.selectedProject?.value || !currentDatabaseId) {
+    if (!sessionConfig.config.selectedProject?.value || !currentDatabaseId || !userIdentifier) {
       setCompletedSummary(null);
       return;
     }
     try {
       setLoadingCompleted(true);
       const data = await getCompletedQuests({
-        userId: "notion-user",
+        userId: userIdentifier,
         databaseId: currentDatabaseId!,
         adventurePageId: sessionConfig.config.selectedProject.value,
       });
@@ -87,7 +120,7 @@ export default function Timer({
     } finally {
       setLoadingCompleted(false);
     }
-  }, [sessionConfig.config.selectedProject?.value, currentDatabaseId]);
+  }, [sessionConfig.config.selectedProject?.value, currentDatabaseId, userIdentifier]);
 
   // When the timer transitions from stopped to started, create a live entry with proper Quest relation
   const prevBusy = useRef(false);
@@ -104,7 +137,7 @@ export default function Timer({
       // If resuming the same session, only update status back to In Progress
       if (lastStartTimeRef.current === startTime) {
         if (questPageId) {
-          updateQuestStatus({ userId: "notion-user", status: "In Progress", questPageId, adventurePageId, targetDatabaseId })
+          updateQuestStatus({ userId: userIdentifier, status: "In Progress", questPageId, adventurePageId, targetDatabaseId })
             .catch((e) => {
               if (process.env.NODE_ENV === "development") {
                 console.warn("Failed to set In Progress on resume:", e);
@@ -116,7 +149,7 @@ export default function Timer({
       }
 
       if (questPageId) {
-        startQuestWork({ userId: "notion-user", questPageId, projectTitle, adventurePageId, targetDatabaseId })
+        startQuestWork({ userId: userIdentifier, questPageId, projectTitle, adventurePageId, targetDatabaseId })
           .catch((e) => {
             if (process.env.NODE_ENV === "development") {
               console.warn("Failed to create tracker entry on start:", e);
@@ -404,7 +437,6 @@ export default function Timer({
     </div>
   );
 }
-
 
 interface PopOverProps {
   visible?: boolean;

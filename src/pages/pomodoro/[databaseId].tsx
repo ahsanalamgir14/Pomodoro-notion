@@ -13,13 +13,18 @@ import QuestSelection from "@/Components/QuestSelection";
 import Tabs from "../../Components/Tabs";
 import Views from "@/Components/Views";
 import useFormattedData from "../../hooks/useFormattedData";
+import { trpc } from "../../utils/trpc";
+import { getCompletedQuests } from "../../utils/apis/notion/client";
 import {
   queryDatabase,
   retrieveDatabase,
   listDatabases,
 } from "../../utils/apis/notion/database";
 import { fetchNotionUser } from "../../utils/apis/firebase/notionUser";
-import { getProjectId, getProjectTitle } from "../../utils/notionutils";
+import { verifyJWT } from "../../utils/serverSide/jwt";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../api/auth/[...nextauth]";
+import { getProjectId, getProjectTitleSafe } from "../../utils/notionutils";
 import { actionTypes } from "../../utils/Context/PomoContext/reducer";
 import { actionTypes as userActiontype } from "../../utils/Context/UserContext/reducer";
 import { actionTypes as projActiontype } from "../../utils/Context/ProjectContext/reducer";
@@ -37,25 +42,32 @@ export const getServerSideProps = async ({
   const databaseId = query.databaseId as string;
   const tab = query.tab as string;
   try {
-    
-    console.log("Fetching real Notion database data for:", databaseId);
-    
-    // Get the user's access token from Firebase
-    const userEmail = "notion-user"; // Use the same identifier as the OAuth flow
-    console.log("🔍 Fetching user data for email:", userEmail);
-    const userData = await fetchNotionUser(userEmail);
-    
-    if (!userData || !userData.accessToken) {
-      console.log("❌ No user data or access token found, falling back to mock data");
-      console.log("User data:", userData);
-      const { mockDatabaseQuery, mockDatabaseDetail } = await import("../../utils/apis/notion/mockDatabase");
-      
+    console.log("Fetching Notion database data for:", databaseId);
+
+    const session = await getServerSession(req as any, undefined as any, authOptions).catch(() => null);
+    const cookieHeader = req?.headers?.cookie || "";
+    const cookies = Object.fromEntries((cookieHeader || "").split(";").map((c: string) => { const [k,v] = c.trim().split("="); return [k,v]; }));
+    const jwt = cookies["session_token"]; const secret = process.env.NEXTAUTH_SECRET || process.env.SESSION_SECRET || "dev-secret";
+    const jwtPayload = jwt ? verifyJWT(jwt, secret) : null;
+    const legacy = cookies["session_user"] ? decodeURIComponent(cookies["session_user"]) : null;
+    const candidates = [session?.user?.email || null, (jwtPayload?.email as string) || null, legacy]
+      .filter(Boolean)
+      .filter((e) => e !== "notion-user") as string[];
+    let token: string | null = null;
+    for (const id of candidates) {
+      const u = await fetchNotionUser(id);
+      if (u?.accessToken) { token = u.accessToken; break; }
+    }
+
+    if (!token) {
+      const emptyQuery: any = { object: "list", results: [] };
+      const emptyDetail: any = { object: "database", id: databaseId, properties: {}, title: [] };
       return {
         props: {
-          database: mockDatabaseQuery,
-          db: mockDatabaseDetail,
+          database: emptyQuery,
+          db: emptyDetail,
           tab: tab || null,
-          error: null,
+          error: "User not connected to Notion",
           databaseId: databaseId,
           availableDatabases: [],
         },
@@ -67,9 +79,9 @@ export const getServerSideProps = async ({
     
     // Use real Notion API calls with the user's access token
     const [database, db, dbList] = await Promise.all([
-      queryDatabase(databaseId, true, userData.accessToken),
-      retrieveDatabase(databaseId, true, userData.accessToken),
-      listDatabases(true, userData.accessToken),
+      queryDatabase(databaseId, true, token),
+      retrieveDatabase(databaseId, true, token),
+      listDatabases(true, token),
     ]);
     
     console.log("✅ Successfully fetched real Notion data");
@@ -124,8 +136,8 @@ export const getServerSideProps = async ({
 };
 
 export default function Pages({
-  database,
-  db,
+  database: ssrDatabase,
+  db: ssrDb,
   tab,
   error,
   databaseId,
@@ -145,6 +157,50 @@ export default function Pages({
   const [{ busyIndicator, project }, dispatch] = usePomoState();
   const [, userDispatch] = useUserState();
   const [, projectDispatch] = useProjectState();
+  const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+  const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
+
+  useEffect(() => {
+    let mounted = true;
+    fetch('/api/session')
+      .then((r) => r.json())
+      .then((data) => {
+        if (!mounted) return;
+        if (data?.isAuthenticated) setSessionEmail(data?.email || null);
+        else setSessionEmail(null);
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
+  useEffect(() => {
+    let mounted = true;
+    fetch('/api/user/identifier')
+      .then((r) => r.json())
+      .then((d) => {
+        if (!mounted) return;
+        setResolvedUserId(d?.resolvedUserId || null);
+      })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
+  const userIdentifier = (resolvedUserId && resolvedUserId !== 'notion-user')
+    ? resolvedUserId
+    : (sessionEmail || (typeof window !== 'undefined' ? (localStorage.getItem('notion_user_data') ? JSON.parse(localStorage.getItem('notion_user_data') as string)?.email : null) : null) || "");
+
+  const { data: apiQuery, isFetching: fetchingQuery } = trpc.private.queryDatabase.useQuery(
+    { databaseId, email: userIdentifier },
+    { enabled: !!userIdentifier, refetchOnWindowFocus: false, retry: false }
+  );
+  const { data: apiDetail, isFetching: fetchingDetail } = trpc.private.getDatabaseDetail.useQuery(
+    { databaseId, email: userIdentifier },
+    { enabled: !!userIdentifier, refetchOnWindowFocus: false, retry: false }
+  );
+
+  const database = apiQuery?.database || ssrDatabase;
+  const db = apiDetail?.db || ssrDb;
+  const loading = (fetchingQuery || fetchingDetail) && !apiQuery && !apiDetail;
 
   useEffect(() => {
     router.push(
@@ -162,6 +218,15 @@ export default function Pages({
   }, [activeTab]);
 
   // No user authentication required - removed userId dependency
+  const tagPropName = useMemo(() => {
+    const props: any = db?.properties || {};
+    const explicit = props["Tags"]?.type === "multi_select" ? "Tags" : null;
+    if (explicit) return explicit;
+    const match = Object.entries(props).find(([, p]: any) => p?.type === "multi_select" && /tag/i.test(((p as any)?.name || "") as string))?.[0];
+    if (match) return match as string;
+    const first = Object.entries(props).find(([, p]: any) => p?.type === "multi_select")?.[0];
+    return (first as string) || "";
+  }, [db]);
 
   useEffect(() => {
     if (databaseId)
@@ -180,7 +245,7 @@ export default function Pages({
             if (
               selectedProperties.every(
                 (sp) =>
-                  project.properties?.Tags?.multi_select?.findIndex(
+                  project.properties?.[tagPropName as any]?.multi_select?.findIndex(
                     (m) => m.id == sp.value
                   ) != -1
               ) ||
@@ -195,7 +260,7 @@ export default function Pages({
         payload: notionProjects,
       });
     }
-  }, [database?.results, selectedProperties]);
+  }, [database?.results, selectedProperties, tagPropName]);
 
   const [piedata] = useFormattedData();
 
@@ -207,35 +272,30 @@ export default function Pages({
           if (
             selectedProperties.every(
               (sp) =>
-                project.properties?.Tags?.multi_select?.findIndex(
+                project.properties?.[tagPropName as any]?.multi_select?.findIndex(
                   (m) => m.id == sp.value
                 ) != -1
             ) ||
             selectedProperties.length == 0
           )
             return {
-              label: getProjectTitle(project),
+              label: getProjectTitleSafe(project),
               value: getProjectId(project),
             };
           return null;
         })
         .filter(notEmpty) || []
     );
-  }, [database?.results, selectedProperties]);
+  }, [database?.results, selectedProperties, tagPropName]);
 
   const properties = useMemo(() => {
-    if (
-      db?.properties &&
-      db.properties.Tags?.multi_select &&
-      db.properties.Tags.multi_select.options
-    )
-      return db?.properties?.Tags?.multi_select?.options.map((prp) => ({
-        label: prp.name,
-        value: prp.id,
-        color: prp.color,
-      }));
-    else return [];
-  }, []);
+    const props: any = db?.properties || {};
+    const opt = tagPropName ? (props?.[tagPropName] as any)?.multi_select?.options : undefined;
+    if (Array.isArray(opt)) {
+      return opt.map((prp: any) => ({ label: prp.name, value: prp.id, color: prp.color }));
+    }
+    return [];
+  }, [db, tagPropName]);
 
   const onProjectSelect = (proj: { label: string; value: string } | null) => {
     if (!proj)
@@ -255,6 +315,26 @@ export default function Pages({
 
   // Top-level Quests (relation) selection, shown below Project like Tags
   const [selectedQuestsTop, setSelectedQuestsTop] = useState<Array<{ label: string; value: string }>>([]);
+  const [availableCompletedQuests, setAvailableCompletedQuests] = useState<Array<{ label: string; value: string }>>([]);
+
+  useEffect(() => {
+    let mounted = true;
+    (async () => {
+      try {
+        setAvailableCompletedQuests([]);
+        const advId = project?.value || null;
+        if (!advId || !databaseId) return;
+        const email = userIdentifier;
+        if (!email) return;
+        const data = await getCompletedQuests({ userId: email, databaseId, adventurePageId: advId });
+        const opts = (data?.items || []).map((i) => ({ label: i.title, value: i.id }));
+        if (mounted) setAvailableCompletedQuests(opts);
+      } catch {
+        if (mounted) setAvailableCompletedQuests([]);
+      }
+    })();
+    return () => { mounted = false; };
+  }, [project?.value, databaseId, userIdentifier]);
 
   return (
     <>
@@ -273,7 +353,7 @@ export default function Pages({
           backgroundColor="#37415130"
           width="50%"
         />
-        {!error ? (
+        {(!error || database?.results) ? (
           <>
             {/* Tabs */}
             <Tabs tabs={TabsOptions} activeTab={activeTab} setActiveTab={setActiveTab} />
@@ -283,7 +363,7 @@ export default function Pages({
               {/* Project selection first */}
               <div>
                 <ProjectSelection
-                  disabled={busyIndicator}
+                  disabled={busyIndicator || loading}
                   value={project as any}
                   projects={projects as any}
                   handleSelect={onProjectSelect as any}
@@ -299,6 +379,8 @@ export default function Pages({
                   projectId={project?.value || null}
                   values={selectedQuestsTop}
                   onChange={setSelectedQuestsTop}
+                  relationName="Quests"
+                  overrideOptions={availableCompletedQuests}
                 />
               </div>
 
@@ -306,7 +388,7 @@ export default function Pages({
               <div>
                 <NotionTags
                   options={properties}
-                  disabled={busyIndicator}
+                  disabled={busyIndicator || loading}
                   handleSelect={setProperties}
                   selectedOptions={selectedProperties}
                 />
@@ -327,7 +409,9 @@ export default function Pages({
             />
           </>
         ) : (
-          <p className="text-sm text-gray-500">Something went wrong.</p>
+          <div className="text-sm text-gray-500">
+            {loading ? 'Loading...' : 'Connect Notion to view this database.'}
+          </div>
         )}
       </main>
     </>

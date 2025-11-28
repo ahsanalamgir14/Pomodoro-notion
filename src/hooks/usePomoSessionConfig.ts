@@ -42,6 +42,7 @@ export const usePomoSessionConfig = ({
   selectedQuests = [],
   currentDatabaseId,
   availableDatabases = [],
+  userId,
 }: {
   projects: ProjectOption[];
   availableTags: TagOption[];
@@ -49,6 +50,7 @@ export const usePomoSessionConfig = ({
   selectedQuests?: ProjectOption[];
   currentDatabaseId?: string;
   availableDatabases?: Array<{ id: string; title: string; icon?: string | null }>;
+  userId?: string | null;
 }): UsePomoSessionConfigReturn => {
   const [{ project }] = usePomoState();
   const [config, setConfig] = useState<PomoSessionConfig>({
@@ -153,7 +155,7 @@ export const usePomoSessionConfig = ({
       projectId: config.selectedProject.value,
       projectTitle: config.selectedProject.label,
       databaseId: sourceDb,
-      userId: "notion-user", // demo identifier used across the app
+      userId: userId || "",
       timerValue: sessionData.timerValue,
       startTime: sessionData.startTime,
       endTime: sessionData.endTime,

@@ -18,6 +18,7 @@ type Props = {
   onChange: (opts: Option[]) => void;
   theme?: "light" | "dark";
   width?: number | string;
+  overrideOptions?: Option[];
 };
 
 const colourStyles = ({
@@ -75,7 +76,7 @@ const colourStyles = ({
   };
 };
 
-export default function QuestSelection({ disabled = false, projectId, relationName = "Quests", values, onChange, theme = "light", width }: Props) {
+export default function QuestSelection({ disabled = false, projectId, relationName = "Quests", values, onChange, theme = "light", width, overrideOptions }: Props) {
   const [userIdentifier, setUserIdentifier] = React.useState<string>(() => {
     if (typeof window !== 'undefined') {
       try { return (window as any).NotionCache ? (window as any).NotionCache.getUserData()?.email || 'notion-user' : 'notion-user'; } catch { return 'notion-user'; }
@@ -104,6 +105,7 @@ export default function QuestSelection({ disabled = false, projectId, relationNa
   }, []);
   const loadOptions = useCallback(async (): Promise<Option[]> => {
     if (!projectId) return [];
+    if (overrideOptions && overrideOptions.length > 0) return overrideOptions;
     try {
       const qs = new URLSearchParams({ userId: userIdentifier, pageId: projectId, relationName });
       const resp = await fetch(`/api/notion/page-relations?${qs.toString()}`);
@@ -114,13 +116,13 @@ export default function QuestSelection({ disabled = false, projectId, relationNa
     } catch (e) {
       return [];
     }
-  }, [projectId, relationName, userIdentifier]);
+  }, [projectId, relationName, userIdentifier, overrideOptions]);
 
   return (
     <AsyncSelect
       key={projectId || "quest-select"}
       cacheOptions
-      defaultOptions
+      defaultOptions={overrideOptions && overrideOptions.length > 0 ? overrideOptions : true}
       isDisabled={disabled || !projectId}
       value={values}
       isMulti
