@@ -21,6 +21,26 @@
     {
       "id": "28b83b1b-345b-80e9-8956-e44cc657a09f",
       "title": "Promo App Test",
+      "link": "http://localhost:3000/embed/widget?c=eyJwYWdlSWQiOiIyOGI4M2IxYi0zNDViLTgwZTktODk1Ni1lNDRjYzY1N2EwOWYiLCJ0aGVtZSI6ImxpZ2h0Iiwid2lkZ2V0QmciOiIjZmZmZmZmIiwid2lkZ2V0Q29sb3IiOiIjMTExMTExIiwiaW5wdXRXaWR0aCI6MzIwLCJpbnB1dEJvcmRlciI6IiMxYTUxYTIiLCJ0aW1lckNvbG9yIjoiI2VmNDQ0NCIsInRpbWVyRm9udFNpemUiOjQ4LCJ0YXNrRGF0YWJhc2VJZCI6IjI3YzgzYjFiLTM0NWItODA1Yy1iYmFkLWUwNjViOTQ4ZDU0MiIsInNlc3Npb25EYXRhYmFzZUlkIjoiMjdjODNiMWItMzQ1Yi04MDAzLWFkMDItZjE0ODZhNDQ4NGJiIiwiaGlkZURiU2VsZWN0b3JzIjp0cnVlLCJ1c2VySWQiOiJhaHNhbmFsYW1naXIxNEBnbWFpbC5jb20ifQ%3D%3D",
+      "config": {
+        "pageId": "28b83b1b-345b-80e9-8956-e44cc657a09f",
+        "theme": "light",
+        "widgetBg": "#ffffff",
+        "widgetColor": "#111111",
+        "inputWidth": 320,
+        "inputBorder": "#1a51a2",
+        "timerColor": "#ef4444",
+        "timerFontSize": 48,
+        "taskDatabaseId": "27c83b1b-345b-805c-bbad-e065b948d542",
+        "sessionDatabaseId": "27c83b1b-345b-8003-ad02-f1486a4484bb",
+        "hideDbSelectors": true,
+        "userId": "ahsanalamgir14@gmail.com"
+      },
+      "createdAt": 1764348648673
+    },
+    {
+      "id": "28b83b1b-345b-80e9-8956-e44cc657a09f",
+      "title": "Promo App Test",
       "link": "http://localhost:3000/embed/widget?c=eyJwYWdlSWQiOiIyOGI4M2IxYi0zNDViLTgwZTktODk1Ni1lNDRjYzY1N2EwOWYiLCJ0aGVtZSI6ImxpZ2h0Iiwid2lkZ2V0QmciOiIjZmZmZmZmIiwid2lkZ2V0Q29sb3IiOiIjMTExMTExIiwiaW5wdXRXaWR0aCI6NjAwLCJpbnB1dEJvcmRlciI6IiMwMDAwMDAiLCJ0aW1lckNvbG9yIjoiI2VmNDQ0NCIsInRpbWVyRm9udFNpemUiOjQ4LCJ0YXNrRGF0YWJhc2VJZCI6IjI3YzgzYjFiLTM0NWItODA1Yy1iYmFkLWUwNjViOTQ4ZDU0MiIsInNlc3Npb25EYXRhYmFzZUlkIjoiMjdjODNiMWItMzQ1Yi04MDAzLWFkMDItZjE0ODZhNDQ4NGJiIiwiaGlkZURiU2VsZWN0b3JzIjp0cnVlfQ%3D%3D",
       "config": {
         "pageId": "28b83b1b-345b-80e9-8956-e44cc657a09f",

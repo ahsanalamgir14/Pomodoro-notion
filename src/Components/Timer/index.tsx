@@ -21,7 +21,7 @@ import WakeLockNote from "./WakeLockNote";
 import dynamic from "next/dynamic";
 const PomoSessionConfigComp = dynamic(() => import("../PomoSessionConfig"), { loading: () => <div>Loading...</div>, ssr: false });
 import { usePomoSessionConfig } from "../../hooks/usePomoSessionConfig";
-import { startQuestWork, updateQuestStatus } from "../../utils/apis/notion/client";
+import { startQuestWork, updateQuestStatus, updateTaskStatus } from "../../utils/apis/notion/client";
 
 type Props = {
   projectName: string;
@@ -146,6 +146,38 @@ export default function Timer({
     prevBusy.current = busyIndicator;
   }, [busyIndicator, startTime, sessionConfig.config.selectedProject?.value, sessionConfig.config.selectedProject?.label, projectName, project?.value, selectedQuests, sessionConfig.config.selectedTrackingDatabase?.value]);
 
+  // Pause: update statuses to Paused for task and related quests
+  useEffect(() => {
+    const justPaused = !busyIndicator && prevBusy.current;
+    if (justPaused) {
+      const adventurePageId = sessionConfig.config.selectedProject?.value;
+      const taskPageId = sessionConfig.config.selectedProject?.value || null;
+      const targetDatabaseId = sessionConfig.config.selectedTrackingDatabase?.value;
+      if (taskPageId) {
+        updateTaskStatus({ userId: userIdentifier, pageId: taskPageId, status: "Paused" }).catch(() => {});
+      }
+      const selectedIds = (selectedQuests || []).map(q => q.value);
+      const applyPause = (ids: string[]) => {
+        ids.forEach((qid) => {
+          updateQuestStatus({ userId: userIdentifier, questPageId: qid, status: "Paused", adventurePageId, targetDatabaseId }).catch(() => {});
+        });
+      };
+      if (selectedIds.length > 0) {
+        applyPause(selectedIds);
+      } else if (taskPageId && userIdentifier) {
+        const qs = new URLSearchParams({ userId: userIdentifier, pageId: taskPageId, relationName: "Quests" });
+        fetch(`/api/notion/page-relations?${qs.toString()}`)
+          .then(r => r.json())
+          .then(json => {
+            const ids = ((json?.items || []) as Array<{ id: string }>).map(i => i.id);
+            if (ids.length > 0) applyPause(ids);
+          })
+          .catch(() => {});
+      }
+    }
+    prevBusy.current = busyIndicator;
+  }, [busyIndicator, selectedQuests, sessionConfig.config.selectedProject?.value, project?.value, sessionConfig.config.selectedTrackingDatabase?.value]);
+
   // Handle session completion and save to Notion if configured
   const handleSessionComplete = useCallback(async (sessionData: {
     timerValue: number;
@@ -159,7 +191,31 @@ export default function Timer({
         toast.success("Session saved to Notion database!", {
           autoClose: 3000,
         });
-        // No-op: completed quests list removed from this view
+        // Update statuses to Completed for task and related quests
+        const adventurePageId = sessionConfig.config.selectedProject?.value;
+        const taskPageId = sessionConfig.config.selectedProject?.value || null;
+        const targetDatabaseId = sessionConfig.config.selectedTrackingDatabase?.value;
+        if (taskPageId) {
+          updateTaskStatus({ userId: userIdentifier, pageId: taskPageId, status: "Completed" }).catch(() => {});
+        }
+        const selectedIds = (selectedQuests || []).map(q => q.value);
+        const applyComplete = (ids: string[]) => {
+          ids.forEach((qid) => {
+            updateQuestStatus({ userId: userIdentifier, questPageId: qid, status: "Completed", adventurePageId, targetDatabaseId }).catch(() => {});
+          });
+        };
+        if (selectedIds.length > 0) {
+          applyComplete(selectedIds);
+        } else if (taskPageId && userIdentifier) {
+          const qs = new URLSearchParams({ userId: userIdentifier, pageId: taskPageId, relationName: "Quests" });
+          fetch(`/api/notion/page-relations?${qs.toString()}`)
+            .then(r => r.json())
+            .then(json => {
+              const ids = ((json?.items || []) as Array<{ id: string }>).map(i => i.id);
+              if (ids.length > 0) applyComplete(ids);
+            })
+            .catch(() => {});
+        }
       } catch (error) {
         console.error("Failed to save session to Notion:", error);
         toast.error("Failed to save session to Notion database", {
@@ -172,7 +228,7 @@ export default function Timer({
         autoClose: 4000,
       });
     }
-  }, [sessionConfig.isReadyToSave, sessionConfig.saveSessionToNotion, refreshCompleted]);
+  }, [sessionConfig.isReadyToSave, sessionConfig.saveSessionToNotion, selectedQuests, sessionConfig.config.selectedProject?.value, project?.value, sessionConfig.config.selectedTrackingDatabase?.value, userIdentifier]);
 
   const { clockifiedValue, togglePlayPause, resetTimer, restartPomo } =
     useSyncPomo(handleSessionComplete);
