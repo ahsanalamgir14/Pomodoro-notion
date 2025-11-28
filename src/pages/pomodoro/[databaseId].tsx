@@ -196,10 +196,28 @@ export default function Pages({
     { databaseId, email: userIdentifier },
     { enabled: !!userIdentifier, refetchOnWindowFocus: false, retry: false }
   );
+  const { data: apiList } = trpc.private.getDatabases.useQuery(
+    { email: userIdentifier },
+    { enabled: !!userIdentifier, refetchOnWindowFocus: false, retry: false }
+  );
 
   const database = apiQuery?.database || ssrDatabase;
   const db = apiDetail?.db || ssrDb;
   const loading = (fetchingQuery || fetchingDetail) && !apiQuery && !apiDetail;
+
+  const availableDbList = useMemo(() => {
+    const results: any[] = (apiList?.databases?.results || []) as any[];
+    return results.map((d: any) => {
+      const titleText = Array.isArray(d.title) && d.title.length > 0
+        ? d.title.map((t: any) => t.plain_text || "").join("").trim()
+        : "Untitled";
+      let icon: string | undefined = undefined;
+      if (d.icon?.type === "emoji") icon = d.icon.emoji;
+      else if (d.icon?.type === "file") icon = "📄";
+      else if (d.icon?.type === "external") icon = "🔗";
+      return { id: d.id, title: titleText || "Untitled", icon: icon ?? null };
+    });
+  }, [apiList]);
 
   useEffect(() => {
     router.push(
@@ -399,7 +417,7 @@ export default function Pages({
               databaseId={databaseId}
               selectedTags={selectedProperties}
               selectedQuests={selectedQuestsTop}
-              availableDatabases={availableDatabases}
+              availableDatabases={availableDbList.length > 0 ? availableDbList : availableDatabases}
               projects={projects}
               availableTags={properties}
             />
