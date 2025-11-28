@@ -14,7 +14,6 @@ import Tabs from "../../Components/Tabs";
 import Views from "@/Components/Views";
 import useFormattedData from "../../hooks/useFormattedData";
 import { trpc } from "../../utils/trpc";
-import { getCompletedQuests } from "../../utils/apis/notion/client";
 import {
   queryDatabase,
   retrieveDatabase,
@@ -315,26 +314,24 @@ export default function Pages({
 
   // Top-level Quests (relation) selection, shown below Project like Tags
   const [selectedQuestsTop, setSelectedQuestsTop] = useState<Array<{ label: string; value: string }>>([]);
-  const [availableCompletedQuests, setAvailableCompletedQuests] = useState<Array<{ label: string; value: string }>>([]);
-
   useEffect(() => {
     let mounted = true;
-    (async () => {
+    const loadRelation = async () => {
       try {
-        setAvailableCompletedQuests([]);
-        const advId = project?.value || null;
-        if (!advId || !databaseId) return;
-        const email = userIdentifier;
-        if (!email) return;
-        const data = await getCompletedQuests({ userId: email, databaseId, adventurePageId: advId });
-        const opts = (data?.items || []).map((i) => ({ label: i.title, value: i.id }));
-        if (mounted) setAvailableCompletedQuests(opts);
+        if (!project?.value || !userIdentifier) { setSelectedQuestsTop([]); return; }
+        const qs = new URLSearchParams({ userId: userIdentifier, pageId: project.value, relationName: "Quests" });
+        const resp = await fetch(`/api/notion/page-relations?${qs.toString()}`);
+        if (!resp.ok) { setSelectedQuestsTop([]); return; }
+        const json = await resp.json();
+        const opts = (json?.items || []).map((i: any) => ({ label: i.title, value: i.id }));
+        if (mounted) setSelectedQuestsTop(opts);
       } catch {
-        if (mounted) setAvailableCompletedQuests([]);
+        if (mounted) setSelectedQuestsTop([]);
       }
-    })();
+    };
+    loadRelation();
     return () => { mounted = false; };
-  }, [project?.value, databaseId, userIdentifier]);
+  }, [project?.value, userIdentifier]);
 
   return (
     <>
@@ -380,7 +377,6 @@ export default function Pages({
                   values={selectedQuestsTop}
                   onChange={setSelectedQuestsTop}
                   relationName="Quests"
-                  overrideOptions={availableCompletedQuests}
                 />
               </div>
 

@@ -59,7 +59,7 @@ export const usePomoSessionConfig = ({
     selectedTags: [],
     selectedDatabase: null,
     selectedTrackingDatabase: null,
-    isExpanded: false,
+    isExpanded: true,
   });
 
   // Convert availableDatabases to the expected format
