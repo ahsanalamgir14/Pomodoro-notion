@@ -201,7 +201,7 @@ function Home() {
             <div className="mt-2 text-sm text-gray-700 text-center">{disconnectMsg}</div>
           )}
           {displayData?.databases?.results && displayData?.databases.results.length > 0 ? (
-            <div className="mt-3 grid gap-3 pt-3 text-center md:grid-cols-3 lg:w-2/3">
+            <div className="mt-3 grid gap-3 pt-3 text-center md:grid-cols-3 lg:w-2/3 mx-auto">
               {displayData.databases.results.map((d) => (
                 <DatabaseCard
                   key={d.id}
@@ -292,12 +292,14 @@ function Home() {
           <p className="mt-4 text-center text-gray-600">
             Please connect your Notion account to access your databases
           </p>
-          <button
-            onClick={() => setModal(true)}
-            className="mt-5 rounded bg-blue-500 py-2 px-4 font-bold text-white hover:bg-blue-700"
-          >
-            Connect Notion
-          </button>
+          <div className="mt-5 flex justify-center">
+            <button
+              onClick={() => setModal(true)}
+              className="rounded bg-blue-500 py-2 px-4 font-bold text-white hover:bg-blue-700"
+            >
+              Connect Notion
+            </button>
+          </div>
           <section className="mt-10">
             <Footer />
           </section>
