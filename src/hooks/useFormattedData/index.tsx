@@ -1,5 +1,5 @@
 import { useProjectState } from "@/utils/Context/ProjectContext/Context";
-import { getProjectTitle } from "@/utils/notionutils";
+import { getProjectTitleSafe } from "@/utils/notionutils";
 import { useEffect, useState } from "react";
 
 import { PieData } from "../../Components/PieChart";
@@ -39,7 +39,7 @@ export default function useFormattedData(): [
               key: input.id,
               value: t,
               sessionTime: convertToMMSS(t, true, true),
-              label: getProjectTitle(input, "No title"),
+              label: getProjectTitleSafe(input, "No title"),
               hexcolor: Math.floor(Math.random() * 16777215).toString(16),
             };
           } else {
@@ -55,7 +55,7 @@ export default function useFormattedData(): [
             if (pr)
               return {
                 ...ts,
-                projectName: getProjectTitle(pr),
+                projectName: getProjectTitleSafe(pr),
                 href: pr.url,
               };
             else return null;

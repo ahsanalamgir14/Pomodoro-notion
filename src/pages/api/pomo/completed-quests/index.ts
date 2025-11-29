@@ -1,7 +1,10 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import notionClient from "../../../../utils/apis/notionServerClient";
-import { fetchNotionUser } from "../../../../utils/apis/firebase/mockUserNotion";
+import { fetchNotionUser } from "../../../../utils/apis/firebase/notionUser";
 import { retrieveDatabase } from "../../../../utils/apis/notion/database";
+import { getServerSession } from "next-auth";
+import { authOptions } from "../../auth/[...nextauth]";
+import { verifyJWT } from "../../../../utils/serverSide/jwt";
 
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {
   try {
@@ -24,13 +27,26 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    const userData = await fetchNotionUser(userId);
-    if (!userData?.accessToken) {
-      return res.status(401).json({ error: "User not connected to Notion or token missing" });
+    const session = await getServerSession(req as any, res as any, authOptions).catch(() => null);
+    const cookieHeader = req.headers.cookie || "";
+    const cookies = Object.fromEntries(cookieHeader.split(";").map((c) => { const [k,v] = c.trim().split("="); return [k,v]; }));
+    const jwt = cookies["session_token"]; const secret = process.env.NEXTAUTH_SECRET || process.env.SESSION_SECRET || "dev-secret";
+    const jwtPayload = jwt ? verifyJWT(jwt, secret) : null;
+    const legacy = cookies["session_user"] ? decodeURIComponent(cookies["session_user"]) : null;
+    const candidates: string[] = [userId, session?.user?.email, (jwtPayload?.email as string) || undefined, legacy, "notion-user"].filter(Boolean) as string[];
+    let token: string | null = null;
+    for (const id of candidates) {
+      const u = await fetchNotionUser(id!);
+      if (u?.accessToken) { token = u.accessToken; break; }
+    }
+    if (!token) {
+      const envToken = process.env.NOTION_TOKEN || null;
+      if (!envToken) return res.status(401).json({ error: "User not connected to Notion or token missing" });
+      token = envToken;
     }
 
     // Retrieve database to detect property types
-    const db = await retrieveDatabase(databaseId, true, userData.accessToken);
+    const db = await retrieveDatabase(databaseId, true, token);
     const dbProps: Record<string, any> = (db as any)?.properties || {};
 
     const filters: any[] = [];
@@ -43,17 +59,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    // Adventure relation filter
-    if (adventurePageId && dbProps["Adventure"]) {
-      if (dbProps["Adventure"].type === "relation") {
-        filters.push({ property: "Adventure", relation: { contains: adventurePageId } });
+    // Adventure relation filter (supports Adventure/Adventures or any relation containing 'adventure')
+    if (adventurePageId) {
+      const advPropName = dbProps["Adventure"]?.type === "relation"
+        ? "Adventure"
+        : dbProps["Adventures"]?.type === "relation"
+          ? "Adventures"
+          : Object.entries(dbProps).find(([k, p]: any) => p?.type === "relation" && /adventure/i.test(k))?.[0];
+      if (advPropName) {
+        filters.push({ property: advPropName as string, relation: { contains: adventurePageId } });
       }
     }
 
     const filterPayload = filters.length > 1 ? { and: filters } : filters[0] || undefined;
 
     const { data } = await notionClient.post(`/v1/databases/${databaseId}/query`, filterPayload ? { filter: filterPayload } : {}, {
-      headers: { Authorization: `Bearer ${userData.accessToken}` },
+      headers: { Authorization: `Bearer ${token}` },
     });
 
     const results = (data?.results || []) as any[];

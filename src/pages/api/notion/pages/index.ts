@@ -1,6 +1,6 @@
 import { NextApiRequest, NextApiResponse } from "next";
 import { Client } from "@notionhq/client";
-import { fetchNotionUser } from "../../../../utils/apis/firebase/mockUserNotion";
+import { fetchNotionUser } from "../../../../utils/apis/firebase/notionUser";
 
 // Lists top Notion pages for the connected account using Notion search
 export default async function handler(req: NextApiRequest, res: NextApiResponse) {

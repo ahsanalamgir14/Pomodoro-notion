@@ -75,8 +75,23 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     };
 
-    if (questPageId) await updateStatus(questPageId);
-    if (adventurePageId && adventurePageId !== questPageId) await updateStatus(adventurePageId);
+    let anyUpdated = false;
+    if (questPageId) {
+      try {
+        await updateStatus(questPageId);
+        anyUpdated = true;
+      } catch (e) {
+        console.warn("Failed to update quest status for:", questPageId, e);
+      }
+    }
+    if (adventurePageId && adventurePageId !== questPageId) {
+      try {
+        await updateStatus(adventurePageId);
+        anyUpdated = true;
+      } catch (e) {
+        console.warn("Failed to update adventure status for:", adventurePageId, e);
+      }
+    }
 
     // If adventure provided, propagate status to all related quests in its Quests/Quest relation
     if (adventurePageId) {
@@ -199,7 +214,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       }
     }
 
-    return res.status(200).json({ success: true });
+    return res.status(200).json({ success: true, updated: anyUpdated });
   } catch (error: any) {
     console.error("Quest status API error:", error?.message || error);
     return res.status(500).json({ error: "Failed to update status", details: error?.message || String(error) });

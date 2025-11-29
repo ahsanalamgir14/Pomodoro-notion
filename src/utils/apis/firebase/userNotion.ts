@@ -29,3 +29,13 @@ export const fetchNotionUser = async (email: string) => {
   const user = await getUserByEmail(email);
   return user;
 };
+
+export const disconnectNotionUser = async (email: string) => {
+  await setDoc(doc(db, FIREBASE_COLLECTIONS.USERS, email), {
+    email,
+    accessToken: null,
+    workspace: null,
+    updatedAt: serverTimestamp(),
+  }, { merge: true });
+  return true;
+};

@@ -18,10 +18,7 @@ export const privateRouter = router({
     .query(async ({ input: { email } }) => {
       try {
         let userData = await fetchNotionUser(email);
-        if ((!userData || !userData.accessToken) && email !== "notion-user") {
-          userData = await fetchNotionUser("notion-user");
-        }
-        const token = userData?.accessToken || process.env.NOTION_TOKEN;
+        const token = userData?.accessToken || (email === "notion-user" ? process.env.NOTION_TOKEN : undefined);
         if (!token) {
           return {
             databases: { results: [] },
@@ -64,11 +61,8 @@ export const privateRouter = router({
       })
     )
     .query(async ({ input: { databaseId, email } }) => {
-      let userData = await fetchNotionUser(email);
-      if ((!userData || !userData.accessToken) && email !== "notion-user") {
-        userData = await fetchNotionUser("notion-user");
-      }
-      const token = userData?.accessToken || process.env.NOTION_TOKEN;
+      const userData = await fetchNotionUser(email);
+      const token = userData?.accessToken || (email === "notion-user" ? process.env.NOTION_TOKEN : undefined);
       if (!token) {
         throw new Error("User not found or not connected to Notion");
       }
@@ -90,11 +84,8 @@ export const privateRouter = router({
       })
     )
     .query(async ({ input: { databaseId, email } }) => {
-      let userData = await fetchNotionUser(email);
-      if ((!userData || !userData.accessToken) && email !== "notion-user") {
-        userData = await fetchNotionUser("notion-user");
-      }
-      const token = userData?.accessToken || process.env.NOTION_TOKEN;
+      const userData = await fetchNotionUser(email);
+      const token = userData?.accessToken || (email === "notion-user" ? process.env.NOTION_TOKEN : undefined);
       if (!token) {
         throw new Error("User not found or not connected to Notion");
       }
