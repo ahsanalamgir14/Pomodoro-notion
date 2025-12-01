@@ -89,15 +89,13 @@ export default function Views({
           <Noises />
         </div>
       </div>
-      <div
-        className={`${
-          activeTab === "notes" ? "flex" : "hidden"
-        } w-full items-center justify-center `}
-      >
-        <div className="w-full">
-          <Notes />
+      {activeTab === "notes" && (
+        <div className="w-full items-center justify-center flex">
+          <div className="w-full">
+            <Notes />
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
