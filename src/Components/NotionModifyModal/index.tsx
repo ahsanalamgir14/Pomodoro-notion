@@ -8,18 +8,10 @@ type Props = {
 
 export default function NotionModifyModal({ setModal }: Props) {
   const handleOAuthClick = () => {
-    // Use a simple identifier for Notion connection - no user accounts needed
-    const stateParam = "notion-user";
-
-    const defaultRedirect =
-      typeof window !== "undefined" ? `${window.location.origin}/api/notion/oauth` : "";
-    const redirectUri =
-      process.env.NEXT_PUBLIC_NOTION_AUTH_REDIRECT_URI || defaultRedirect;
-
-    const oauthUrl = `https://api.notion.com/v1/oauth/authorize?client_id=${process.env.NEXT_PUBLIC_NOTION_AUTH_CLIENT_ID}&response_type=code&owner=user&redirect_uri=${encodeURIComponent(
-      redirectUri
-    )}&state=${encodeURIComponent(stateParam)}`;
-
+    const defaultRedirect = typeof window !== "undefined" ? `${window.location.origin}/api/notion/oauth` : "";
+    const redirectUri = process.env.NEXT_PUBLIC_NOTION_AUTH_REDIRECT_URI || defaultRedirect;
+    const statePayload = typeof window !== "undefined" ? window.btoa(JSON.stringify({ u: "notion-user", r: redirectUri })) : "notion-user";
+    const oauthUrl = `https://api.notion.com/v1/oauth/authorize?client_id=${process.env.NEXT_PUBLIC_NOTION_AUTH_CLIENT_ID}&response_type=code&owner=user&redirect_uri=${encodeURIComponent(redirectUri)}&state=${encodeURIComponent(statePayload)}`;
     window.location.href = oauthUrl;
   };
 
@@ -36,4 +28,4 @@ export default function NotionModifyModal({ setModal }: Props) {
     />
   );
 }
-
+
