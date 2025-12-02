@@ -90,7 +90,9 @@ export default function CreateEmbedPage() {
         if (data?.isAuthenticated) {
           setIsAuthenticated(true);
           setSessionEmail(data?.email || null);
-          fetch('/api/embeds')
+          const em = String(data?.email || "");
+          if (!em) return;
+          fetch(`/api/embeds?email=${encodeURIComponent(em)}`)
             .then((r) => r.json())
             .then((json) => {
               if (!mounted) return;
@@ -373,7 +375,7 @@ export default function CreateEmbedPage() {
         taskDatabaseId: selectedTaskDbId,
         sessionDatabaseId: selectedSessionDbId,
         hideDbSelectors: lockDbSelections,
-        userId: sessionEmail || (typeof window !== 'undefined' ? (NotionCache.getUserData()?.email || 'notion-user') : 'notion-user'),
+        userId: sessionEmail || resolvedUserId || (typeof window !== 'undefined' ? (NotionCache.getUserData()?.email || '') : ''),
       };
       // Task selection is handled within the embedded UI; omit taskId/taskTitle
       const res = await fetch('/api/embeds', {

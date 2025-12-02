@@ -79,9 +79,9 @@ const colourStyles = ({
 export default function QuestSelection({ disabled = false, projectId, relationName = "Quests", values, onChange, theme = "light", width, overrideOptions }: Props) {
   const [userIdentifier, setUserIdentifier] = React.useState<string>(() => {
     if (typeof window !== 'undefined') {
-      try { return (window as any).NotionCache ? (window as any).NotionCache.getUserData()?.email || 'notion-user' : 'notion-user'; } catch { return 'notion-user'; }
+      try { return (window as any).NotionCache ? (window as any).NotionCache.getUserData()?.email || '' : ''; } catch { return ''; }
     }
-    return 'notion-user';
+    return '';
   });
   React.useEffect(() => {
     fetch('/api/session')
@@ -105,6 +105,7 @@ export default function QuestSelection({ disabled = false, projectId, relationNa
   }, []);
   const loadOptions = useCallback(async (): Promise<Option[]> => {
     if (!projectId) return [];
+    if (!userIdentifier) return [];
     if (overrideOptions && overrideOptions.length > 0) return overrideOptions;
     try {
       const qs = new URLSearchParams({ userId: userIdentifier, pageId: projectId, relationName });
