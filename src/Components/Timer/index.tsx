@@ -44,7 +44,7 @@ export default function Timer({
 }: Props) {
   const timerScreen = useFullScreenHandle();
 
-  const [{ timerLabel, project, shouldTickSound, busyIndicator, startTime, tickVolume }, dispatch] = usePomoState();
+  const [{ timerLabel, project, shouldTickSound, busyIndicator, startTime, tickVolume, sessionValue, timerValue }, dispatch] = usePomoState();
 
 
 
@@ -269,6 +269,20 @@ export default function Timer({
   const { clockifiedValue, togglePlayPause, resetTimer, restartPomo } =
     useSyncPomo(handleSessionComplete);
 
+  const handleQuickComplete = useCallback(async () => {
+    const nowSec = Math.floor(Date.now() / 1000);
+    const selectedSeconds = (sessionValue || 0) * 60;
+    const timeLeft = timerValue || 0;
+    const duration = Math.max(1, selectedSeconds - timeLeft);
+    await handleSessionComplete({
+      timerValue: duration,
+      startTime: startTime || nowSec,
+      endTime: nowSec,
+      sessionType: "work",
+    });
+    restartPomo();
+  }, [sessionValue, timerValue, startTime, handleSessionComplete, restartPomo]);
+
   // prevent screen lock when timer is in focus
   const wakeLock = useRef<WakeLockSentinel>();
 
@@ -387,7 +401,7 @@ export default function Timer({
                   disableControls={disableControls}
                   handlePlayPause={togglePlayPause}
                   handleReset={resetTimer}
-                  handleRestart={restartPomo}
+                  handleRestart={handleQuickComplete}
                 />
               </div>
 
