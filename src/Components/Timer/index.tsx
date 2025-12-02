@@ -92,6 +92,10 @@ export default function Timer({
     ? resolvedUserId
     : (sessionEmail || (typeof window !== 'undefined' ? (localStorage.getItem('notion_user_data') ? JSON.parse(localStorage.getItem('notion_user_data') as string)?.email : null) : null) || "");
 
+  const effectiveUserId = (sessionEmail && sessionEmail !== 'notion-user')
+    ? sessionEmail
+    : ((resolvedUserId && resolvedUserId !== 'notion-user') ? resolvedUserId : (userIdentifier && userIdentifier !== 'notion-user' ? userIdentifier : ""));
+
   // Initialize session configuration hook
   const sessionConfig = usePomoSessionConfig({
     projects,
@@ -100,7 +104,7 @@ export default function Timer({
     selectedQuests,
     currentDatabaseId,
     availableDatabases,
-    userId: userIdentifier,
+    userId: effectiveUserId,
   });
 
   const refreshCompleted = useCallback(async () => {
@@ -113,35 +117,63 @@ export default function Timer({
   useEffect(() => {
     const justStarted = busyIndicator && !prevBusy.current;
     if (justStarted) {
+      if (!effectiveUserId) {
+        prevBusy.current = busyIndicator;
+        return;
+      }
       const adventurePageId = sessionConfig.config.selectedProject?.value;
-      const projectTitle = sessionConfig.config.selectedProject?.label || projectName;
-      // Prefer the top-level selected quest; fall back to project/adventure
-      const questPageId = (selectedQuests?.[0]?.value) || project?.value || adventurePageId;
-      const targetDatabaseId = sessionConfig.config.selectedTrackingDatabase?.value;
+      const taskPageId = sessionConfig.config.selectedProject?.value || null;
+      const targetDatabaseId = sessionConfig.config.selectedDatabase?.value || currentDatabaseId;
 
       // If resuming the same session, only update status back to In Progress
       if (lastStartTimeRef.current === startTime) {
-        if (questPageId) {
-          updateQuestStatus({ userId: userIdentifier, status: "In Progress", questPageId, adventurePageId, targetDatabaseId })
-            .catch((e) => {
-              if (process.env.NODE_ENV === "development") {
-                console.warn("Failed to set In Progress on resume:", e);
-              }
-            });
+        if (taskPageId) {
+          updateTaskStatus({ userId: effectiveUserId, pageId: taskPageId, status: "In Progress" }).catch(() => {});
+        }
+        const selectedIds = (selectedQuests || []).map(q => q.value);
+        const applyStart = (ids: string[]) => {
+          ids.forEach((qid) => {
+            updateQuestStatus({ userId: effectiveUserId, status: "In Progress", questPageId: qid, adventurePageId, targetDatabaseId }).catch(() => {});
+          });
+        };
+        if (selectedIds.length > 0) {
+          applyStart(selectedIds);
+        } else if (taskPageId && userIdentifier) {
+          const qs = new URLSearchParams({ userId: effectiveUserId, pageId: taskPageId, relationName: "Quests" });
+          fetch(`/api/notion/page-relations?${qs.toString()}`)
+            .then(r => r.json())
+            .then(json => {
+              const ids = ((json?.items || []) as Array<{ id: string }>).map(i => i.id);
+              if (ids.length > 0) applyStart(ids);
+            })
+            .catch(() => {});
         }
         prevBusy.current = busyIndicator;
         return;
       }
 
-      if (questPageId) {
-        startQuestWork({ userId: userIdentifier, questPageId, projectTitle, adventurePageId, targetDatabaseId })
-          .catch((e) => {
-            if (process.env.NODE_ENV === "development") {
-              console.warn("Failed to create tracker entry on start:", e);
-            }
-          });
-        lastStartTimeRef.current = startTime;
+      if (taskPageId) {
+        updateTaskStatus({ userId: effectiveUserId, pageId: taskPageId, status: "In Progress" }).catch(() => {});
       }
+      const selectedIds = (selectedQuests || []).map(q => q.value);
+      const applyStart = (ids: string[]) => {
+        ids.forEach((qid) => {
+          updateQuestStatus({ userId: effectiveUserId, status: "In Progress", questPageId: qid, adventurePageId, targetDatabaseId }).catch(() => {});
+        });
+      };
+      if (selectedIds.length > 0) {
+        applyStart(selectedIds);
+      } else if (taskPageId && userIdentifier) {
+        const qs = new URLSearchParams({ userId: effectiveUserId, pageId: taskPageId, relationName: "Quests" });
+        fetch(`/api/notion/page-relations?${qs.toString()}`)
+          .then(r => r.json())
+          .then(json => {
+            const ids = ((json?.items || []) as Array<{ id: string }>).map(i => i.id);
+            if (ids.length > 0) applyStart(ids);
+          })
+          .catch(() => {});
+      }
+      lastStartTimeRef.current = startTime;
     }
     prevBusy.current = busyIndicator;
   }, [busyIndicator, startTime, sessionConfig.config.selectedProject?.value, sessionConfig.config.selectedProject?.label, projectName, project?.value, selectedQuests, sessionConfig.config.selectedTrackingDatabase?.value]);
@@ -150,22 +182,26 @@ export default function Timer({
   useEffect(() => {
     const justPaused = !busyIndicator && prevBusy.current;
     if (justPaused) {
+      if (!effectiveUserId) {
+        prevBusy.current = busyIndicator;
+        return;
+      }
       const adventurePageId = sessionConfig.config.selectedProject?.value;
       const taskPageId = sessionConfig.config.selectedProject?.value || null;
-      const targetDatabaseId = sessionConfig.config.selectedTrackingDatabase?.value;
+      const targetDatabaseId = sessionConfig.config.selectedDatabase?.value || currentDatabaseId;
       if (taskPageId) {
-        updateTaskStatus({ userId: userIdentifier, pageId: taskPageId, status: "Paused" }).catch(() => {});
+        updateTaskStatus({ userId: effectiveUserId, pageId: taskPageId, status: "Paused" }).catch(() => {});
       }
       const selectedIds = (selectedQuests || []).map(q => q.value);
       const applyPause = (ids: string[]) => {
         ids.forEach((qid) => {
-          updateQuestStatus({ userId: userIdentifier, questPageId: qid, status: "Paused", adventurePageId, targetDatabaseId }).catch(() => {});
+          updateQuestStatus({ userId: effectiveUserId, questPageId: qid, status: "Paused", adventurePageId, targetDatabaseId }).catch(() => {});
         });
       };
       if (selectedIds.length > 0) {
         applyPause(selectedIds);
       } else if (taskPageId && userIdentifier) {
-        const qs = new URLSearchParams({ userId: userIdentifier, pageId: taskPageId, relationName: "Quests" });
+        const qs = new URLSearchParams({ userId: effectiveUserId, pageId: taskPageId, relationName: "Quests" });
         fetch(`/api/notion/page-relations?${qs.toString()}`)
           .then(r => r.json())
           .then(json => {
@@ -196,18 +232,18 @@ export default function Timer({
         const taskPageId = sessionConfig.config.selectedProject?.value || null;
         const targetDatabaseId = sessionConfig.config.selectedTrackingDatabase?.value;
         if (taskPageId) {
-          updateTaskStatus({ userId: userIdentifier, pageId: taskPageId, status: "Completed" }).catch(() => {});
+          updateTaskStatus({ userId: effectiveUserId, pageId: taskPageId, status: "Completed" }).catch(() => {});
         }
         const selectedIds = (selectedQuests || []).map(q => q.value);
         const applyComplete = (ids: string[]) => {
           ids.forEach((qid) => {
-            updateQuestStatus({ userId: userIdentifier, questPageId: qid, status: "Completed", adventurePageId, targetDatabaseId }).catch(() => {});
+            updateQuestStatus({ userId: effectiveUserId, questPageId: qid, status: "Completed", adventurePageId, targetDatabaseId }).catch(() => {});
           });
         };
         if (selectedIds.length > 0) {
           applyComplete(selectedIds);
         } else if (taskPageId && userIdentifier) {
-          const qs = new URLSearchParams({ userId: userIdentifier, pageId: taskPageId, relationName: "Quests" });
+          const qs = new URLSearchParams({ userId: effectiveUserId, pageId: taskPageId, relationName: "Quests" });
           fetch(`/api/notion/page-relations?${qs.toString()}`)
             .then(r => r.json())
             .then(json => {

@@ -1,7 +1,7 @@
 // this will do jobs regarding synchronization and working with pomodoro timer
 // save project timeline on pause
 
-import { useRef } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "react-toastify";
 import { usePomoState } from "../../utils/Context/PomoContext/Context";
 import {
@@ -46,6 +46,35 @@ export default function useSyncPomo(onSessionComplete?: (sessionData: {
 
   const elapsedTime = useRef(0);
 
+  const [sessionEmail, setSessionEmail] = useState<string | null>(null);
+  const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
+  useEffect(() => {
+    let mounted = true;
+    fetch('/api/session')
+      .then((r) => r.json())
+      .then((data) => { if (!mounted) return; setSessionEmail(data?.email || null); })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+  useEffect(() => {
+    let mounted = true;
+    fetch('/api/user/identifier')
+      .then((r) => r.json())
+      .then((d) => { if (!mounted) return; setResolvedUserId(d?.resolvedUserId || null); })
+      .catch(() => {});
+    return () => { mounted = false; };
+  }, []);
+
+  const effectiveUserId = useMemo(() => {
+    if (sessionEmail && sessionEmail !== 'notion-user') return sessionEmail;
+    if (resolvedUserId && resolvedUserId !== 'notion-user') return resolvedUserId;
+    try {
+      const raw = typeof window !== 'undefined' ? localStorage.getItem('notion_user_data') : null;
+      const email = raw ? JSON.parse(raw).email : null;
+      return email && email !== 'notion-user' ? email : '';
+    } catch { return ''; }
+  }, [sessionEmail, resolvedUserId]);
+
   function togglePlayPause() {
     handlePlayPause();
   }
@@ -58,10 +87,9 @@ export default function useSyncPomo(onSessionComplete?: (sessionData: {
       // Update status to Paused on Quest
       try {
         const questPageId = project?.value;
-        const adventurePageId = project?.value; // when selected project is an Adventure, propagate to its quests
-        if (questPageId) {
-          // Only update quest/adventure status; do not sync tracker DB here
-          updateQuestStatus({ userId: "notion-user", status: "Paused", questPageId, adventurePageId });
+        const adventurePageId = project?.value;
+        if (questPageId && effectiveUserId) {
+          updateQuestStatus({ userId: effectiveUserId, status: "Paused", questPageId, adventurePageId });
         }
       } catch (e) {
         if (process.env.NODE_ENV === "development") console.warn("Failed to pause quest:", e);
@@ -93,10 +121,9 @@ export default function useSyncPomo(onSessionComplete?: (sessionData: {
       // Update status to Completed on Quest
       try {
         const questPageId = project?.value;
-        const adventurePageId = project?.value; // when selected project is an Adventure, propagate to its quests
-        if (questPageId) {
-          // Only update quest/adventure status; do not sync tracker DB here
-          updateQuestStatus({ userId: "notion-user", status: "Completed", questPageId, adventurePageId });
+        const adventurePageId = project?.value;
+        if (questPageId && effectiveUserId) {
+          updateQuestStatus({ userId: effectiveUserId, status: "Completed", questPageId, adventurePageId });
         }
       } catch (e) {
         if (process.env.NODE_ENV === "development") console.warn("Failed to complete quest:", e);
