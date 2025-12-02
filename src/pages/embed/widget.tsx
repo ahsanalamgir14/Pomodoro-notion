@@ -121,11 +121,11 @@ export default function EmbedWidget() {
   // Determine which identifier to use for Notion access
   // Prefer logged-in session email; fallback to "notion-user"
   const [userIdentifier, setUserIdentifier] = useState<string>(() => {
-    if (typeof window === 'undefined') return 'notion-user';
+    if (typeof window === 'undefined') return '';
     const urlUser = getUrlUserOverride();
     if (urlUser) return urlUser;
     const cached = NotionCache.getUserData()?.email;
-    return cached || 'notion-user';
+    return cached || '';
   });
   useEffect(() => {
     fetch('/api/session')
@@ -220,20 +220,19 @@ export default function EmbedWidget() {
   useEffect(() => {
     const populateQuests = async () => {
       if (!selectedTaskId) return;
-      if (selectedQuests && selectedQuests.length > 0) return; // respect manual selection
+      if (!userIdentifier) return;
+      if (selectedQuests && selectedQuests.length > 0) return;
       try {
         const qs = new URLSearchParams({ userId: userIdentifier, pageId: selectedTaskId, relationName: "Quests" });
         const resp = await fetch(`/api/notion/page-relations?${qs.toString()}`);
         if (!resp.ok) return;
         const data = await resp.json();
         const items: Array<{ id: string; title: string }> = data?.items || [];
-        // Prefill selection with current relations
         const values = items.map(i => ({ label: i.title, value: i.id }));
         setSelectedQuests(values);
         setLinkedQuestIds(values.map(v => v.value));
         setQuestOptions(values);
       } catch (e) {
-        // ignore
       }
     };
     populateQuests();
