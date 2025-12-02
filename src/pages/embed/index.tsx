@@ -15,6 +15,7 @@ export default function CreateEmbedPage() {
   const [selectedPageId, setSelectedPageId] = useState<string>("");
   const [theme, setTheme] = useState<ThemeType>("light");
   const [isConnected, setIsConnected] = useState(false);
+  const [resolvedUserId, setResolvedUserId] = useState<string>("");
 
   // Style options
   const [widgetBg, setWidgetBg] = useState<string>("#ffffff");
@@ -35,10 +36,24 @@ export default function CreateEmbedPage() {
   const [selectedSessionDbId, setSelectedSessionDbId] = useState<string>("");
   const [lockDbSelections, setLockDbSelections] = useState<boolean>(true);
 
-  // Track Notion connection only
+  // Track Notion connection via server identifier (preferred)
   useEffect(() => {
-    const userData = typeof window !== "undefined" ? NotionCache.getUserData() : null;
-    setIsConnected(!!userData?.accessToken);
+    let mounted = true;
+    fetch('/api/user/identifier')
+      .then((r) => r.json())
+      .then((data) => {
+        if (!mounted) return;
+        setIsConnected(Boolean(data?.hasToken));
+        setResolvedUserId(String(data?.resolvedUserId || ""));
+        if (!sessionEmail && data?.email) {
+          setSessionEmail(String(data.email));
+        }
+      })
+      .catch(() => {
+        const userData = typeof window !== "undefined" ? NotionCache.getUserData() : null;
+        setIsConnected(!!userData?.accessToken);
+      });
+    return () => { mounted = false; };
   }, []);
 
   // Fetch Notion pages using session email (fallback to cached email)
@@ -92,10 +107,10 @@ export default function CreateEmbedPage() {
   }, []);
 
   // Databases and tasks for selections
-  const userIdentifier = (typeof window !== "undefined" ? NotionCache.getUserData()?.email : null) || sessionEmail || "notion-user";
+  const userIdentifier = resolvedUserId || (typeof window !== "undefined" ? NotionCache.getUserData()?.email : null) || sessionEmail || "";
   const { data: dbs } = trpc.private.getDatabases.useQuery(
     { email: userIdentifier },
-    { refetchOnWindowFocus: false, retry: false }
+    { refetchOnWindowFocus: false, retry: false, enabled: !!userIdentifier }
   );
   useEffect(() => {
     if (dbs?.databases?.results?.length) {
@@ -111,16 +126,16 @@ export default function CreateEmbedPage() {
 
   const { data: taskDbDetail } = trpc.private.getDatabaseDetail.useQuery(
     { databaseId: selectedTaskDbId, email: userIdentifier },
-    { enabled: !!selectedTaskDbId, refetchOnWindowFocus: false, retry: false }
+    { enabled: !!selectedTaskDbId && !!userIdentifier, refetchOnWindowFocus: false, retry: false }
   );
   const { data: sessionDbDetail } = trpc.private.getDatabaseDetail.useQuery(
     { databaseId: selectedSessionDbId, email: userIdentifier },
-    { enabled: !!selectedSessionDbId, refetchOnWindowFocus: false, retry: false }
+    { enabled: !!selectedSessionDbId && !!userIdentifier, refetchOnWindowFocus: false, retry: false }
   );
 
   const { data: taskDbQuery } = trpc.private.queryDatabase.useQuery(
     { databaseId: selectedTaskDbId, email: userIdentifier },
-    { enabled: !!selectedTaskDbId, refetchOnWindowFocus: false, retry: false }
+    { enabled: !!selectedTaskDbId && !!userIdentifier, refetchOnWindowFocus: false, retry: false }
   );
 
   const previewTaskItems = useMemo(() => {
@@ -177,6 +192,7 @@ export default function CreateEmbedPage() {
           ? "Quest"
           : Object.entries(props).find(([k, p]: any) => k?.toLowerCase?.().includes("quest") && p?.type === "relation")?.[0];
       if (!questsRelProp) { setPreviewQuestChips([]); if (previewSelectedQuests.length === 0) setPreviewSelectedQuests([]); return; }
+      if (!userIdentifier) { setPreviewQuestChips([]); return; }
       const qs = new URLSearchParams({ userId: userIdentifier, pageId: previewSelectedTaskId, relationName: questsRelProp });
       fetch(`/api/notion/page-relations?${qs.toString()}`)
         .then((r) => r.ok ? r.json() : null)
@@ -525,7 +541,7 @@ export default function CreateEmbedPage() {
                         taskDatabaseId: selectedTaskDbId,
                         sessionDatabaseId: selectedSessionDbId,
                         hideDbSelectors: lockDbSelections,
-                        userId: sessionEmail || (typeof window !== 'undefined' ? (NotionCache.getUserData()?.email || 'notion-user') : 'notion-user'),
+                        userId: sessionEmail || resolvedUserId || (typeof window !== 'undefined' ? (NotionCache.getUserData()?.email || '') : ''),
                       };
                       // Task selection happens in the embedded UI; do not include taskId/taskTitle in link
                       if (typeof window !== "undefined") {
