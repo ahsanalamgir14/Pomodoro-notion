@@ -70,7 +70,15 @@ export default async function handler(
         : hostHeader
           ? `https://${hostHeader}`
           : undefined;
-      const redirectUri = redirectUriEnv || (origin ? `${origin}/api/notion/oauth` : undefined);
+      let redirectUri = redirectUriEnv || (origin ? `${origin}/api/notion/oauth` : undefined);
+
+      try {
+        const decoded = Buffer.from(String(stateParam), "base64").toString("utf-8");
+        const parsed = JSON.parse(decoded || "{}");
+        if (parsed && typeof parsed === "object" && parsed.r && typeof parsed.r === "string") {
+          redirectUri = parsed.r;
+        }
+      } catch {}
 
       if (!redirectUri) {
         console.error("Missing redirect URI for Notion token exchange");
