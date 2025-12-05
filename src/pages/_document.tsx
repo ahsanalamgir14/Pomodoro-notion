@@ -9,6 +9,7 @@ class MyDocument extends Document {
           <link rel="apple-touch-icon" href="/icon.png"></link>
           <meta name="theme-color" content="#fff" />
           <meta name="google-site-verification" content="CQ9VZn5qGUaXAmphy3Ft710863CYrmrPNznKwU7LOQg" />
+          <meta httpEquiv="Permissions-Policy" content="camera=(), microphone=()" />
         </Head>
         <body>
           <Main />
