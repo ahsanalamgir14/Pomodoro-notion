@@ -53,7 +53,7 @@ export default function useSyncPomo(onSessionComplete?: (sessionData: {
     fetch('/api/session')
       .then((r) => r.json())
       .then((data) => { if (!mounted) return; setSessionEmail(data?.email || null); })
-      .catch(() => {});
+      .catch(() => undefined);
     return () => { mounted = false; };
   }, []);
   useEffect(() => {
@@ -61,7 +61,7 @@ export default function useSyncPomo(onSessionComplete?: (sessionData: {
     fetch('/api/user/identifier')
       .then((r) => r.json())
       .then((d) => { if (!mounted) return; setResolvedUserId(d?.resolvedUserId || null); })
-      .catch(() => {});
+      .catch(() => undefined);
     return () => { mounted = false; };
   }, []);
 

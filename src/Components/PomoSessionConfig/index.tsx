@@ -162,7 +162,7 @@ export default function PomoSessionConfig({
             <DatabaseSelection
               disabled={disabled || lockStatusDatabase}
               value={selectedDatabase}
-              handleSelect={lockStatusDatabase ? () => {} : onDatabaseSelect}
+              handleSelect={lockStatusDatabase ? () => undefined : onDatabaseSelect}
               databases={availableDatabases}
               placeholder="Select status database (Adventure/Quest)"
               label="Status Database"

@@ -84,7 +84,7 @@ function Home() {
           setSessionEmail(null);
         }
       })
-      .catch(() => {});
+      .catch(() => undefined);
     return () => { mounted = false; };
   }, []);
 
@@ -97,7 +97,7 @@ function Home() {
         setResolvedUserId(d?.resolvedUserId || null);
         if (typeof d?.hasToken === 'boolean') setIsConnected(!!d.hasToken);
       })
-      .catch(() => {});
+      .catch(() => undefined);
     return () => { mounted = false; };
   }, []);
 

@@ -72,7 +72,7 @@ export default function Timer({
         if (data?.isAuthenticated) setSessionEmail(data?.email || null);
         else setSessionEmail(null);
       })
-      .catch(() => {});
+      .catch(() => undefined);
     return () => { mounted = false; };
   }, []);
 
@@ -84,7 +84,7 @@ export default function Timer({
         if (!mounted) return;
         setResolvedUserId(d?.resolvedUserId || null);
       })
-      .catch(() => {});
+      .catch(() => undefined);
     return () => { mounted = false; };
   }, []);
 
@@ -128,12 +128,12 @@ export default function Timer({
       // If resuming the same session, only update status back to In Progress
       if (lastStartTimeRef.current === startTime) {
         if (taskPageId) {
-          updateTaskStatus({ userId: effectiveUserId, pageId: taskPageId, status: "In Progress" }).catch(() => {});
+          updateTaskStatus({ userId: effectiveUserId, pageId: taskPageId, status: "In Progress" }).catch(() => undefined);
         }
         const selectedIds = (selectedQuests || []).map(q => q.value);
         const applyStart = (ids: string[]) => {
           ids.forEach((qid) => {
-            updateQuestStatus({ userId: effectiveUserId, status: "In Progress", questPageId: qid, adventurePageId, targetDatabaseId }).catch(() => {});
+            updateQuestStatus({ userId: effectiveUserId, status: "In Progress", questPageId: qid, adventurePageId, targetDatabaseId }).catch(() => undefined);
           });
         };
         if (selectedIds.length > 0) {
@@ -146,19 +146,19 @@ export default function Timer({
               const ids = ((json?.items || []) as Array<{ id: string }>).map(i => i.id);
               if (ids.length > 0) applyStart(ids);
             })
-            .catch(() => {});
+            .catch(() => undefined);
         }
         prevBusy.current = busyIndicator;
         return;
       }
 
       if (taskPageId) {
-        updateTaskStatus({ userId: effectiveUserId, pageId: taskPageId, status: "In Progress" }).catch(() => {});
+        updateTaskStatus({ userId: effectiveUserId, pageId: taskPageId, status: "In Progress" }).catch(() => undefined);
       }
       const selectedIds = (selectedQuests || []).map(q => q.value);
       const applyStart = (ids: string[]) => {
         ids.forEach((qid) => {
-          updateQuestStatus({ userId: effectiveUserId, status: "In Progress", questPageId: qid, adventurePageId, targetDatabaseId }).catch(() => {});
+          updateQuestStatus({ userId: effectiveUserId, status: "In Progress", questPageId: qid, adventurePageId, targetDatabaseId }).catch(() => undefined);
         });
       };
       if (selectedIds.length > 0) {
@@ -171,7 +171,7 @@ export default function Timer({
             const ids = ((json?.items || []) as Array<{ id: string }>).map(i => i.id);
             if (ids.length > 0) applyStart(ids);
           })
-          .catch(() => {});
+          .catch(() => undefined);
       }
       lastStartTimeRef.current = startTime;
     }
@@ -190,12 +190,12 @@ export default function Timer({
       const taskPageId = sessionConfig.config.selectedProject?.value || null;
       const targetDatabaseId = sessionConfig.config.selectedDatabase?.value || currentDatabaseId;
       if (taskPageId) {
-        updateTaskStatus({ userId: effectiveUserId, pageId: taskPageId, status: "Paused" }).catch(() => {});
+        updateTaskStatus({ userId: effectiveUserId, pageId: taskPageId, status: "Paused" }).catch(() => undefined);
       }
       const selectedIds = (selectedQuests || []).map(q => q.value);
       const applyPause = (ids: string[]) => {
         ids.forEach((qid) => {
-          updateQuestStatus({ userId: effectiveUserId, questPageId: qid, status: "Paused", adventurePageId, targetDatabaseId }).catch(() => {});
+          updateQuestStatus({ userId: effectiveUserId, questPageId: qid, status: "Paused", adventurePageId, targetDatabaseId }).catch(() => undefined);
         });
       };
       if (selectedIds.length > 0) {
@@ -208,7 +208,7 @@ export default function Timer({
             const ids = ((json?.items || []) as Array<{ id: string }>).map(i => i.id);
             if (ids.length > 0) applyPause(ids);
           })
-          .catch(() => {});
+          .catch(() => undefined);
       }
     }
     prevBusy.current = busyIndicator;
@@ -232,12 +232,12 @@ export default function Timer({
         const taskPageId = sessionConfig.config.selectedProject?.value || null;
         const targetDatabaseId = sessionConfig.config.selectedTrackingDatabase?.value;
         if (taskPageId) {
-          updateTaskStatus({ userId: effectiveUserId, pageId: taskPageId, status: "Completed" }).catch(() => {});
+          updateTaskStatus({ userId: effectiveUserId, pageId: taskPageId, status: "Completed" }).catch(() => undefined);
         }
         const selectedIds = (selectedQuests || []).map(q => q.value);
         const applyComplete = (ids: string[]) => {
           ids.forEach((qid) => {
-            updateQuestStatus({ userId: effectiveUserId, questPageId: qid, status: "Completed", adventurePageId, targetDatabaseId }).catch(() => {});
+            updateQuestStatus({ userId: effectiveUserId, questPageId: qid, status: "Completed", adventurePageId, targetDatabaseId }).catch(() => undefined);
           });
         };
         if (selectedIds.length > 0) {
@@ -250,7 +250,7 @@ export default function Timer({
               const ids = ((json?.items || []) as Array<{ id: string }>).map(i => i.id);
               if (ids.length > 0) applyComplete(ids);
             })
-            .catch(() => {});
+            .catch(() => undefined);
         }
       } catch (error) {
         console.error("Failed to save session to Notion:", error);
