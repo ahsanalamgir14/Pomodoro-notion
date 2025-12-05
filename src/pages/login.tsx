@@ -82,8 +82,18 @@ export default function Login({ disableGoogle = false }: { disableGoogle?: boole
       <div className="mt-8 w-full max-w-md rounded-xl bg-white p-6 shadow-md">
         <h3 className="text-center text-2xl font-bold text-gray-900">Sign in</h3>
         <p className="mt-2 text-center text-sm text-gray-600">
-          Sign in with your email and password to continue.
+          Sign in to your Pomodoro account. This is not your Notion account.
         </p>
+        <div className="mt-3 rounded-md bg-yellow-50 p-3 text-xs text-yellow-900">
+          <p>
+            We never ask for your Notion password. Connecting Notion uses official OAuth at
+            <span className="mx-1 font-semibold">api.notion.com</span> and you can revoke access anytime.
+            We do not ask you to download any software.
+          </p>
+          <p className="mt-2">
+            Pomodoro for Notion is an independent tool and is not affiliated with Notion.
+          </p>
+        </div>
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
           <div>
             <label htmlFor="email" className="sr-only">
@@ -93,6 +103,7 @@ export default function Login({ disableGoogle = false }: { disableGoogle?: boole
               id="email"
               name="email"
               type="email"
+              autoComplete="email"
               placeholder="Email"
               value={email}
               onChange={(e) => setEmail(e.target.value)}
@@ -107,6 +118,7 @@ export default function Login({ disableGoogle = false }: { disableGoogle?: boole
               id="password"
               name="password"
               type="password"
+              autoComplete="current-password"
               placeholder="Password"
               value={password}
               onChange={(e) => setPassword(e.target.value)}
