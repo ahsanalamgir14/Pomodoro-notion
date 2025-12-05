@@ -20,7 +20,7 @@ module.exports = {
           {
             key: "Content-Security-Policy",
             value:
-              "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' https:; worker-src 'self'; connect-src 'self' https://api.notion.com https://www.googleapis.com https://firestore.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://firebase.googleapis.com https://vitals.vercel-insights.com; frame-src 'self' https://www.notion.so https://notion.so; frame-ancestors 'self' https://www.notion.so https://notion.so; base-uri 'self'; form-action 'self' https://api.notion.com; object-src 'none'; upgrade-insecure-requests",
+              "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' https:; worker-src 'self'; connect-src 'self' https://api.notion.com https://www.googleapis.com https://firestore.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://firebase.googleapis.com https://vitals.vercel-insights.com; frame-src 'self' https://www.notion.so https://notion.so https://app.netlify.com https://*.netlify.app; frame-ancestors 'self' https://www.notion.so https://notion.so; base-uri 'self'; form-action 'self' https://api.notion.com; object-src 'none'; upgrade-insecure-requests",
           },
           {
             key: "Strict-Transport-Security",
@@ -40,7 +40,7 @@ module.exports = {
           {
             key: "Content-Security-Policy",
             value:
-              "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' https:; worker-src 'self'; connect-src 'self' https://api.notion.com https://www.googleapis.com https://firestore.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://firebase.googleapis.com https://vitals.vercel-insights.com; frame-src 'self'; frame-ancestors 'self'; base-uri 'self'; form-action 'self' https://api.notion.com; object-src 'none'; upgrade-insecure-requests",
+              "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; style-src-elem 'self' 'unsafe-inline' https://fonts.googleapis.com; img-src 'self' data: https:; font-src 'self' data: https://fonts.gstatic.com; media-src 'self' https:; worker-src 'self'; connect-src 'self' https://api.notion.com https://www.googleapis.com https://firestore.googleapis.com https://securetoken.googleapis.com https://identitytoolkit.googleapis.com https://firebase.googleapis.com https://vitals.vercel-insights.com; frame-src 'self' https://app.netlify.com https://*.netlify.app; frame-ancestors 'self'; base-uri 'self'; form-action 'self' https://api.notion.com; object-src 'none'; upgrade-insecure-requests",
           },
           {
             key: "Strict-Transport-Security",
