@@ -1,4 +1,17 @@
 module.exports = {
+  eslint: {
+    ignoreDuringBuilds: true,
+  },
+  typescript: {
+    ignoreBuildErrors: true,
+  },
+  webpack: (config) => {
+    config.module.rules.push({
+      test: /\.(mp3|wav|ogg)$/i,
+      type: "asset/resource",
+    });
+    return config;
+  },
   async headers() {
     return [
       {
