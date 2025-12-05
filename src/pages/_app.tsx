@@ -1,6 +1,5 @@
 import { AppProps } from "next/app";
 import Shield from "../Components/Shield";
-import { Analytics } from "@vercel/analytics/react";
 import { AuthProvider } from "../utils/Context/AuthContext/Context";
 import "../styles/globals.css";
 import { trpc } from "../utils/trpc";
@@ -15,7 +14,6 @@ const MyApp = ({
         <Shield>
           <Component {...pageProps} />
         </Shield>
-        <Analytics />
       </AuthProvider>
     </>
   );
