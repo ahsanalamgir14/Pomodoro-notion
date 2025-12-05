@@ -135,7 +135,7 @@ export default function EmbedWidget() {
           setUserIdentifier(String(data.email));
         }
       })
-      .catch(() => {});
+      .catch(() => undefined);
   }, []);
 
   // Fetch databases via tRPC (same as home page style)

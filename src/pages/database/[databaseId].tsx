@@ -46,7 +46,7 @@ export default function Pages({
           setSessionEmail(null);
         }
       })
-      .catch(() => {});
+      .catch(() => undefined);
     return () => { mounted = false; };
   }, []);
 

@@ -168,7 +168,7 @@ export default function Pages({
         if (data?.isAuthenticated) setSessionEmail(data?.email || null);
         else setSessionEmail(null);
       })
-      .catch(() => {});
+      .catch(() => undefined);
     return () => { mounted = false; };
   }, []);
 
@@ -180,7 +180,7 @@ export default function Pages({
         if (!mounted) return;
         setResolvedUserId(d?.resolvedUserId || null);
       })
-      .catch(() => {});
+      .catch(() => undefined);
     return () => { mounted = false; };
   }, []);
 

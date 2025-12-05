@@ -98,13 +98,13 @@ export default function CreateEmbedPage() {
               if (!mounted) return;
               setSavedEmbeds(json?.items || []);
             })
-            .catch(() => {});
+            .catch(() => undefined);
         } else {
           setIsAuthenticated(false);
           setSessionEmail(null);
         }
       })
-      .catch(() => {});
+      .catch(() => undefined);
     return () => { mounted = false; };
   }, []);
 
