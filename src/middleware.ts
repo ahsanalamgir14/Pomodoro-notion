@@ -29,6 +29,12 @@ export default function middleware(req: NextRequest) {
     return NextResponse.next();
   }
 
+  // If a persistent Notion connection cookie exists, allow access
+  const notionConnected = req.cookies.get("notion_connected")?.value === "1";
+  if (notionConnected) {
+    return NextResponse.next();
+  }
+
   // Check cookie-based session
   const sessionUser = req.cookies.get("session_user")?.value;
   const sessionToken = req.cookies.get("session_token")?.value;

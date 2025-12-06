@@ -34,7 +34,6 @@ export default function CreateEmbedPage() {
   // Data selections
   const [selectedTaskDbId, setSelectedTaskDbId] = useState<string>("");
   const [selectedSessionDbId, setSelectedSessionDbId] = useState<string>("");
-  const [lockDbSelections, setLockDbSelections] = useState<boolean>(true);
 
   // Track Notion connection via server identifier (preferred)
   useEffect(() => {
@@ -374,7 +373,7 @@ export default function CreateEmbedPage() {
         timerFontSize,
         taskDatabaseId: selectedTaskDbId,
         sessionDatabaseId: selectedSessionDbId,
-        hideDbSelectors: lockDbSelections,
+        hideDbSelectors: true,
         userId: sessionEmail || resolvedUserId || (typeof window !== 'undefined' ? (NotionCache.getUserData()?.email || '') : ''),
       };
       // Task selection is handled within the embedded UI; omit taskId/taskTitle
@@ -488,12 +487,7 @@ export default function CreateEmbedPage() {
                       ))}
                     </select>
                   </div>
-                  <div className="sm:col-span-2 flex flex-col gap-2">
-                    <label className="inline-flex items-center gap-2">
-                      <input id="hideDbSelectors" type="checkbox" checked={lockDbSelections} onChange={(e) => setLockDbSelections(e.target.checked)} />
-                      <span className="text-sm">Hide database selectors in embed</span>
-                    </label>
-                  </div>
+                  
                 </div>
               </div>
 
@@ -542,7 +536,7 @@ export default function CreateEmbedPage() {
                         timerFontSize,
                         taskDatabaseId: selectedTaskDbId,
                         sessionDatabaseId: selectedSessionDbId,
-                        hideDbSelectors: lockDbSelections,
+                        hideDbSelectors: true,
                         userId: sessionEmail || resolvedUserId || (typeof window !== 'undefined' ? (NotionCache.getUserData()?.email || '') : ''),
                       };
                       // Task selection happens in the embedded UI; do not include taskId/taskTitle in link
@@ -644,18 +638,7 @@ export default function CreateEmbedPage() {
                 <label className="block mb-1 text-sm">Session Title</label>
                 <input style={inputStyle} placeholder="Widget Session" />
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {!lockDbSelections && (
-                    <>
-                      <div>
-                        <label className="block mb-1 text-sm">Selected Table</label>
-                        <div style={inputStyle as React.CSSProperties}>{taskDbName || "(not set)"}</div>
-                      </div>
-                      <div>
-                        <label className="block mb-1 text-sm">Time Tracking Database</label>
-                        <div style={inputStyle as React.CSSProperties}>{sessionDbName || "(not set)"}</div>
-                      </div>
-                    </>
-                  )}
+                  
                   <div className="sm:col-span-2">
                     <label className="block mb-1 text-sm">Task</label>
                     <select
