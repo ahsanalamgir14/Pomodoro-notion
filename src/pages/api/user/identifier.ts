@@ -19,7 +19,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const legacy = cookies["session_user"] ? decodeURIComponent(cookies["session_user"]) : null;
 
     const candidates = [session?.user?.email || null, (jwtPayload?.email as string) || null, legacy].filter(Boolean) as string[];
-    const resolvedUserId = candidates[0] || "";
+    let resolvedUserId = candidates[0] || "";
+    if (!resolvedUserId && cookies["notion_connected"] === "1") {
+      resolvedUserId = "notion-user";
+    }
 
     let hasToken = false;
     let email = resolvedUserId || "";

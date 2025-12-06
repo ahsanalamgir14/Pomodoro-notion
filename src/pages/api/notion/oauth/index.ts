@@ -118,6 +118,20 @@ export default async function handler(
         });
         console.log("Notion user created successfully");
         
+        // Set a persistent cookie to keep the user connected to Notion
+        // Also set a guest identifier if the user isn't logged in
+        const forwardedProto = (req.headers["x-forwarded-proto"] as string) || "";
+        const host = req.headers.host || "";
+        const isLocal = host.includes("localhost") || host.startsWith("127.0.0.1");
+        const isHttps = forwardedProto === "https";
+        const secureFlag = isHttps && !isLocal ? "Secure; " : "";
+        const cookieHeaders: string[] = [];
+        cookieHeaders.push(`notion_connected=1; Path=/; ${secureFlag}SameSite=Lax; Max-Age=${60 * 60 * 24 * 365}`);
+        if (!existingEmail) {
+          cookieHeaders.push(`session_user=notion-user; Path=/; HttpOnly; ${secureFlag}SameSite=Lax; Max-Age=${60 * 60 * 24 * 365}`);
+        }
+        res.setHeader("Set-Cookie", cookieHeaders);
+
         // Redirect with success and cache data in client (do NOT override session cookie)
         const cacheData = encodeURIComponent(JSON.stringify({
           accessToken: access_token,
