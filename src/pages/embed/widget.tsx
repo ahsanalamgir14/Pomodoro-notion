@@ -29,12 +29,29 @@ function decodeConfigParam() {
   if (typeof window === "undefined") return null;
   try {
     const url = new URL(window.location.href);
-    const cParam = url.searchParams.get("c");
-    if (!cParam) return null;
-    const json = atob(cParam);
-    return JSON.parse(json) as EmbedSettings;
-  } catch (e) {
-    console.warn("Failed to decode config", e);
+    let raw = url.searchParams.get("c") || url.searchParams.get("config") || null;
+    if (!raw && window.location.hash) {
+      const hash = window.location.hash.replace(/^#/, "");
+      const params = new URLSearchParams(hash);
+      raw = params.get("c") || params.get("config");
+    }
+    if (!raw) return null;
+    let base = raw;
+    try { base = decodeURIComponent(base); } catch {}
+    try {
+      const json = atob(base);
+      return JSON.parse(json) as EmbedSettings;
+    } catch {
+      const normalized = (() => {
+        let s = base.replace(/-/g, "+").replace(/_/g, "/");
+        const pad = s.length % 4;
+        if (pad === 2) s += "=="; else if (pad === 3) s += "=";
+        return s;
+      })();
+      const json = atob(normalized);
+      return JSON.parse(json) as EmbedSettings;
+    }
+  } catch {
     return null;
   }
 }
