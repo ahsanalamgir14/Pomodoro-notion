@@ -73,7 +73,7 @@ export const getServerSideProps = async ({
       };
     }
     
-    console.log("🔑 Access token found:", userData.accessToken.substring(0, 20) + "...");
+    console.log("🔑 Access token found:", token.substring(0, 20) + "...");
     console.log("📡 Making real Notion API calls for database:", databaseId);
     
     // Use real Notion API calls with the user's access token
