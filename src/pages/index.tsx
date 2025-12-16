@@ -58,6 +58,9 @@ function Home() {
         const userData = JSON.parse(decodeURIComponent(router.query.cache_data as string));
         NotionCache.saveUserData(userData);
         setIsConnected(true);
+        if (userData?.accessToken) {
+          setAccessToken(userData.accessToken);
+        }
 
         console.log('✅ Notion connection cached successfully');
         router.replace("/", undefined, { shallow: true });
@@ -95,7 +98,16 @@ function Home() {
       .then((d) => {
         if (!mounted) return;
         setResolvedUserId(d?.resolvedUserId || null);
-        if (typeof d?.hasToken === 'boolean') setIsConnected(!!d.hasToken);
+        if (typeof d?.hasToken === 'boolean') {
+          setIsConnected(!!d.hasToken);
+          // If connected, try to load token from cache
+          if (d.hasToken) {
+            const cached = NotionCache.getUserData();
+            if (cached?.accessToken) {
+              setAccessToken(cached.accessToken);
+            }
+          }
+        }
       })
       .catch(() => undefined);
     return () => { mounted = false; };
@@ -109,7 +121,7 @@ function Home() {
   const shouldFetch = isConnected && !!userIdentifier;
   
   const { data, isFetching, error, refetch } = trpc.private.getDatabases.useQuery(
-    { email: userIdentifier },
+    { email: userIdentifier, accessToken },
     {
       refetchOnWindowFocus: false,
       retry: false, // Don't retry on error
