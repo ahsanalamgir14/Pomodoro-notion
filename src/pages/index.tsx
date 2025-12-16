@@ -14,6 +14,7 @@ function Home() {
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [cachedData, setCachedData] = useState<any>(null);
   const [isConnected, setIsConnected] = useState(false);
+  const [accessToken, setAccessToken] = useState<string | undefined>(undefined);
   const router = useRouter();
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
   const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
