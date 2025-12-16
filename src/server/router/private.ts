@@ -13,12 +13,13 @@ export const privateRouter = router({
     .input(
       z.object({
         email: z.string(),
+        accessToken: z.string().optional(),
       })
     )
-    .query(async ({ input: { email } }) => {
+    .query(async ({ input: { email, accessToken } }) => {
       try {
         let userData = await fetchNotionUser(email);
-        const token = userData?.accessToken || (email === "notion-user" ? process.env.NOTION_TOKEN : undefined);
+        const token = accessToken || userData?.accessToken || (email === "notion-user" ? process.env.NOTION_TOKEN : undefined);
         if (!token) {
           return {
             databases: { results: [] },
