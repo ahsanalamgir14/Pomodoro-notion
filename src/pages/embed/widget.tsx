@@ -167,7 +167,7 @@ export default function EmbedWidget() {
   }, []);
 
   // Fetch databases via tRPC (same as home page style)
-  const { data: dbData } = trpc.private.getDatabases.useQuery(
+  const { data: dbData, error: dbError } = trpc.private.getDatabases.useQuery(
     { email: userIdentifier, accessToken },
     { refetchOnWindowFocus: false, retry: false, enabled: !!userIdentifier }
   );
@@ -186,16 +186,30 @@ export default function EmbedWidget() {
   }, [dbData, config?.taskDatabaseId, config?.sessionDatabaseId]);
 
   // Fetch tasks (pages) for selected database
-  const { data: dbQueryData } = trpc.private.queryDatabase.useQuery(
+  const { data: dbQueryData, error: queryError } = trpc.private.queryDatabase.useQuery(
     { email: userIdentifier, databaseId: selectedDbId, accessToken },
     { enabled: !!selectedDbId, refetchOnWindowFocus: false, retry: false }
   );
 
   // Fetch database detail to get schema (e.g., Tags options)
-  const { data: dbDetailData } = trpc.private.getDatabaseDetail.useQuery(
+  const { data: dbDetailData, error: detailError } = trpc.private.getDatabaseDetail.useQuery(
     { email: userIdentifier, databaseId: selectedDbId, accessToken },
     { enabled: !!selectedDbId, refetchOnWindowFocus: false, retry: false }
   );
+
+  // Handle API token errors
+  useEffect(() => {
+    const error = dbError || queryError || detailError;
+    if (error) {
+      const msg = error.message?.toLowerCase() || "";
+      if (msg.includes("token") || msg.includes("unauthorized") || msg.includes("auth") || msg.includes("invalid")) {
+        console.log("Invalid token detected in widget, clearing cache");
+        NotionCache.clearUserData();
+        setAccessToken(undefined);
+        setErrorMsg("Notion connection expired. Please reconnect.");
+      }
+    }
+  }, [dbError, queryError, detailError]);
 
   const taskItems = useMemo(() => {
     const results: any[] = dbQueryData?.database?.results || [];
