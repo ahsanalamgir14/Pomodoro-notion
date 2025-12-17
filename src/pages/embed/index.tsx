@@ -35,51 +35,60 @@ export default function CreateEmbedPage() {
   const [selectedTaskDbId, setSelectedTaskDbId] = useState<string>("");
   const [selectedSessionDbId, setSelectedSessionDbId] = useState<string>("");
 
-  // Track Notion connection via server identifier (preferred)
+  // Check connection status and resolve user identifier - similar to homepage
+  const checkConnectionStatus = async () => {
+    try {
+      // First, check local cache for immediate feedback
+      const cachedUserData = NotionCache.getUserData();
+      if (cachedUserData?.accessToken) {
+        setIsConnected(true);
+        if (cachedUserData.email && !sessionEmail) {
+          setSessionEmail(cachedUserData.email);
+        }
+      }
+
+      // Then verify with server
+      const response = await fetch('/api/user/identifier');
+      const data = await response.json();
+      
+      if (data?.resolvedUserId) {
+        setResolvedUserId(data.resolvedUserId);
+      }
+      
+      // Server has the final say on connection status
+      if (typeof data?.hasToken === 'boolean') {
+        setIsConnected(!!data.hasToken);
+        if (data.hasToken && data?.email && !sessionEmail) {
+          setSessionEmail(data.email);
+        }
+      } else if (cachedUserData?.accessToken) {
+        // If server check failed but we have cache, keep connection
+        setIsConnected(true);
+      }
+    } catch (error) {
+      console.error('Failed to check connection status:', error);
+      // On error, fall back to cache if available
+      const cached = NotionCache.getUserData();
+      if (cached?.accessToken) {
+        setIsConnected(true);
+        if (cached.email && !sessionEmail) {
+          setSessionEmail(cached.email);
+        }
+      }
+    }
+  };
+
+  // Check connection on mount
   useEffect(() => {
     let mounted = true;
-    fetch('/api/user/identifier')
-      .then((r) => r.json())
-      .then((data) => {
-        if (!mounted) return;
-        setIsConnected(Boolean(data?.hasToken));
-        setResolvedUserId(String(data?.resolvedUserId || ""));
-        if (!sessionEmail && data?.email) {
-          setSessionEmail(String(data.email));
-        }
-      })
-      .catch(() => {
-        const userData = typeof window !== "undefined" ? NotionCache.getUserData() : null;
-        setIsConnected(!!userData?.accessToken);
-      });
+    checkConnectionStatus().then(() => {
+      if (!mounted) return;
+    });
     return () => { mounted = false; };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
-  // Fetch Notion pages using session email (fallback to cached email)
-  useEffect(() => {
-    const run = async () => {
-      try {
-        setLoadingPages(true);
-        const cacheEmail = typeof window !== "undefined" ? NotionCache.getUserData()?.email : null;
-        const email = sessionEmail || cacheEmail;
-        if (!email) {
-          setPages([]);
-          setSelectedPageId("");
-          return;
-        }
-        const data = await getConnectedPages({ userId: email });
-        setPages(data.items);
-        if (data.items[0]) setSelectedPageId(data.items[0].id);
-      } catch (e) {
-        console.error("Failed to load Notion pages", e);
-      } finally {
-        setLoadingPages(false);
-      }
-    };
-    run();
-  }, [sessionEmail]);
-
-  // Check cookie-based session and load saved embeds
+  // Fetch session email separately
   useEffect(() => {
     let mounted = true;
     fetch('/api/session')
@@ -88,55 +97,146 @@ export default function CreateEmbedPage() {
         if (!mounted) return;
         if (data?.isAuthenticated) {
           setIsAuthenticated(true);
-          setSessionEmail(data?.email || null);
-          const em = String(data?.email || "");
-          if (!em) return;
-          fetch(`/api/embeds?email=${encodeURIComponent(em)}`)
-            .then((r) => r.json())
-            .then((json) => {
-              if (!mounted) return;
-              setSavedEmbeds(json?.items || []);
-            })
-            .catch(() => undefined);
+          if (data?.email && !sessionEmail) {
+            setSessionEmail(data.email);
+          }
         } else {
           setIsAuthenticated(false);
-          setSessionEmail(null);
         }
       })
       .catch(() => undefined);
     return () => { mounted = false; };
   }, []);
 
-  // Databases and tasks for selections
-  const userIdentifier = resolvedUserId || (typeof window !== "undefined" ? NotionCache.getUserData()?.email : null) || sessionEmail || "";
+  // Fetch Notion pages using resolved user identifier
+  useEffect(() => {
+    const run = async () => {
+      if (!isConnected) {
+        setPages([]);
+        setSelectedPageId("");
+        return;
+      }
+
+      try {
+        setLoadingPages(true);
+        // Use resolvedUserId first, then sessionEmail, then cache
+        const cacheEmail = typeof window !== "undefined" ? NotionCache.getUserData()?.email : null;
+        const email = (resolvedUserId && resolvedUserId !== "notion-user") 
+          ? resolvedUserId 
+          : (sessionEmail || cacheEmail);
+        
+        if (!email) {
+          setPages([]);
+          setSelectedPageId("");
+          return;
+        }
+        
+        const data = await getConnectedPages({ userId: email });
+        setPages(data.items);
+        if (data.items[0]) setSelectedPageId(data.items[0].id);
+      } catch (e) {
+        console.error("Failed to load Notion pages", e);
+        setPages([]);
+      } finally {
+        setLoadingPages(false);
+      }
+    };
+    if (isConnected) {
+      run();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isConnected, resolvedUserId, sessionEmail]);
+
+  // Load saved embeds when authenticated
+  useEffect(() => {
+    let mounted = true;
+    if (isAuthenticated && sessionEmail) {
+      fetch(`/api/embeds?email=${encodeURIComponent(sessionEmail)}`)
+        .then((r) => r.json())
+        .then((json) => {
+          if (!mounted) return;
+          setSavedEmbeds(json?.items || []);
+        })
+        .catch(() => undefined);
+    }
+    return () => { mounted = false; };
+  }, [isAuthenticated, sessionEmail]);
+
+  // Databases and tasks for selections - use consistent user identifier
+  const userIdentifier = useMemo(() => {
+    // Prefer resolvedUserId (from server), but exclude "notion-user" fallback
+    if (resolvedUserId && resolvedUserId !== "notion-user") {
+      return resolvedUserId;
+    }
+    // Then use sessionEmail
+    if (sessionEmail) {
+      return sessionEmail;
+    }
+    // Finally fall back to cache
+    if (typeof window !== "undefined") {
+      const cached = NotionCache.getUserData();
+      if (cached?.email) {
+        return cached.email;
+      }
+    }
+    return "";
+  }, [resolvedUserId, sessionEmail]);
+
   const { data: dbs } = trpc.private.getDatabases.useQuery(
     { email: userIdentifier },
-    { refetchOnWindowFocus: false, retry: false, enabled: !!userIdentifier }
+    { 
+      refetchOnWindowFocus: false, 
+      retry: false, 
+      enabled: !!userIdentifier && isConnected 
+    }
   );
   useEffect(() => {
     if (dbs?.databases?.results?.length) {
-      const firstId = dbs.databases.results[0].id;
-      setSelectedTaskDbId((prev) => prev || firstId);
-      const trackingCandidate = dbs.databases.results.find((d: any) => {
-        const name = (d?.title && d?.title[0]?.plain_text) || "";
-        return /time|tracking|timesheet|log/i.test(name);
-      })?.id || firstId;
-      setSelectedSessionDbId((prev) => prev || trackingCandidate);
+      const firstResult = dbs.databases.results[0];
+      if (firstResult?.id) {
+        const firstId = firstResult.id;
+        setSelectedTaskDbId((prev) => prev || firstId);
+        const trackingCandidate = dbs.databases.results.find((d: any) => {
+          const name = (d?.title && d?.title[0]?.plain_text) || "";
+          return /time|tracking|timesheet|log/i.test(name);
+        })?.id || firstId;
+        setSelectedSessionDbId((prev) => prev || trackingCandidate || "");
+      }
     }
   }, [dbs]);
 
+  // Only fetch database details when needed (for preview) - lazy load
+  // Fetch task database detail when task database is selected
   const { data: taskDbDetail } = trpc.private.getDatabaseDetail.useQuery(
     { databaseId: selectedTaskDbId, email: userIdentifier },
-    { enabled: !!selectedTaskDbId && !!userIdentifier, refetchOnWindowFocus: false, retry: false }
+    { 
+      enabled: !!selectedTaskDbId && !!userIdentifier && isConnected, 
+      refetchOnWindowFocus: false, 
+      retry: false 
+    }
   );
+  
+  // Only fetch session detail if it's different from task database (reuse taskDbDetail if same)
   const { data: sessionDbDetail } = trpc.private.getDatabaseDetail.useQuery(
     { databaseId: selectedSessionDbId, email: userIdentifier },
-    { enabled: !!selectedSessionDbId && !!userIdentifier, refetchOnWindowFocus: false, retry: false }
+    { 
+      enabled: !!selectedSessionDbId && !!userIdentifier && isConnected && selectedSessionDbId !== selectedTaskDbId, 
+      refetchOnWindowFocus: false, 
+      retry: false 
+    }
   );
+  
+  // Reuse taskDbDetail if both databases are the same to avoid duplicate API calls
+  const effectiveSessionDbDetail = selectedTaskDbId === selectedSessionDbId ? taskDbDetail : sessionDbDetail;
 
+  // Only fetch task query when task database is selected (for preview items)
   const { data: taskDbQuery } = trpc.private.queryDatabase.useQuery(
     { databaseId: selectedTaskDbId, email: userIdentifier },
-    { enabled: !!selectedTaskDbId && !!userIdentifier, refetchOnWindowFocus: false, retry: false }
+    { 
+      enabled: !!selectedTaskDbId && !!userIdentifier && isConnected, 
+      refetchOnWindowFocus: false, 
+      retry: false 
+    }
   );
 
   const previewTaskItems = useMemo(() => {
@@ -158,9 +258,10 @@ export default function CreateEmbedPage() {
   const [previewSelectedQuests, setPreviewSelectedQuests] = useState<Array<{ label: string; value: string }>>([]);
   const [previewSelectedTags, setPreviewSelectedTags] = useState<Array<{ label: string; value: string; color: string }>>([]);
   useEffect(() => {
-    if (previewTaskItems.length > 0) {
-      setPreviewSelectedTaskId((prev) => prev || previewTaskItems[0].id);
-      setPreviewSelectedTaskTitle((prev) => prev || previewTaskItems[0].title);
+    if (previewTaskItems.length > 0 && previewTaskItems[0]) {
+      const firstItem = previewTaskItems[0];
+      setPreviewSelectedTaskId((prev) => prev || firstItem.id);
+      setPreviewSelectedTaskTitle((prev) => prev || firstItem.title);
     } else {
       setPreviewSelectedTaskId("");
       setPreviewSelectedTaskTitle("");
@@ -215,9 +316,9 @@ export default function CreateEmbedPage() {
     return (t && t[0]?.plain_text) || selectedTaskDbId || "";
   }, [taskDbDetail, selectedTaskDbId]);
   const sessionDbName = useMemo(() => {
-    const t = sessionDbDetail?.db?.title;
+    const t = effectiveSessionDbDetail?.db?.title;
     return (t && t[0]?.plain_text) || selectedSessionDbId || "";
-  }, [sessionDbDetail, selectedSessionDbId]);
+  }, [effectiveSessionDbDetail, selectedSessionDbId]);
 
   const taskTitlePropName = useMemo(() => {
     const props: any = taskDbDetail?.db?.properties || {};
@@ -250,36 +351,36 @@ export default function CreateEmbedPage() {
     return options.map((o: any) => ({ label: o?.name || "", value: o?.id || o?.name || "", color: o?.color || "default" }));
   }, [taskDbDetail?.db?.properties]);
   const sessionTagProps = useMemo(() => {
-    const props: any = sessionDbDetail?.db?.properties || {};
+    const props: any = effectiveSessionDbDetail?.db?.properties || {};
     return Object.entries(props)
       .filter(([, def]: any) => ["multi_select", "select"].includes(def?.type))
       .map(([n]) => n)
       .slice(0, 6);
-  }, [sessionDbDetail]);
+  }, [effectiveSessionDbDetail]);
 
   const trackingStatusPropName = useMemo(() => {
-    const props: any = sessionDbDetail?.db?.properties || {};
+    const props: any = effectiveSessionDbDetail?.db?.properties || {};
     if (props["Status"]?.type === "status" || props["Status"]?.type === "select") return "Status";
     const found = Object.entries(props).find(([, p]: any) => p?.type === "status" || p?.type === "select")?.[0] as string | undefined;
     return found;
-  }, [sessionDbDetail]);
+  }, [effectiveSessionDbDetail]);
   const trackingStartPropName = useMemo(() => {
-    const props: any = sessionDbDetail?.db?.properties || {};
+    const props: any = effectiveSessionDbDetail?.db?.properties || {};
     if (props["Start Time"]?.type === "date") return "Start Time";
     if (props["Start Date"]?.type === "date") return "Start Date";
     const found = Object.entries(props).find(([k, p]: any) => (k.toLowerCase().includes("start") || k.toLowerCase().includes("begin")) && p?.type === "date")?.[0] as string | undefined;
     return found;
-  }, [sessionDbDetail]);
+  }, [effectiveSessionDbDetail]);
   const trackingEndPropName = useMemo(() => {
-    const props: any = sessionDbDetail?.db?.properties || {};
+    const props: any = effectiveSessionDbDetail?.db?.properties || {};
     if (props["End Time"]?.type === "date") return "End Time";
     if (props["End Date"]?.type === "date") return "End Date";
     if (props["Due Date"]?.type === "date") return "Due Date";
     const found = Object.entries(props).find(([k, p]: any) => (k.toLowerCase().includes("end") || k.toLowerCase().includes("finish") || k.toLowerCase().includes("due")) && p?.type === "date")?.[0] as string | undefined;
     return found;
-  }, [sessionDbDetail]);
+  }, [effectiveSessionDbDetail]);
   const trackingDurationPropName = useMemo(() => {
-    const props: any = sessionDbDetail?.db?.properties || {};
+    const props: any = effectiveSessionDbDetail?.db?.properties || {};
     if (props["Duration"]?.type) return "Duration";
     if (props["Duration (minutes)"]?.type) return "Duration (minutes)";
     if (props["Time Worked"]?.type) return "Time Worked";
