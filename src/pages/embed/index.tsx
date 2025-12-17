@@ -35,32 +35,37 @@ export default function CreateEmbedPage() {
   const [selectedTaskDbId, setSelectedTaskDbId] = useState<string>("");
   const [selectedSessionDbId, setSelectedSessionDbId] = useState<string>("");
 
-  // Check connection status and resolve user identifier - similar to homepage
-  const checkConnectionStatus = async () => {
+  // Single unified check for connection status and user identifier (consolidates session + identifier)
+  const checkConnectionAndUser = async () => {
     try {
       // First, check local cache for immediate feedback
       const cachedUserData = NotionCache.getUserData();
       if (cachedUserData?.accessToken) {
         setIsConnected(true);
-        if (cachedUserData.email && !sessionEmail) {
+        if (cachedUserData.email) {
           setSessionEmail(cachedUserData.email);
+          setResolvedUserId(cachedUserData.email);
         }
       }
 
-      // Then verify with server
+      // Then verify with server (this endpoint returns both session and connection info)
       const response = await fetch('/api/user/identifier');
       const data = await response.json();
       
+      // Update user identifier
       if (data?.resolvedUserId) {
         setResolvedUserId(data.resolvedUserId);
       }
+      if (data?.email) {
+        setSessionEmail(data.email);
+      }
+      if (data?.isAuthenticated !== undefined) {
+        setIsAuthenticated(data.isAuthenticated);
+      }
       
-      // Server has the final say on connection status
+      // Update connection status based on server response
       if (typeof data?.hasToken === 'boolean') {
         setIsConnected(!!data.hasToken);
-        if (data.hasToken && data?.email && !sessionEmail) {
-          setSessionEmail(data.email);
-        }
       } else if (cachedUserData?.accessToken) {
         // If server check failed but we have cache, keep connection
         setIsConnected(true);
@@ -71,33 +76,38 @@ export default function CreateEmbedPage() {
       const cached = NotionCache.getUserData();
       if (cached?.accessToken) {
         setIsConnected(true);
-        if (cached.email && !sessionEmail) {
+        if (cached.email) {
           setSessionEmail(cached.email);
+          setResolvedUserId(cached.email);
         }
       }
     }
   };
 
-  // Check connection on mount and periodically
+  // Check connection and user on mount
+  useEffect(() => {
+    let mounted = true;
+    checkConnectionAndUser().then(() => {
+      if (!mounted) return;
+    });
+    return () => { mounted = false; };
+  }, []);
+
+  // Re-check connection status periodically and on window focus
   useEffect(() => {
     let mounted = true;
     let intervalId: NodeJS.Timeout | null = null;
 
     const handleFocus = () => {
       if (mounted) {
-        checkConnectionStatus();
+        checkConnectionAndUser();
       }
     };
-
-    // Initial check
-    checkConnectionStatus().then(() => {
-      if (!mounted) return;
-    });
 
     // Check every 5 minutes to ensure connection persists
     intervalId = setInterval(() => {
       if (mounted) {
-        checkConnectionStatus();
+        checkConnectionAndUser();
       }
     }, 5 * 60 * 1000); // 5 minutes
 
@@ -111,33 +121,21 @@ export default function CreateEmbedPage() {
       }
       window.removeEventListener('focus', handleFocus);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // Fetch session email separately
-  useEffect(() => {
-    let mounted = true;
-    fetch('/api/session')
-      .then((r) => r.json())
-      .then((data) => {
-        if (!mounted) return;
-        if (data?.isAuthenticated) {
-          setIsAuthenticated(true);
-          if (data?.email && !sessionEmail) {
-            setSessionEmail(data.email);
-          }
-        } else {
-          setIsAuthenticated(false);
-        }
-      })
-      .catch(() => undefined);
-    return () => { mounted = false; };
   }, []);
 
   // Fetch Notion pages using resolved user identifier
   useEffect(() => {
     const run = async () => {
-      if (!isConnected) {
+      // Wait for connection check to complete and user identifier to be resolved
+      const cacheEmail = typeof window !== "undefined" ? NotionCache.getUserData()?.email : null;
+      const email = (resolvedUserId && resolvedUserId !== "notion-user") 
+        ? resolvedUserId 
+        : (sessionEmail || cacheEmail);
+      
+      // If we have a cached token or email, try to load pages even if isConnected isn't set yet
+      const hasCachedToken = typeof window !== "undefined" ? !!NotionCache.getUserData()?.accessToken : false;
+      
+      if (!email && !hasCachedToken) {
         setPages([]);
         setSelectedPageId("");
         return;
@@ -145,43 +143,40 @@ export default function CreateEmbedPage() {
 
       try {
         setLoadingPages(true);
-        // Use resolvedUserId first, then sessionEmail, then cache
-        const cacheEmail = typeof window !== "undefined" ? NotionCache.getUserData()?.email : null;
-        const email = (resolvedUserId && resolvedUserId !== "notion-user") 
-          ? resolvedUserId 
-          : (sessionEmail || cacheEmail);
-        
-        if (!email) {
+        const emailToUse = email || cacheEmail;
+        if (!emailToUse) {
           setPages([]);
           setSelectedPageId("");
           return;
         }
         
-        const data = await getConnectedPages({ userId: email });
+        const data = await getConnectedPages({ userId: emailToUse });
         setPages(data.items);
         if (data.items[0]) setSelectedPageId(data.items[0].id);
+        // If pages loaded successfully, ensure connection status is set
+        if (!isConnected) {
+          setIsConnected(true);
+        }
       } catch (e: any) {
         console.error("Failed to load Notion pages", e);
         // Don't reset connection status on API errors - might be temporary
-        // Only clear pages if it's a 401 and we're sure the user is disconnected
         if (e?.response?.status === 401) {
           // Check connection status again before clearing
           const cached = NotionCache.getUserData();
           if (!cached?.accessToken) {
-            // Only clear if we truly don't have a token
             setPages([]);
-            // Re-check connection status
-            checkConnectionStatus().catch(() => undefined);
+            checkConnectionAndUser().catch(() => undefined);
           }
         } else {
-          // For other errors, just clear pages but keep connection status
           setPages([]);
         }
       } finally {
         setLoadingPages(false);
       }
     };
-    if (isConnected) {
+    
+    // Run when we have connection status or user identifier
+    if (isConnected || resolvedUserId || sessionEmail) {
       run();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

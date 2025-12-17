@@ -1,6 +1,7 @@
 import React from "react";
 import { trpc } from "../utils/trpc";
 import { useRouter } from "next/router";
+import Link from "next/link";
 import { useEffect, useState } from "react";
 import ContentLoader from "react-content-loader";
 import DatabaseCard from "../Components/DatabaseCard";
@@ -12,38 +13,12 @@ import { NotionCache } from "../utils/notionCache";
 function Home() {
   const [showModal, setModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
-  const [cachedData, setCachedData] = useState<any>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [accessToken, setAccessToken] = useState<string | undefined>(undefined);
   const router = useRouter();
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
   const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
-  const [creatingDemo, setCreatingDemo] = useState(false);
   const [disconnectMsg, setDisconnectMsg] = useState<string | null>(null);
-  const createDemoWorkspace = async () => {
-    try {
-      setCreatingDemo(true);
-      const userId = (NotionCache.getUserData()?.email) || sessionEmail || 'notion-user';
-      const resp = await fetch('/api/notion/create-demo', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId })
-      });
-      const json = await resp.json().catch(() => ({}));
-      if (!resp.ok) {
-        console.error('Failed to create demo workspace', json);
-        setErrorMessage(json?.error || 'Failed to create demo workspace');
-        return;
-      }
-      if (json?.databases && json?.workspace) {
-        setIsConnected(true);
-      }
-    } catch (e) {
-      setErrorMessage('Failed to create demo workspace');
-    } finally {
-      setCreatingDemo(false);
-    }
-  };
 
   // Handle OAuth callback and cache data
   useEffect(() => {
@@ -70,61 +45,45 @@ function Home() {
       }
       return;
     }
-  }, [router.query, router.isReady]);
+  }, [router]);
 
-  // Fetch session email to scope Notion queries to the logged-in user
-  useEffect(() => {
-    let mounted = true;
-    fetch('/api/session')
-      .then((r) => r.json())
-      .then((data) => {
-        if (!mounted) return;
-        if (data?.isAuthenticated) {
-          setSessionEmail(data?.email || null);
-        } else {
-          setSessionEmail(null);
-        }
-      })
-      .catch(() => undefined);
-    return () => { mounted = false; };
-  }, []);
-
-  // Check connection status - check both local cache and server
-  const checkConnectionStatus = async () => {
+  // Single unified check for connection status and user identifier
+  const checkConnectionAndUser = async () => {
     try {
       // First, check local cache for immediate feedback
       const cachedUserData = NotionCache.getUserData();
       if (cachedUserData?.accessToken) {
-        // If we have cached data, optimistically set as connected
         setIsConnected(true);
         setAccessToken(cachedUserData.accessToken);
+        if (cachedUserData.email) {
+          setSessionEmail(cachedUserData.email);
+          setResolvedUserId(cachedUserData.email);
+        }
       }
 
-      // Then verify with server
+      // Then verify with server (this endpoint returns both session and connection info)
       const response = await fetch('/api/user/identifier');
       const data = await response.json();
       
+      // Update user identifier
       if (data?.resolvedUserId) {
         setResolvedUserId(data.resolvedUserId);
       }
+      if (data?.email) {
+        setSessionEmail(data.email);
+      }
       
-      // Server has the final say on connection status
+      // Update connection status based on server response
       if (typeof data?.hasToken === 'boolean') {
         setIsConnected(!!data.hasToken);
         if (data.hasToken) {
-          // If server confirms connection, ensure we have the token
           const cached = NotionCache.getUserData();
           if (cached?.accessToken) {
             setAccessToken(cached.accessToken);
-          } else if (data?.resolvedUserId) {
-            // If no cache but server says connected, token is on server side
-            // The API calls will fetch it from server using email
-            setIsConnected(true);
           }
         }
       } else if (cachedUserData?.accessToken) {
         // If server check failed but we have cache, keep connection
-        // This handles cases where server is temporarily unavailable
         setIsConnected(true);
       }
     } catch (error) {
@@ -134,14 +93,18 @@ function Home() {
       if (cached?.accessToken) {
         setIsConnected(true);
         setAccessToken(cached.accessToken);
+        if (cached.email) {
+          setSessionEmail(cached.email);
+          setResolvedUserId(cached.email);
+        }
       }
     }
   };
 
-  // Check connection on mount
+  // Check connection and user on mount
   useEffect(() => {
     let mounted = true;
-    checkConnectionStatus().then(() => {
+    checkConnectionAndUser().then(() => {
       if (!mounted) return;
     });
     return () => { mounted = false; };
@@ -154,14 +117,14 @@ function Home() {
 
     const handleFocus = () => {
       if (mounted) {
-        checkConnectionStatus();
+        checkConnectionAndUser();
       }
     };
 
     // Check every 5 minutes to ensure connection persists
     intervalId = setInterval(() => {
       if (mounted) {
-        checkConnectionStatus();
+        checkConnectionAndUser();
       }
     }, 5 * 60 * 1000); // 5 minutes
 
@@ -188,8 +151,8 @@ function Home() {
     { email: userIdentifier, accessToken },
     {
       refetchOnWindowFocus: false,
-      retry: false, // Don't retry on error
-      enabled: shouldFetch, // Only fetch when connected
+      retry: false,
+      enabled: shouldFetch,
     }
   );
 
@@ -200,18 +163,11 @@ function Home() {
     error.message?.includes("Connection to Notion was lost") ||
     error.message?.includes("socket hang up")
   );
-
-  // Check if user needs to connect to Notion
-  const isUnauthorized = !isConnected;
   
-  // Always use fresh API data
+  // Display logic: Show databases if connected OR if we're loading (to avoid flicker)
+  const shouldShowDatabases = isConnected || (isFetching && !!userIdentifier);
+  const isLoadingDatabases = isFetching && !data;
   const displayData = data;
-  
-  // Show databases view only when connected
-  const shouldShowDatabases = isConnected && (!!displayData || isFetching);
-  
-  // Single source of truth for loading state
-  const isLoadingDatabases = isFetching && !displayData;
 
   return (
     <div className="container mx-auto flex min-h-screen flex-col items-center p-4">
@@ -241,12 +197,12 @@ function Home() {
               >
                 Refresh databases
               </button>
-              <a
+              <Link
                 href="/embed"
                 className="text-sm rounded bg-indigo-600 px-3 py-1 font-medium text-white hover:bg-indigo-500"
               >
                 Create Embed
-              </a>
+              </Link>
                 <button
                   onClick={async () => {
                     try {
@@ -261,7 +217,6 @@ function Home() {
                     NotionCache.clearUserData();
                     NotionCache.clearDatabaseCache();
                     setIsConnected(false);
-                    setCachedData(null);
                     setDisconnectMsg('Disconnected');
                   } catch {
                     setDisconnectMsg('Failed to disconnect');
@@ -335,7 +290,7 @@ function Home() {
         </div>
       ) : (
         <div>
-          <Header imgSrc={null} />
+          <Header imgSrc={undefined} />
           {(errorMessage || connectionError) && (
             <div className="mt-4 w-full max-w-md rounded-md bg-red-50 p-4 border border-red-200">
               <div className="flex">
@@ -351,7 +306,6 @@ function Home() {
               <button
                 onClick={() => {
                   setErrorMessage(null);
-                  // For connection errors, we can suggest retrying
                   if (connectionError) {
                     window.location.reload();
                   }
