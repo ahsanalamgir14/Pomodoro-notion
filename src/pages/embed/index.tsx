@@ -153,7 +153,9 @@ export default function CreateEmbedPage() {
           return;
         }
         
-        const data = await getConnectedPages({ userId: emailToUse });
+        // Pass accessToken to API to bypass Firestore latency
+        const tokenToUse = accessToken || (typeof window !== "undefined" ? NotionCache.getUserData()?.accessToken : undefined);
+        const data = await getConnectedPages({ userId: emailToUse, accessToken: tokenToUse });
         setPages(data.items);
         if (data.items[0]) setSelectedPageId(data.items[0].id);
         // If pages loaded successfully, ensure connection status is set
@@ -333,7 +335,14 @@ export default function CreateEmbedPage() {
           : Object.entries(props).find(([k, p]: any) => k?.toLowerCase?.().includes("quest") && p?.type === "relation")?.[0];
       if (!questsRelProp) { setPreviewQuestChips([]); if (previewSelectedQuests.length === 0) setPreviewSelectedQuests([]); return; }
       if (!userIdentifier) { setPreviewQuestChips([]); return; }
-      const qs = new URLSearchParams({ userId: userIdentifier, pageId: previewSelectedTaskId, relationName: questsRelProp });
+      
+      const tokenToUse = accessToken || (typeof window !== "undefined" ? NotionCache.getUserData()?.accessToken : undefined);
+      const qs = new URLSearchParams({ 
+        userId: userIdentifier, 
+        pageId: previewSelectedTaskId, 
+        relationName: questsRelProp,
+        ...(tokenToUse ? { accessToken: tokenToUse } : {})
+      });
       fetch(`/api/notion/page-relations?${qs.toString()}`)
         .then((r) => r.ok ? r.json() : null)
         .then((data) => {

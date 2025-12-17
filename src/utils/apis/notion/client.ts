@@ -102,9 +102,13 @@ export const updateTaskStatus = async (params: { userId: string; pageId: string;
   }
 };
 
-export const getConnectedPages = async (params: { userId: string; query?: string }) => {
+export const getConnectedPages = async (params: { userId: string; query?: string; accessToken?: string }) => {
   try {
-    const query = new URLSearchParams({ userId: params.userId, ...(params.query ? { query: params.query } : {}) });
+    const query = new URLSearchParams({ 
+      userId: params.userId, 
+      ...(params.query ? { query: params.query } : {}),
+      ...(params.accessToken ? { accessToken: params.accessToken } : {})
+    });
     const response = await PomodoroClient.get(`/api/notion/pages?${query.toString()}`);
     return response.data as { count: number; items: Array<{ id: string; title: string; url?: string }> };
   } catch (error) {

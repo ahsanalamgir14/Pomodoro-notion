@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
     }
 
-    const { userId, query: q } = req.query as { userId?: string; query?: string };
+    const { userId, query: q, accessToken } = req.query as { userId?: string; query?: string; accessToken?: string };
 
     // Try multiple ways to resolve user identifier (same as other endpoints)
     const session = await getServerSession(req as any, res as any, authOptions).catch(() => null);
@@ -36,19 +36,21 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       "notion-user"
     ].filter(Boolean) as string[];
 
-    let token: string | null = null;
+    let token: string | null = accessToken || null;
 
     // Try each candidate until we find a valid token
-    for (const id of candidates) {
-      try {
-        const u = await fetchNotionUser(id!);
-        if (u?.accessToken) {
-          token = u.accessToken;
-          break;
+    if (!token) {
+      for (const id of candidates) {
+        try {
+          const u = await fetchNotionUser(id!);
+          if (u?.accessToken) {
+            token = u.accessToken;
+            break;
+          }
+        } catch (e) {
+          // Continue to next candidate
+          continue;
         }
-      } catch (e) {
-        // Continue to next candidate
-        continue;
       }
     }
 
