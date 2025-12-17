@@ -59,11 +59,12 @@ export const privateRouter = router({
       z.object({
         databaseId: z.string(),
         email: z.string(),
+        accessToken: z.string().optional(),
       })
     )
-    .query(async ({ input: { databaseId, email } }) => {
+    .query(async ({ input: { databaseId, email, accessToken } }) => {
       const userData = await fetchNotionUser(email);
-      const token = userData?.accessToken || (email === "notion-user" ? process.env.NOTION_TOKEN : undefined);
+      const token = accessToken || userData?.accessToken || (email === "notion-user" ? process.env.NOTION_TOKEN : undefined);
       if (!token) {
         throw new Error("User not found or not connected to Notion");
       }
@@ -82,11 +83,12 @@ export const privateRouter = router({
       z.object({
         databaseId: z.string(),
         email: z.string(),
+        accessToken: z.string().optional(),
       })
     )
-    .query(async ({ input: { databaseId, email } }) => {
+    .query(async ({ input: { databaseId, email, accessToken } }) => {
       const userData = await fetchNotionUser(email);
-      const token = userData?.accessToken || (email === "notion-user" ? process.env.NOTION_TOKEN : undefined);
+      const token = accessToken || userData?.accessToken || (email === "notion-user" ? process.env.NOTION_TOKEN : undefined);
       if (!token) {
         throw new Error("User not found or not connected to Notion");
       }

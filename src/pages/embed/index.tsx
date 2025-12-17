@@ -16,6 +16,7 @@ export default function CreateEmbedPage() {
   const [theme, setTheme] = useState<ThemeType>("light");
   const [isConnected, setIsConnected] = useState(false);
   const [resolvedUserId, setResolvedUserId] = useState<string>("");
+  const [accessToken, setAccessToken] = useState<string | undefined>(undefined);
 
   // Style options
   const [widgetBg, setWidgetBg] = useState<string>("#ffffff");
@@ -42,6 +43,7 @@ export default function CreateEmbedPage() {
       const cachedUserData = NotionCache.getUserData();
       if (cachedUserData?.accessToken) {
         setIsConnected(true);
+        setAccessToken(cachedUserData.accessToken);
         if (cachedUserData.email) {
           setSessionEmail(cachedUserData.email);
           setResolvedUserId(cachedUserData.email);
@@ -76,6 +78,7 @@ export default function CreateEmbedPage() {
       const cached = NotionCache.getUserData();
       if (cached?.accessToken) {
         setIsConnected(true);
+        setAccessToken(cached.accessToken);
         if (cached.email) {
           setSessionEmail(cached.email);
           setResolvedUserId(cached.email);
@@ -218,7 +221,7 @@ export default function CreateEmbedPage() {
   }, [resolvedUserId, sessionEmail]);
 
   const { data: dbs } = trpc.private.getDatabases.useQuery(
-    { email: userIdentifier },
+    { email: userIdentifier, accessToken },
     { 
       refetchOnWindowFocus: false, 
       retry: false, 
@@ -243,7 +246,7 @@ export default function CreateEmbedPage() {
   // Only fetch database details when needed (for preview) - lazy load
   // Fetch task database detail when task database is selected
   const { data: taskDbDetail } = trpc.private.getDatabaseDetail.useQuery(
-    { databaseId: selectedTaskDbId, email: userIdentifier },
+    { databaseId: selectedTaskDbId, email: userIdentifier, accessToken },
     { 
       enabled: !!selectedTaskDbId && !!userIdentifier && isConnected, 
       refetchOnWindowFocus: false, 
@@ -253,7 +256,7 @@ export default function CreateEmbedPage() {
   
   // Only fetch session detail if it's different from task database (reuse taskDbDetail if same)
   const { data: sessionDbDetail } = trpc.private.getDatabaseDetail.useQuery(
-    { databaseId: selectedSessionDbId, email: userIdentifier },
+    { databaseId: selectedSessionDbId, email: userIdentifier, accessToken },
     { 
       enabled: !!selectedSessionDbId && !!userIdentifier && isConnected && selectedSessionDbId !== selectedTaskDbId, 
       refetchOnWindowFocus: false, 
@@ -266,7 +269,7 @@ export default function CreateEmbedPage() {
 
   // Only fetch task query when task database is selected (for preview items)
   const { data: taskDbQuery } = trpc.private.queryDatabase.useQuery(
-    { databaseId: selectedTaskDbId, email: userIdentifier },
+    { databaseId: selectedTaskDbId, email: userIdentifier, accessToken },
     { 
       enabled: !!selectedTaskDbId && !!userIdentifier && isConnected, 
       refetchOnWindowFocus: false, 

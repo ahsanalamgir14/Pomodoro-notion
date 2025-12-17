@@ -158,6 +158,16 @@ export default function Pages({
   const [, projectDispatch] = useProjectState();
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
   const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    try {
+      const cached = NotionCache.getUserData();
+      if (cached?.accessToken) {
+        setAccessToken(cached.accessToken);
+      }
+    } catch {}
+  }, []);
 
   useEffect(() => {
     let mounted = true;
