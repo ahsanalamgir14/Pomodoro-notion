@@ -63,6 +63,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
 
     return res.status(200).json({ relationName: propName, items });
   } catch (error: any) {
+    console.error("Notion page relations API error:", error?.message || error);
+    if (error?.message?.includes("token is invalid") || error?.status === 401 || error?.code === "unauthorized") {
+      return res.status(401).json({ error: "Invalid Notion token", details: error.message });
+   }
     return res.status(500).json({ error: "Failed to fetch page relations", details: error?.message || String(error) });
   }
 }

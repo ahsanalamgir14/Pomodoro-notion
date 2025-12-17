@@ -166,12 +166,12 @@ export default function CreateEmbedPage() {
         console.error("Failed to load Notion pages", e);
         // Don't reset connection status on API errors - might be temporary
         if (e?.response?.status === 401) {
-          // Check connection status again before clearing
-          const cached = NotionCache.getUserData();
-          if (!cached?.accessToken) {
-            setPages([]);
-            checkConnectionAndUser().catch(() => undefined);
-          }
+          console.log("Token invalid, clearing cache");
+          NotionCache.clearUserData();
+          setIsConnected(false);
+          setAccessToken(undefined);
+          setPages([]);
+          checkConnectionAndUser().catch(() => undefined);
         } else {
           setPages([]);
         }

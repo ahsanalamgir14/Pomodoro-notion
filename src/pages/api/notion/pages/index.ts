@@ -97,6 +97,9 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     return res.status(200).json({ count: items.length, items });
   } catch (error: any) {
     console.error("Notion pages API error:", error?.message || error);
+    if (error?.message?.includes("token is invalid") || error?.status === 401 || error?.code === "unauthorized") {
+       return res.status(401).json({ error: "Invalid Notion token", details: error.message });
+    }
     return res.status(500).json({ error: "Failed to list Notion pages", details: error?.message || String(error) });
   }
 }
