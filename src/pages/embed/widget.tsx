@@ -144,6 +144,17 @@ export default function EmbedWidget() {
     const cached = NotionCache.getUserData()?.email;
     return cached || '';
   });
+  const [accessToken, setAccessToken] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    try {
+      const cached = NotionCache.getUserData();
+      if (cached?.accessToken) {
+        setAccessToken(cached.accessToken);
+      }
+    } catch {}
+  }, []);
+
   useEffect(() => {
     fetch('/api/session')
       .then(r => r.json())
@@ -157,7 +168,7 @@ export default function EmbedWidget() {
 
   // Fetch databases via tRPC (same as home page style)
   const { data: dbData } = trpc.private.getDatabases.useQuery(
-    { email: userIdentifier },
+    { email: userIdentifier, accessToken },
     { refetchOnWindowFocus: false, retry: false, enabled: !!userIdentifier }
   );
 
@@ -176,13 +187,13 @@ export default function EmbedWidget() {
 
   // Fetch tasks (pages) for selected database
   const { data: dbQueryData } = trpc.private.queryDatabase.useQuery(
-    { email: userIdentifier, databaseId: selectedDbId },
+    { email: userIdentifier, databaseId: selectedDbId, accessToken },
     { enabled: !!selectedDbId, refetchOnWindowFocus: false, retry: false }
   );
 
   // Fetch database detail to get schema (e.g., Tags options)
   const { data: dbDetailData } = trpc.private.getDatabaseDetail.useQuery(
-    { email: userIdentifier, databaseId: selectedDbId },
+    { email: userIdentifier, databaseId: selectedDbId, accessToken },
     { enabled: !!selectedDbId, refetchOnWindowFocus: false, retry: false }
   );
 
