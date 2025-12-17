@@ -36,6 +36,26 @@ export default function CreateEmbedPage() {
   const [selectedTaskDbId, setSelectedTaskDbId] = useState<string>("");
   const [selectedSessionDbId, setSelectedSessionDbId] = useState<string>("");
 
+  // Databases and tasks for selections - use consistent user identifier
+  const userIdentifier = useMemo(() => {
+    // Prefer resolvedUserId (from server), but exclude "notion-user" fallback
+    if (resolvedUserId && resolvedUserId !== "notion-user") {
+      return resolvedUserId;
+    }
+    // Then use sessionEmail
+    if (sessionEmail) {
+      return sessionEmail;
+    }
+    // Finally fall back to cache
+    if (typeof window !== "undefined") {
+      const cached = NotionCache.getUserData();
+      if (cached?.email) {
+        return cached.email;
+      }
+    }
+    return "";
+  }, [resolvedUserId, sessionEmail]);
+
   // Single unified check for connection status and user identifier (consolidates session + identifier)
   const checkConnectionAndUser = async () => {
     try {
@@ -127,34 +147,38 @@ export default function CreateEmbedPage() {
   }, []);
 
   // Fetch Notion pages using resolved user identifier
+  const lastFetchParams = useRef<{ id: string; token: string } | null>(null);
+
   useEffect(() => {
     const run = async () => {
-      // Wait for connection check to complete and user identifier to be resolved
-      const cacheEmail = typeof window !== "undefined" ? NotionCache.getUserData()?.email : null;
-      const email = (resolvedUserId && resolvedUserId !== "notion-user") 
-        ? resolvedUserId 
-        : (sessionEmail || cacheEmail);
-      
       // If we have a cached token or email, try to load pages even if isConnected isn't set yet
       const hasCachedToken = typeof window !== "undefined" ? !!NotionCache.getUserData()?.accessToken : false;
       
-      if (!email && !hasCachedToken) {
+      if (!userIdentifier && !hasCachedToken && !accessToken) {
         setPages([]);
         setSelectedPageId("");
         return;
       }
 
+      const emailToUse = userIdentifier;
+      // Pass accessToken to API to bypass Firestore latency
+      const tokenToUse = accessToken || (typeof window !== "undefined" ? NotionCache.getUserData()?.accessToken : undefined) || "";
+
+      if (!emailToUse && !tokenToUse) {
+         setPages([]);
+         setSelectedPageId("");
+         return;
+      }
+
+      // Prevent duplicate fetches for same params
+      if (lastFetchParams.current?.id === emailToUse && lastFetchParams.current?.token === tokenToUse) {
+        return;
+      }
+
       try {
         setLoadingPages(true);
-        const emailToUse = email || cacheEmail;
-        if (!emailToUse) {
-          setPages([]);
-          setSelectedPageId("");
-          return;
-        }
+        lastFetchParams.current = { id: emailToUse, token: tokenToUse };
         
-        // Pass accessToken to API to bypass Firestore latency
-        const tokenToUse = accessToken || (typeof window !== "undefined" ? NotionCache.getUserData()?.accessToken : undefined);
         const data = await getConnectedPages({ userId: emailToUse, accessToken: tokenToUse });
         setPages(data.items);
         if (data.items[0]) setSelectedPageId(data.items[0].id);
@@ -164,6 +188,7 @@ export default function CreateEmbedPage() {
         }
       } catch (e: any) {
         console.error("Failed to load Notion pages", e);
+        lastFetchParams.current = null; // Allow retry on error
         // Don't reset connection status on API errors - might be temporary
         if (e?.response?.status === 401) {
           console.log("Token invalid, clearing cache");
@@ -181,11 +206,11 @@ export default function CreateEmbedPage() {
     };
     
     // Run when we have connection status or user identifier
-    if (isConnected || resolvedUserId || sessionEmail) {
+    if (isConnected || userIdentifier || accessToken) {
       run();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isConnected, resolvedUserId, sessionEmail]);
+  }, [isConnected, userIdentifier, accessToken]);
 
   // Load saved embeds when authenticated
   useEffect(() => {
