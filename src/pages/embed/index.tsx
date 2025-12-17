@@ -153,7 +153,9 @@ export default function CreateEmbedPage() {
           return;
         }
         
-        const data = await getConnectedPages({ userId: emailToUse });
+        // Pass accessToken to API to bypass Firestore latency
+        const tokenToUse = accessToken || (typeof window !== "undefined" ? NotionCache.getUserData()?.accessToken : undefined);
+        const data = await getConnectedPages({ userId: emailToUse, accessToken: tokenToUse });
         setPages(data.items);
         if (data.items[0]) setSelectedPageId(data.items[0].id);
         // If pages loaded successfully, ensure connection status is set
