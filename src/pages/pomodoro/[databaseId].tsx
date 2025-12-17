@@ -158,7 +158,11 @@ export default function Pages({
   const [, projectDispatch] = useProjectState();
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
   const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
-  const [accessToken, setAccessToken] = useState<string | undefined>(undefined);
+  const [accessToken, setAccessToken] = useState<string | undefined>(() => {
+    if (typeof window === 'undefined') return undefined;
+    const cached = NotionCache.getUserData();
+    return cached?.accessToken || undefined;
+  });
 
   useEffect(() => {
     try {
@@ -199,16 +203,16 @@ export default function Pages({
     : (sessionEmail || (typeof window !== 'undefined' ? (localStorage.getItem('notion_user_data') ? JSON.parse(localStorage.getItem('notion_user_data') as string)?.email : null) : null) || "");
 
   const { data: apiQuery, isFetching: fetchingQuery } = trpc.private.queryDatabase.useQuery(
-    { databaseId, email: userIdentifier },
-    { enabled: !!userIdentifier, refetchOnWindowFocus: false, retry: false }
+    { databaseId, email: userIdentifier, accessToken },
+    { enabled: !!userIdentifier && (!!accessToken || !!userIdentifier), refetchOnWindowFocus: false, retry: false }
   );
   const { data: apiDetail, isFetching: fetchingDetail } = trpc.private.getDatabaseDetail.useQuery(
-    { databaseId, email: userIdentifier },
-    { enabled: !!userIdentifier, refetchOnWindowFocus: false, retry: false }
+    { databaseId, email: userIdentifier, accessToken },
+    { enabled: !!userIdentifier && (!!accessToken || !!userIdentifier), refetchOnWindowFocus: false, retry: false }
   );
   const { data: apiList } = trpc.private.getDatabases.useQuery(
-    { email: userIdentifier },
-    { enabled: !!userIdentifier, refetchOnWindowFocus: false, retry: false }
+    { email: userIdentifier, accessToken },
+    { enabled: !!userIdentifier && (!!accessToken || !!userIdentifier), refetchOnWindowFocus: false, retry: false }
   );
 
   const database = apiQuery?.database || ssrDatabase;

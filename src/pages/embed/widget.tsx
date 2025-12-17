@@ -144,7 +144,11 @@ export default function EmbedWidget() {
     const cached = NotionCache.getUserData()?.email;
     return cached || '';
   });
-  const [accessToken, setAccessToken] = useState<string | undefined>(undefined);
+  const [accessToken, setAccessToken] = useState<string | undefined>(() => {
+    if (typeof window === 'undefined') return undefined;
+    const cached = NotionCache.getUserData();
+    return cached?.accessToken || undefined;
+  });
 
   useEffect(() => {
     try {
@@ -169,7 +173,7 @@ export default function EmbedWidget() {
   // Fetch databases via tRPC (same as home page style)
   const { data: dbData, error: dbError } = trpc.private.getDatabases.useQuery(
     { email: userIdentifier, accessToken },
-    { refetchOnWindowFocus: false, retry: false, enabled: !!userIdentifier }
+    { refetchOnWindowFocus: false, retry: false, enabled: !!userIdentifier && (!!accessToken || !!userIdentifier) }
   );
 
   useEffect(() => {
@@ -188,13 +192,13 @@ export default function EmbedWidget() {
   // Fetch tasks (pages) for selected database
   const { data: dbQueryData, error: queryError } = trpc.private.queryDatabase.useQuery(
     { email: userIdentifier, databaseId: selectedDbId, accessToken },
-    { enabled: !!selectedDbId, refetchOnWindowFocus: false, retry: false }
+    { enabled: !!selectedDbId && (!!accessToken || !!userIdentifier), refetchOnWindowFocus: false, retry: false }
   );
 
   // Fetch database detail to get schema (e.g., Tags options)
   const { data: dbDetailData, error: detailError } = trpc.private.getDatabaseDetail.useQuery(
     { email: userIdentifier, databaseId: selectedDbId, accessToken },
-    { enabled: !!selectedDbId, refetchOnWindowFocus: false, retry: false }
+    { enabled: !!selectedDbId && (!!accessToken || !!userIdentifier), refetchOnWindowFocus: false, retry: false }
   );
 
   // Handle API token errors
