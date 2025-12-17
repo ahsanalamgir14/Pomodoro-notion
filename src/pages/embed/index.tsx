@@ -227,25 +227,6 @@ export default function CreateEmbedPage() {
     return () => { mounted = false; };
   }, [isAuthenticated, sessionEmail]);
 
-  // Databases and tasks for selections - use consistent user identifier
-  const userIdentifier = useMemo(() => {
-    // Prefer resolvedUserId (from server), but exclude "notion-user" fallback
-    if (resolvedUserId && resolvedUserId !== "notion-user") {
-      return resolvedUserId;
-    }
-    // Then use sessionEmail
-    if (sessionEmail) {
-      return sessionEmail;
-    }
-    // Finally fall back to cache
-    if (typeof window !== "undefined") {
-      const cached = NotionCache.getUserData();
-      if (cached?.email) {
-        return cached.email;
-      }
-    }
-    return "";
-  }, [resolvedUserId, sessionEmail]);
 
   const { data: dbs } = trpc.private.getDatabases.useQuery(
     { email: userIdentifier, accessToken },
