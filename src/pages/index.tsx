@@ -75,11 +75,19 @@ function Home() {
       
       // Update connection status based on server response
       if (typeof data?.hasToken === 'boolean') {
-        setIsConnected(!!data.hasToken);
         if (data.hasToken) {
+          setIsConnected(true);
           const cached = NotionCache.getUserData();
           if (cached?.accessToken) {
             setAccessToken(cached.accessToken);
+          }
+        } else {
+          // Server says no token. Check if we have one locally.
+          if (cachedUserData?.accessToken) {
+            console.log("Server says disconnected, but local cache has token. Keeping connected.");
+            setIsConnected(true);
+          } else {
+            setIsConnected(false);
           }
         }
       } else if (cachedUserData?.accessToken) {
