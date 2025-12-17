@@ -78,13 +78,39 @@ export default function CreateEmbedPage() {
     }
   };
 
-  // Check connection on mount
+  // Check connection on mount and periodically
   useEffect(() => {
     let mounted = true;
+    let intervalId: NodeJS.Timeout | null = null;
+
+    const handleFocus = () => {
+      if (mounted) {
+        checkConnectionStatus();
+      }
+    };
+
+    // Initial check
     checkConnectionStatus().then(() => {
       if (!mounted) return;
     });
-    return () => { mounted = false; };
+
+    // Check every 5 minutes to ensure connection persists
+    intervalId = setInterval(() => {
+      if (mounted) {
+        checkConnectionStatus();
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+
+    // Also check when window regains focus
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      mounted = false;
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+      window.removeEventListener('focus', handleFocus);
+    };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
@@ -134,9 +160,23 @@ export default function CreateEmbedPage() {
         const data = await getConnectedPages({ userId: email });
         setPages(data.items);
         if (data.items[0]) setSelectedPageId(data.items[0].id);
-      } catch (e) {
+      } catch (e: any) {
         console.error("Failed to load Notion pages", e);
-        setPages([]);
+        // Don't reset connection status on API errors - might be temporary
+        // Only clear pages if it's a 401 and we're sure the user is disconnected
+        if (e?.response?.status === 401) {
+          // Check connection status again before clearing
+          const cached = NotionCache.getUserData();
+          if (!cached?.accessToken) {
+            // Only clear if we truly don't have a token
+            setPages([]);
+            // Re-check connection status
+            checkConnectionStatus().catch(() => undefined);
+          }
+        } else {
+          // For other errors, just clear pages but keep connection status
+          setPages([]);
+        }
       } finally {
         setLoadingPages(false);
       }
