@@ -9,17 +9,22 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
     }
 
-    const { userId, pageId, relationName } = req.query as { userId?: string; pageId?: string; relationName?: string };
+    const { userId, pageId, relationName, accessToken } = req.query as { userId?: string; pageId?: string; relationName?: string; accessToken?: string };
     if (!userId || !pageId) {
       return res.status(400).json({ error: "Missing required query params", required: ["userId", "pageId"] });
     }
 
-    const userData = await fetchNotionUser(userId);
-    if (!userData?.accessToken) {
+    let token = accessToken;
+    if (!token) {
+      const userData = await fetchNotionUser(userId);
+      token = userData?.accessToken;
+    }
+
+    if (!token) {
       return res.status(401).json({ error: "User not connected to Notion or token missing" });
     }
 
-    const notion = new Client({ auth: userData.accessToken });
+    const notion = new Client({ auth: token });
 
     // Retrieve page with properties
     const page: any = await notion.pages.retrieve({ page_id: pageId });
