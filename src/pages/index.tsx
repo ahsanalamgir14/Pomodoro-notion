@@ -70,9 +70,6 @@ function Home() {
       }
       return;
     }
-    
-    // Do not use local cache for connection or databases; rely on server identifier below
-    setIsConnected(false);
   }, [router.query, router.isReady]);
 
   // Fetch session email to scope Notion queries to the logged-in user
@@ -92,26 +89,92 @@ function Home() {
     return () => { mounted = false; };
   }, []);
 
-  useEffect(() => {
-    let mounted = true;
-    fetch('/api/user/identifier')
-      .then((r) => r.json())
-      .then((d) => {
-        if (!mounted) return;
-        setResolvedUserId(d?.resolvedUserId || null);
-        if (typeof d?.hasToken === 'boolean') {
-          setIsConnected(!!d.hasToken);
-          // If connected, try to load token from cache
-          if (d.hasToken) {
-            const cached = NotionCache.getUserData();
-            if (cached?.accessToken) {
-              setAccessToken(cached.accessToken);
-            }
+  // Check connection status - check both local cache and server
+  const checkConnectionStatus = async () => {
+    try {
+      // First, check local cache for immediate feedback
+      const cachedUserData = NotionCache.getUserData();
+      if (cachedUserData?.accessToken) {
+        // If we have cached data, optimistically set as connected
+        setIsConnected(true);
+        setAccessToken(cachedUserData.accessToken);
+      }
+
+      // Then verify with server
+      const response = await fetch('/api/user/identifier');
+      const data = await response.json();
+      
+      if (data?.resolvedUserId) {
+        setResolvedUserId(data.resolvedUserId);
+      }
+      
+      // Server has the final say on connection status
+      if (typeof data?.hasToken === 'boolean') {
+        setIsConnected(!!data.hasToken);
+        if (data.hasToken) {
+          // If server confirms connection, ensure we have the token
+          const cached = NotionCache.getUserData();
+          if (cached?.accessToken) {
+            setAccessToken(cached.accessToken);
+          } else if (data?.resolvedUserId) {
+            // If no cache but server says connected, token is on server side
+            // The API calls will fetch it from server using email
+            setIsConnected(true);
           }
         }
-      })
-      .catch(() => undefined);
+      } else if (cachedUserData?.accessToken) {
+        // If server check failed but we have cache, keep connection
+        // This handles cases where server is temporarily unavailable
+        setIsConnected(true);
+      }
+    } catch (error) {
+      console.error('Failed to check connection status:', error);
+      // On error, fall back to cache if available
+      const cached = NotionCache.getUserData();
+      if (cached?.accessToken) {
+        setIsConnected(true);
+        setAccessToken(cached.accessToken);
+      }
+    }
+  };
+
+  // Check connection on mount
+  useEffect(() => {
+    let mounted = true;
+    checkConnectionStatus().then(() => {
+      if (!mounted) return;
+    });
     return () => { mounted = false; };
+  }, []);
+
+  // Re-check connection status periodically and on window focus
+  useEffect(() => {
+    let mounted = true;
+    let intervalId: NodeJS.Timeout | null = null;
+
+    const handleFocus = () => {
+      if (mounted) {
+        checkConnectionStatus();
+      }
+    };
+
+    // Check every 5 minutes to ensure connection persists
+    intervalId = setInterval(() => {
+      if (mounted) {
+        checkConnectionStatus();
+      }
+    }, 5 * 60 * 1000); // 5 minutes
+
+    // Also check when window regains focus
+    window.addEventListener('focus', handleFocus);
+
+    return () => {
+      mounted = false;
+      if (intervalId) {
+        clearInterval(intervalId);
+      }
+      window.removeEventListener('focus', handleFocus);
+    };
   }, []);
 
   // Use server-resolved identifier or session email only; never use demo identifier
