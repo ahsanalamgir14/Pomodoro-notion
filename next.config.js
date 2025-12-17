@@ -1,6 +1,22 @@
 const isDev = process.env.NODE_ENV !== "production";
 
 module.exports = {
+  images: {
+    remotePatterns: [
+      {
+        protocol: "https",
+        hostname: "picsum.photos",
+      },
+      {
+        protocol: "https",
+        hostname: "upload.wikimedia.org",
+      },
+      {
+        protocol: "https",
+        hostname: "**",
+      },
+    ],
+  },
   eslint: {
     ignoreDuringBuilds: true,
   },

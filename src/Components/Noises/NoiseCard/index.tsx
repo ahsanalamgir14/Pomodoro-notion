@@ -8,7 +8,7 @@ interface NoiseCardProps {
   label: string;
   value: string;
   audio: string;
-  icon?: any;
+  icon?: React.ComponentType | { default: React.ComponentType } | null;
   defaultVolume?: number;
 }
 
@@ -16,7 +16,7 @@ export default function NoiseCard({
   audio,
   label,
   value,
-  icon: Icon,
+  icon,
   defaultVolume = 0.2,
 }: NoiseCardProps) {
   const [volume, setVolume] = useState(defaultVolume);
@@ -24,6 +24,18 @@ export default function NoiseCard({
   const [isEnabled, setEnable] = useState(false);
 
   const [{ noisesRunning }, dispatch] = useNoisestate();
+
+  // Handle SVG imports that might be objects with default property
+  const Icon = React.useMemo<React.ComponentType | null>(() => {
+    if (!icon) return null;
+    // If icon is a function/component, use it directly
+    if (typeof icon === 'function') return icon as React.ComponentType;
+    // If icon is an object with default property (common with SVG imports)
+    if (icon && typeof icon === 'object' && 'default' in icon && typeof icon.default === 'function') {
+      return icon.default;
+    }
+    return null;
+  }, [icon]);
 
   const [play, { stop }] = useSound(audio, {
     volume,
