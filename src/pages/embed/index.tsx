@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, useRef } from "react";
 import Head from "next/head";
 import Link from "next/link";
 import { getConnectedPages } from "../../utils/apis/notion/client";
