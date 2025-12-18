@@ -19,6 +19,7 @@ import {
   retrieveDatabase,
   listDatabases,
 } from "../../utils/apis/notion/database";
+import { NotionCache } from "../../utils/notionCache";
 import { fetchNotionUser } from "../../utils/apis/firebase/notionUser";
 import { verifyJWT } from "../../utils/serverSide/jwt";
 import { getServerSession } from "next-auth";
