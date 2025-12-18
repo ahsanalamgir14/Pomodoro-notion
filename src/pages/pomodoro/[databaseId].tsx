@@ -19,6 +19,7 @@ import {
   retrieveDatabase,
   listDatabases,
 } from "../../utils/apis/notion/database";
+import { NotionCache } from "../../utils/notionCache";
 import { fetchNotionUser } from "../../utils/apis/firebase/notionUser";
 import { verifyJWT } from "../../utils/serverSide/jwt";
 import { getServerSession } from "next-auth";
@@ -66,7 +67,7 @@ export const getServerSideProps = async ({
           database: emptyQuery,
           db: emptyDetail,
           tab: tab || null,
-          error: "User not connected to Notion",
+          error: null,
           databaseId: databaseId,
           availableDatabases: [],
         },
@@ -382,7 +383,7 @@ export default function Pages({
           backgroundColor="#37415130"
           width="50%"
         />
-        {(!error || database?.results) ? (
+        {(!error && (!!accessToken || !!userIdentifier || (database?.results && database.results.length > 0))) ? (
           <>
             {/* Tabs */}
             <Tabs tabs={TabsOptions} activeTab={activeTab} setActiveTab={setActiveTab} />
