@@ -352,7 +352,9 @@ export default function Pages({
     const loadRelation = async () => {
       try {
         if (!project?.value || !userIdentifier) { setSelectedQuestsTop([]); return; }
-        const qs = new URLSearchParams({ userId: userIdentifier, pageId: project.value, relationName: "Quests" });
+        const params: any = { userId: userIdentifier, pageId: project.value, relationName: "Quests" };
+        if (accessToken) params.accessToken = accessToken;
+        const qs = new URLSearchParams(params);
         const resp = await fetch(`/api/notion/page-relations?${qs.toString()}`);
         if (!resp.ok) { setSelectedQuestsTop([]); return; }
         const json = await resp.json();
@@ -364,7 +366,7 @@ export default function Pages({
     };
     loadRelation();
     return () => { mounted = false; };
-  }, [project?.value, userIdentifier]);
+  }, [project?.value, userIdentifier, accessToken]);
 
   return (
     <>
