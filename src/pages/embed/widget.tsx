@@ -265,24 +265,26 @@ export default function EmbedWidget() {
   // Auto-populate selected quests options with current relations when task changes (fetch titles)
   useEffect(() => {
     const populateQuests = async () => {
-      if (!selectedTaskId) return;
-      if (!userIdentifier) return;
-      if (selectedQuests && selectedQuests.length > 0) return;
-      try {
-        const qs = new URLSearchParams({ userId: userIdentifier, pageId: selectedTaskId, relationName: "Quests" });
-        const resp = await fetch(`/api/notion/page-relations?${qs.toString()}`);
-        if (!resp.ok) return;
-        const data = await resp.json();
-        const items: Array<{ id: string; title: string }> = data?.items || [];
-        const values = items.map(i => ({ label: i.title, value: i.id }));
-        setSelectedQuests(values);
-        setLinkedQuestIds(values.map(v => v.value));
-        setQuestOptions(values);
-      } catch (e) {
-      }
-    };
-    populateQuests();
-  }, [selectedTaskId, userIdentifier]);
+        if (!selectedTaskId) return;
+        if (!userIdentifier) return;
+        if (selectedQuests && selectedQuests.length > 0) return;
+        try {
+          const params: any = { userId: userIdentifier, pageId: selectedTaskId, relationName: "Quests" };
+          if (accessToken) params.accessToken = accessToken;
+          const qs = new URLSearchParams(params);
+          const resp = await fetch(`/api/notion/page-relations?${qs.toString()}`);
+          if (!resp.ok) return;
+          const data = await resp.json();
+          const items: Array<{ id: string; title: string }> = data?.items || [];
+          const values = items.map(i => ({ label: i.title, value: i.id }));
+          setSelectedQuests(values);
+          setLinkedQuestIds(values.map(v => v.value));
+          setQuestOptions(values);
+        } catch (e) {
+        }
+      };
+      populateQuests();
+    }, [selectedTaskId, userIdentifier, accessToken]);
 
   // Derive available tag options from database schema (prefer Tags multi_select)
   const availableTags = useMemo(() => {
@@ -484,7 +486,7 @@ export default function EmbedWidget() {
                         : (linkedQuestIds.length > 0 ? linkedQuestIds : []);
                       const ops: Promise<any>[] = [];
                       if (taskPageId) {
-                        ops.push(updateTaskStatus({ userId, pageId: taskPageId, status: "In Progress" }));
+                        ops.push(updateTaskStatus({ userId, pageId: taskPageId, status: "In Progress", accessToken }));
                       }
                       targets.forEach((qid) => {
                         ops.push(startQuestWork({

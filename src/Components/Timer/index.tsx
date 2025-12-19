@@ -116,6 +116,7 @@ export default function Timer({
     currentDatabaseId,
     availableDatabases,
     userId: effectiveUserId,
+    accessToken,
   });
 
   const refreshCompleted = useCallback(async () => {
@@ -128,7 +129,7 @@ export default function Timer({
   useEffect(() => {
     const justStarted = busyIndicator && !prevBusy.current;
     if (justStarted) {
-      if (!effectiveUserId) {
+      if (!effectiveUserId && !accessToken) {
         prevBusy.current = busyIndicator;
         return;
       }
@@ -215,7 +216,7 @@ export default function Timer({
       };
       if (selectedIds.length > 0) {
         applyPause(selectedIds);
-      } else if (taskPageId && userIdentifier) {
+      } else if (taskPageId && (userIdentifier || accessToken)) {
         const params: any = { userId: effectiveUserId, pageId: taskPageId, relationName: "Quests" };
         if (accessToken) params.accessToken = accessToken;
         const qs = new URLSearchParams(params);
@@ -249,18 +250,20 @@ export default function Timer({
         const taskPageId = sessionConfig.config.selectedProject?.value || null;
         const targetDatabaseId = sessionConfig.config.selectedTrackingDatabase?.value;
         if (taskPageId) {
-          updateTaskStatus({ userId: effectiveUserId, pageId: taskPageId, status: "Completed" }).catch(() => undefined);
+          updateTaskStatus({ userId: effectiveUserId, pageId: taskPageId, status: "Completed", accessToken }).catch(() => undefined);
         }
         const selectedIds = (selectedQuests || []).map(q => q.value);
         const applyComplete = (ids: string[]) => {
           ids.forEach((qid) => {
-            updateQuestStatus({ userId: effectiveUserId, questPageId: qid, status: "Completed", adventurePageId, targetDatabaseId }).catch(() => undefined);
+            updateQuestStatus({ userId: effectiveUserId, questPageId: qid, status: "Completed", adventurePageId, targetDatabaseId, accessToken }).catch(() => undefined);
           });
         };
         if (selectedIds.length > 0) {
           applyComplete(selectedIds);
         } else if (taskPageId && userIdentifier) {
-          const qs = new URLSearchParams({ userId: effectiveUserId, pageId: taskPageId, relationName: "Quests" });
+          const params: any = { userId: effectiveUserId, pageId: taskPageId, relationName: "Quests" };
+          if (accessToken) params.accessToken = accessToken;
+          const qs = new URLSearchParams(params);
           fetch(`/api/notion/page-relations?${qs.toString()}`)
             .then(r => r.json())
             .then(json => {
@@ -281,7 +284,7 @@ export default function Timer({
         autoClose: 4000,
       });
     }
-  }, [sessionConfig.isReadyToSave, sessionConfig.saveSessionToNotion, selectedQuests, sessionConfig.config.selectedProject?.value, project?.value, sessionConfig.config.selectedTrackingDatabase?.value, userIdentifier]);
+  }, [sessionConfig.isReadyToSave, sessionConfig.saveSessionToNotion, selectedQuests, sessionConfig.config.selectedProject?.value, project?.value, sessionConfig.config.selectedTrackingDatabase?.value, userIdentifier, accessToken]);
 
   const { clockifiedValue, togglePlayPause, resetTimer, restartPomo } =
     useSyncPomo(handleSessionComplete);
