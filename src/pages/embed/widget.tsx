@@ -491,6 +491,7 @@ export default function EmbedWidget() {
                           questPageId: qid,
                           projectTitle: selectedTaskTitle || title || "Task",
                           adventurePageId: config?.pageId,
+                          accessToken,
                         }));
                         ops.push(updateQuestStatus({
                           userId,
@@ -498,6 +499,7 @@ export default function EmbedWidget() {
                           status: "In Progress",
                           targetDatabaseId: selectedDbId,
                           adventurePageId: config?.pageId,
+                          accessToken,
                         }));
                       });
                       void Promise.all(ops).catch(() => {
@@ -522,7 +524,7 @@ export default function EmbedWidget() {
                       const userId = userIdentifier;
                       const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
                       if (taskPageId) {
-                        updateTaskStatus({ userId, pageId: taskPageId, status: "Paused" }).catch((e) => {
+                        updateTaskStatus({ userId, pageId: taskPageId, status: "Paused", accessToken }).catch((e) => {
                           console.warn("Failed to set task status Paused", e);
                         });
                       }
@@ -534,6 +536,7 @@ export default function EmbedWidget() {
                           status: "Paused",
                           targetDatabaseId: selectedDbId,
                           adventurePageId: config?.pageId,
+                          accessToken,
                         }).catch((err) => {
                           console.error("Failed to pause quest", err);
                           setErrorMsg("Failed to update task status on pause.");
@@ -575,6 +578,7 @@ export default function EmbedWidget() {
                           notes,
                           tags,
                           questPageIds: (selectedQuests || []).map(q => q.value),
+                          accessToken,
                         });
                         const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
                         if (taskPageId) {
@@ -594,6 +598,7 @@ export default function EmbedWidget() {
                             status: "Completed",
                             targetDatabaseId: selectedDbId,
                             adventurePageId: config?.pageId,
+                            accessToken,
                           });
                         }
                         setSavingMsg("Time Tracking entry saved and status updated.");

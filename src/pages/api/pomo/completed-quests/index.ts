@@ -14,10 +14,11 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(405).json({ error: `Method ${method} Not Allowed` });
     }
 
-    const { userId, databaseId, adventurePageId } = req.query as {
+    const { userId, databaseId, adventurePageId, accessToken } = req.query as {
       userId?: string;
       databaseId?: string;
       adventurePageId?: string;
+      accessToken?: string;
     };
 
     if (!userId || !databaseId) {
@@ -34,10 +35,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const jwtPayload = jwt ? verifyJWT(jwt, secret) : null;
     const legacy = cookies["session_user"] ? decodeURIComponent(cookies["session_user"]) : null;
     const candidates: string[] = [userId, session?.user?.email, (jwtPayload?.email as string) || undefined, legacy, "notion-user"].filter(Boolean) as string[];
-    let token: string | null = null;
-    for (const id of candidates) {
-      const u = await fetchNotionUser(id!);
-      if (u?.accessToken) { token = u.accessToken; break; }
+    let token: string | null = accessToken || null;
+    if (!token) {
+      for (const id of candidates) {
+        const u = await fetchNotionUser(id!);
+        if (u?.accessToken) { token = u.accessToken; break; }
+      }
     }
     if (!token) {
       const envToken = process.env.NOTION_TOKEN || null;

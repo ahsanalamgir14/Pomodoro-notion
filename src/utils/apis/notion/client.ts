@@ -15,6 +15,7 @@ export interface SaveToNotionParams {
   tags?: string[];
   questPageId?: string;
   questPageIds?: string[];
+  accessToken?: string;
 }
 
 export const savePomoSessionToNotion = async (params: SaveToNotionParams) => {
@@ -61,9 +62,14 @@ export const validateDatabaseForPomodoro = async (databaseId: string) => {
   }
 };
 
-export const getCompletedQuests = async (params: { userId: string; databaseId: string; adventurePageId?: string }) => {
+export const getCompletedQuests = async (params: { userId: string; databaseId: string; adventurePageId?: string; accessToken?: string }) => {
   try {
-    const query = new URLSearchParams({ userId: params.userId, databaseId: params.databaseId, ...(params.adventurePageId ? { adventurePageId: params.adventurePageId } : {}) });
+    const query = new URLSearchParams({ 
+      userId: params.userId, 
+      databaseId: params.databaseId, 
+      ...(params.adventurePageId ? { adventurePageId: params.adventurePageId } : {}),
+      ...(params.accessToken ? { accessToken: params.accessToken } : {})
+    });
     const response = await PomodoroClient.get(`/api/pomo/completed-quests?${query.toString()}`);
     return response.data as { count: number; items: Array<{ id: string; title: string }> };
   } catch (error) {
@@ -72,7 +78,7 @@ export const getCompletedQuests = async (params: { userId: string; databaseId: s
   }
 };
 
-export const startQuestWork = async (params: { userId: string; questPageId: string; targetDatabaseId?: string; projectTitle?: string; adventurePageId?: string }) => {
+export const startQuestWork = async (params: { userId: string; questPageId: string; targetDatabaseId?: string; projectTitle?: string; adventurePageId?: string; accessToken?: string }) => {
   try {
     const response = await PomodoroClient.post("/api/pomo/quest-start", params);
     return response.data;
@@ -82,7 +88,7 @@ export const startQuestWork = async (params: { userId: string; questPageId: stri
   }
 };
 
-export const updateQuestStatus = async (params: { userId: string; status: string; questPageId?: string; adventurePageId?: string; targetDatabaseId?: string }) => {
+export const updateQuestStatus = async (params: { userId: string; status: string; questPageId?: string; adventurePageId?: string; targetDatabaseId?: string; accessToken?: string }) => {
   try {
     const response = await PomodoroClient.post("/api/pomo/quest-status", params);
     return response.data;
@@ -92,7 +98,7 @@ export const updateQuestStatus = async (params: { userId: string; status: string
   }
 };
 
-export const updateTaskStatus = async (params: { userId: string; pageId: string; status: string }) => {
+export const updateTaskStatus = async (params: { userId: string; pageId: string; status: string; accessToken?: string }) => {
   try {
     const response = await PomodoroClient.post("/api/pomo/task-status", params);
     return response.data;

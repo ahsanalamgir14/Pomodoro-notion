@@ -117,7 +117,7 @@ export default function QuestSelection({ disabled = false, projectId, relationNa
     } catch (e) {
       return [];
     }
-  }, [projectId, relationName, userIdentifier, overrideOptions]);
+  }, [projectId, relationName, userIdentifier, overrideOptions, accessToken]);
 
   return (
     <AsyncSelect

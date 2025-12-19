@@ -28,7 +28,8 @@ export default async function handler(
         notes,
         tags,
         questPageId,
-        questPageIds
+        questPageIds,
+        accessToken
       } = req.body;
 
       // Validate required fields
@@ -61,11 +62,15 @@ export default async function handler(
         const cookies = Object.fromEntries(cookieHeader.split(";").map((c) => { const [k,v] = c.trim().split("="); return [k,v]; }));
         const jwt = cookies["session_token"]; const secret = process.env.NEXTAUTH_SECRET || process.env.SESSION_SECRET || "dev-secret";
         const jwtPayload = jwt ? verifyJWT(jwt, secret) : null;
-        const candidates: string[] = [userId, session?.user?.email, jwtPayload?.email as string, cookies["session_user"] ? decodeURIComponent(cookies["session_user"]) : undefined, "notion-user"].filter(Boolean) as string[];
-        let token: string | null = null; let workspace: any = null;
-        for (const id of candidates) {
-          const u = await fetchNotionUser(id!);
-          if (u?.accessToken) { token = u.accessToken; workspace = u.workspace || null; break; }
+        const legacy = cookies["session_user"] ? decodeURIComponent(cookies["session_user"]) : null;
+        const candidates: string[] = [userId, session?.user?.email, (jwtPayload?.email as string) || undefined, legacy, "notion-user"].filter(Boolean) as string[];
+        
+        let token: string | null = accessToken || null;
+        if (!token) {
+          for (const id of candidates) {
+            const u = await fetchNotionUser(id!);
+            if (u?.accessToken) { token = u.accessToken; break; }
+          }
         }
         if (!token) {
           const envToken = process.env.NOTION_TOKEN || null;

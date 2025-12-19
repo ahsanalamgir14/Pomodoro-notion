@@ -9,6 +9,7 @@ export const pushTimesheet = async ({
   timerValue,
   startTime,
   endTime,
+  accessToken,
 }: {
   projectId: string;
   databaseId: string;
@@ -16,6 +17,7 @@ export const pushTimesheet = async ({
   timerValue: number;
   startTime: number;
   endTime: number;
+  accessToken?: string;
 }) => {
   console.log("📡 Making timesheet API call:", {
     url: POMO_TSH_APIS.TIMESHEET,
@@ -25,6 +27,7 @@ export const pushTimesheet = async ({
       timerValue,
       startTime,
       endTime,
+      accessToken,
     },
     params: {
       userId,
@@ -40,6 +43,7 @@ export const pushTimesheet = async ({
         timerValue,
         startTime,
         endTime,
+        accessToken,
       },
       {
         params: {

@@ -14,18 +14,19 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(405).json({ error: `Method ${method} Not Allowed` });
     }
 
-    const { userId, questPageId, adventurePageId, status, targetDatabaseId } = req.body as {
+    const { userId, questPageId, adventurePageId, status, targetDatabaseId, accessToken } = req.body as {
       userId?: string;
       questPageId?: string;
       adventurePageId?: string;
       status?: string; // e.g., "Paused" | "In Progress" | "Completed"
       targetDatabaseId?: string; // Optional time tracker database to sync linked entries
+      accessToken?: string;
     };
 
-    if (!userId || (!questPageId && !adventurePageId) || !status) {
+    if ((!userId && !accessToken) || (!questPageId && !adventurePageId) || !status) {
       return res.status(400).json({
         error: "Missing required fields",
-        required: ["userId", "status", "questPageId | adventurePageId"],
+        required: ["userId or accessToken", "status", "questPageId | adventurePageId"],
       });
     }
 
@@ -35,10 +36,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const jwt = cookies["session_token"]; const secret = process.env.NEXTAUTH_SECRET || process.env.SESSION_SECRET || "dev-secret";
     const jwtPayload = jwt ? verifyJWT(jwt, secret) : null;
     const candidates: string[] = [userId, session?.user?.email, jwtPayload?.email as string, cookies["session_user"] ? decodeURIComponent(cookies["session_user"]) : undefined, "notion-user"].filter(Boolean) as string[];
-    let token: string | null = null;
-    for (const id of candidates) {
-      const u = await fetchNotionUser(id!);
-      if (u?.accessToken) { token = u.accessToken; break; }
+    let token: string | null = accessToken || null;
+    if (!token) {
+      for (const id of candidates) {
+        const u = await fetchNotionUser(id!);
+        if (u?.accessToken) { token = u.accessToken; break; }
+      }
     }
     if (!token) {
       const envToken = process.env.NOTION_TOKEN || null;
