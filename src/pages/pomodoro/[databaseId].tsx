@@ -412,6 +412,7 @@ export default function Pages({
                   values={selectedQuestsTop}
                   onChange={setSelectedQuestsTop}
                   relationName="Quests"
+                  accessToken={accessToken}
                 />
               </div>
 

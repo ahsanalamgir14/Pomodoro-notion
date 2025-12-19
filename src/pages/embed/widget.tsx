@@ -433,13 +433,14 @@ export default function EmbedWidget() {
                   <div className="sm:col-span-2">
                     <label className="block mb-1">Quests (relation)</label>
       <QuestSelection
-        disabled={!selectedTaskId}
-        projectId={selectedTaskId || null}
-        values={selectedQuests}
-        theme={effectiveTheme as any}
-        width={(config?.inputWidth ?? 0) > 0 ? (config!.inputWidth as number) : undefined}
-        overrideOptions={questOptions}
-        onChange={(opts: any[]) => {
+                      disabled={!selectedTaskId}
+                      projectId={selectedTaskId || null}
+                      values={selectedQuests}
+                      theme={effectiveTheme as any}
+                      width={(config?.inputWidth ?? 0) > 0 ? (config!.inputWidth as number) : undefined}
+                      overrideOptions={questOptions}
+                      accessToken={accessToken}
+                      onChange={(opts: any[]) => {
           const arr = (opts || []) as Array<{ label: string; value: string }>;
           setSelectedQuests(arr);
           setLinkedQuestIds(arr.map((o) => o.value));
