@@ -78,31 +78,23 @@ const colourStyles = ({
 };
 
 export default function QuestSelection({ disabled = false, projectId, relationName = "Quests", values, onChange, theme = "light", width, overrideOptions, accessToken }: Props) {
-  const [userIdentifier, setUserIdentifier] = React.useState<string>(() => {
-    if (typeof window !== 'undefined') {
-      try { return (window as any).NotionCache ? (window as any).NotionCache.getUserData()?.email || '' : ''; } catch { return ''; }
-    }
-    return '';
-  });
+  const [userIdentifier, setUserIdentifier] = React.useState<string>("");
+
   React.useEffect(() => {
+    // Try to get from cache first
+    try {
+      const cached = NotionCache.getUserData();
+      if (cached?.email) setUserIdentifier(cached.email);
+    } catch {}
+
     fetch('/api/session')
       .then(r => r.json())
       .then(data => {
         if (data?.isAuthenticated && data?.email) {
           setUserIdentifier(String(data.email));
-        } else {
-          try {
-            const cached = (NotionCache as any)?.getUserData?.()?.email;
-            if (cached) setUserIdentifier(cached);
-          } catch {}
         }
       })
-      .catch(() => {
-        try {
-          const cached = (NotionCache as any)?.getUserData?.()?.email;
-          if (cached) setUserIdentifier(cached);
-        } catch {}
-      });
+      .catch(() => undefined);
   }, []);
   const loadOptions = useCallback(async (): Promise<Option[]> => {
     if (!projectId) return [];

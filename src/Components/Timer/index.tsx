@@ -63,11 +63,7 @@ export default function Timer({
 
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
   const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
-  const [accessToken, setAccessToken] = useState<string | undefined>(() => {
-    if (typeof window === 'undefined') return undefined;
-    const cached = NotionCache.getUserData();
-    return cached?.accessToken || undefined;
-  });
+  const [accessToken, setAccessToken] = useState<string | undefined>(undefined);
 
   useEffect(() => {
     try {
