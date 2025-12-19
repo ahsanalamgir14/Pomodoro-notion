@@ -37,7 +37,7 @@ export default async function handler(
         !projectId ||
         !projectTitle ||
         !databaseId ||
-        !userId ||
+        (!userId && !accessToken) ||
         (timerValue == null || timerValue == undefined) ||
         !startTime ||
         !targetDatabaseId
@@ -48,7 +48,7 @@ export default async function handler(
             "projectId",
             "projectTitle", 
             "databaseId",
-            "userId",
+            "userId or accessToken",
             "timerValue",
             "startTime",
             "targetDatabaseId"

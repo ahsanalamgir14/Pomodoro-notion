@@ -10,12 +10,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const { userId, pageId, relationName, accessToken } = req.query as { userId?: string; pageId?: string; relationName?: string; accessToken?: string };
-    if (!userId || !pageId) {
-      return res.status(400).json({ error: "Missing required query params", required: ["userId", "pageId"] });
+    if ((!userId && !accessToken) || !pageId) {
+      return res.status(400).json({ error: "Missing required query params", required: ["userId or accessToken", "pageId"] });
     }
 
     let token = accessToken;
-    if (!token) {
+    if (!token && userId) {
       const userData = await fetchNotionUser(userId);
       token = userData?.accessToken;
     }

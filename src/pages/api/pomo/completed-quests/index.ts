@@ -21,10 +21,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       accessToken?: string;
     };
 
-    if (!userId || !databaseId) {
+    if ((!userId && !accessToken) || !databaseId) {
       return res.status(400).json({
         error: "Missing required query params",
-        required: ["userId", "databaseId"],
+        required: ["userId or accessToken", "databaseId"],
       });
     }
 
