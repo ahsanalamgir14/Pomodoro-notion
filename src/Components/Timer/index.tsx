@@ -148,13 +148,15 @@ export default function Timer({
         const selectedIds = (selectedQuests || []).map(q => q.value);
         const applyStart = (ids: string[]) => {
           ids.forEach((qid) => {
-            updateQuestStatus({ userId: effectiveUserId, status: "In Progress", questPageId: qid, adventurePageId, targetDatabaseId }).catch(() => undefined);
+            updateQuestStatus({ userId: effectiveUserId, status: "In Progress", questPageId: qid, adventurePageId, targetDatabaseId, accessToken }).catch(() => undefined);
           });
         };
         if (selectedIds.length > 0) {
           applyStart(selectedIds);
         } else if (taskPageId && userIdentifier) {
-          const qs = new URLSearchParams({ userId: effectiveUserId, pageId: taskPageId, relationName: "Quests" });
+          const params: any = { userId: effectiveUserId, pageId: taskPageId, relationName: "Quests" };
+          if (accessToken) params.accessToken = accessToken;
+          const qs = new URLSearchParams(params);
           fetch(`/api/notion/page-relations?${qs.toString()}`)
             .then(r => r.json())
             .then(json => {
@@ -168,18 +170,20 @@ export default function Timer({
       }
 
       if (taskPageId) {
-        updateTaskStatus({ userId: effectiveUserId, pageId: taskPageId, status: "In Progress" }).catch(() => undefined);
+        updateTaskStatus({ userId: effectiveUserId, pageId: taskPageId, status: "In Progress", accessToken }).catch(() => undefined);
       }
       const selectedIds = (selectedQuests || []).map(q => q.value);
       const applyStart = (ids: string[]) => {
         ids.forEach((qid) => {
-          updateQuestStatus({ userId: effectiveUserId, status: "In Progress", questPageId: qid, adventurePageId, targetDatabaseId }).catch(() => undefined);
+          updateQuestStatus({ userId: effectiveUserId, status: "In Progress", questPageId: qid, adventurePageId, targetDatabaseId, accessToken }).catch(() => undefined);
         });
       };
       if (selectedIds.length > 0) {
         applyStart(selectedIds);
       } else if (taskPageId && userIdentifier) {
-        const qs = new URLSearchParams({ userId: effectiveUserId, pageId: taskPageId, relationName: "Quests" });
+        const params: any = { userId: effectiveUserId, pageId: taskPageId, relationName: "Quests" };
+        if (accessToken) params.accessToken = accessToken;
+        const qs = new URLSearchParams(params);
         fetch(`/api/notion/page-relations?${qs.toString()}`)
           .then(r => r.json())
           .then(json => {
