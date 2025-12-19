@@ -434,6 +434,7 @@ export default function Pages({
               availableDatabases={availableDbList.length > 0 ? availableDbList : availableDatabases}
               projects={projects}
               availableTags={properties}
+              accessToken={accessToken}
             />
           </>
         ) : (

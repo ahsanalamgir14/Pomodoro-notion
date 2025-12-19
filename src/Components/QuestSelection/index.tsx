@@ -98,7 +98,7 @@ export default function QuestSelection({ disabled = false, projectId, relationNa
   }, []);
   const loadOptions = useCallback(async (): Promise<Option[]> => {
     if (!projectId) return [];
-    if (!userIdentifier) return [];
+    if (!userIdentifier && !accessToken) return [];
     if (overrideOptions && overrideOptions.length > 0) return overrideOptions;
     try {
       const params: any = { userId: userIdentifier, pageId: projectId, relationName };

@@ -14,7 +14,23 @@ export default async function handler(
   try {
     const { method } = req;
     const firebaseDisabled = process.env.DISABLE_FIREBASE === "true";
-    const userId = req.query.userId as string;
+    let userId = req.query.userId as string;
+    const token = (req.body?.accessToken as string) || (req.query?.accessToken as string);
+
+    // If userId is missing but we have accessToken, try to resolve it
+    if (!userId && token) {
+      try {
+        const { Client } = require("@notionhq/client");
+        const notion = new Client({ auth: token });
+        const user = await notion.users.me({});
+        if (user?.id) {
+          userId = user.id;
+        }
+      } catch (e) {
+        console.warn("Failed to resolve user from accessToken in timesheet api", e);
+      }
+    }
+
     const startDate = Math.floor(
       Number(
         (req.query.startDate as string) ??

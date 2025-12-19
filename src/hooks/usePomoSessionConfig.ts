@@ -44,6 +44,7 @@ export const usePomoSessionConfig = ({
   currentDatabaseId,
   availableDatabases = [],
   userId,
+  accessToken: accessTokenProp,
 }: {
   projects: ProjectOption[];
   availableTags: TagOption[];
@@ -52,6 +53,7 @@ export const usePomoSessionConfig = ({
   currentDatabaseId?: string;
   availableDatabases?: Array<{ id: string; title: string; icon?: string | null }>;
   userId?: string | null;
+  accessToken?: string;
 }): UsePomoSessionConfigReturn => {
   const [{ project }] = usePomoState();
   const [config, setConfig] = useState<PomoSessionConfig>({
@@ -63,16 +65,20 @@ export const usePomoSessionConfig = ({
     isExpanded: true,
   });
 
-  const [accessToken, setAccessToken] = useState<string | undefined>(undefined);
+  const [accessToken, setAccessToken] = useState<string | undefined>(accessTokenProp);
 
   useEffect(() => {
+    if (accessTokenProp) {
+      setAccessToken(accessTokenProp);
+      return;
+    }
     if (typeof window !== "undefined") {
       const cached = NotionCache.getUserData();
       if (cached?.accessToken) {
         setAccessToken(cached.accessToken);
       }
     }
-  }, []);
+  }, [accessTokenProp]);
 
   // Convert availableDatabases to the expected format
   const convertedDatabases: DatabaseOption[] = useMemo(
@@ -176,10 +182,11 @@ export const usePomoSessionConfig = ({
       notes: "",
       tags: (config.selectedTags || []).map(t => t.label),
       questPageIds: (config.selectedQuests || []).map(q => q.value),
+      accessToken,
     };
 
     await savePomoSessionToNotion(saveParams);
-  }, [config, currentDatabaseId]);
+  }, [config, currentDatabaseId, accessToken]);
 
   const isReadyToSave = Boolean(
     config.selectedProject && config.selectedDatabase?.value && config.selectedTrackingDatabase?.value
