@@ -10,12 +10,13 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(405).json({ error: `Method ${method} Not Allowed` });
     }
 
-    const { userId, questPageId, targetDatabaseId, projectTitle, adventurePageId } = req.body as {
+    const { userId, questPageId, targetDatabaseId, projectTitle, adventurePageId, accessToken } = req.body as {
       userId?: string;
       questPageId?: string;
       targetDatabaseId?: string;
       projectTitle?: string;
       adventurePageId?: string;
+      accessToken?: string;
     };
 
     if (!userId || !questPageId) {
@@ -25,12 +26,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       });
     }
 
-    const userData = await fetchNotionUser(userId);
-    if (!userData?.accessToken) {
+    let token = accessToken;
+    if (!token) {
+      const userData = await fetchNotionUser(userId);
+      token = userData?.accessToken;
+    }
+
+    if (!token) {
       return res.status(401).json({ error: "User not connected to Notion or token missing" });
     }
 
-    const notion = new Client({ auth: userData.accessToken });
+    const notion = new Client({ auth: token });
 
     // Retrieve the page to inspect available properties
     const page = await notion.pages.retrieve({ page_id: questPageId });

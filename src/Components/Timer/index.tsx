@@ -22,6 +22,7 @@ import dynamic from "next/dynamic";
 const PomoSessionConfigComp = dynamic(() => import("../PomoSessionConfig"), { loading: () => <div>Loading...</div>, ssr: false });
 import { usePomoSessionConfig } from "../../hooks/usePomoSessionConfig";
 import { startQuestWork, updateQuestStatus, updateTaskStatus } from "../../utils/apis/notion/client";
+import { NotionCache } from "../../utils/notionCache";
 
 type Props = {
   projectName: string;
@@ -62,6 +63,20 @@ export default function Timer({
 
   const [sessionEmail, setSessionEmail] = useState<string | null>(null);
   const [resolvedUserId, setResolvedUserId] = useState<string | null>(null);
+  const [accessToken, setAccessToken] = useState<string | undefined>(() => {
+    if (typeof window === 'undefined') return undefined;
+    const cached = NotionCache.getUserData();
+    return cached?.accessToken || undefined;
+  });
+
+  useEffect(() => {
+    try {
+      const cached = NotionCache.getUserData();
+      if (cached?.accessToken) {
+        setAccessToken(cached.accessToken);
+      }
+    } catch {}
+  }, []);
 
   useEffect(() => {
     let mounted = true;
@@ -190,18 +205,20 @@ export default function Timer({
       const taskPageId = sessionConfig.config.selectedProject?.value || null;
       const targetDatabaseId = sessionConfig.config.selectedDatabase?.value || currentDatabaseId;
       if (taskPageId) {
-        updateTaskStatus({ userId: effectiveUserId, pageId: taskPageId, status: "Paused" }).catch(() => undefined);
+        updateTaskStatus({ userId: effectiveUserId, pageId: taskPageId, status: "Paused", accessToken }).catch(() => undefined);
       }
       const selectedIds = (selectedQuests || []).map(q => q.value);
       const applyPause = (ids: string[]) => {
         ids.forEach((qid) => {
-          updateQuestStatus({ userId: effectiveUserId, questPageId: qid, status: "Paused", adventurePageId, targetDatabaseId }).catch(() => undefined);
+          updateQuestStatus({ userId: effectiveUserId, questPageId: qid, status: "Paused", adventurePageId, targetDatabaseId, accessToken }).catch(() => undefined);
         });
       };
       if (selectedIds.length > 0) {
         applyPause(selectedIds);
       } else if (taskPageId && userIdentifier) {
-        const qs = new URLSearchParams({ userId: effectiveUserId, pageId: taskPageId, relationName: "Quests" });
+        const params: any = { userId: effectiveUserId, pageId: taskPageId, relationName: "Quests" };
+        if (accessToken) params.accessToken = accessToken;
+        const qs = new URLSearchParams(params);
         fetch(`/api/notion/page-relations?${qs.toString()}`)
           .then(r => r.json())
           .then(json => {

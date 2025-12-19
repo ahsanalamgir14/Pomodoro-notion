@@ -62,6 +62,17 @@ export const usePomoSessionConfig = ({
     isExpanded: true,
   });
 
+  const [accessToken, setAccessToken] = useState<string | undefined>(undefined);
+
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      const cached = NotionCache.getUserData();
+      if (cached?.accessToken) {
+        setAccessToken(cached.accessToken);
+      }
+    }
+  }, []);
+
   // Convert availableDatabases to the expected format
   const convertedDatabases: DatabaseOption[] = useMemo(
     () => availableDatabases.map(db => ({ label: db.title, value: db.id, icon: db.icon ?? null })),

@@ -13,7 +13,7 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       return res.status(405).json({ error: `Method ${req.method} Not Allowed` });
     }
 
-    const { userId, pageId, status } = req.body as { userId?: string; pageId?: string; status?: string };
+    const { userId, pageId, status, accessToken } = req.body as { userId?: string; pageId?: string; status?: string; accessToken?: string };
     if (!userId || !pageId || !status) {
       return res.status(400).json({ error: "Missing required fields", required: ["userId", "pageId", "status"] });
     }
@@ -24,10 +24,12 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     const jwt = cookies["session_token"]; const secret = process.env.NEXTAUTH_SECRET || process.env.SESSION_SECRET || "dev-secret";
     const jwtPayload = jwt ? verifyJWT(jwt, secret) : null;
     const candidates: string[] = [userId, session?.user?.email, jwtPayload?.email as string, cookies["session_user"] ? decodeURIComponent(cookies["session_user"]) : undefined, "notion-user"].filter(Boolean) as string[];
-    let token: string | null = null;
-    for (const id of candidates) {
-      const u = await fetchNotionUser(id!);
-      if (u?.accessToken) { token = u.accessToken; break; }
+    let token: string | null = accessToken || null;
+    if (!token) {
+      for (const id of candidates) {
+        const u = await fetchNotionUser(id!);
+        if (u?.accessToken) { token = u.accessToken; break; }
+      }
     }
     if (!token) {
       const envToken = process.env.NOTION_TOKEN || null;

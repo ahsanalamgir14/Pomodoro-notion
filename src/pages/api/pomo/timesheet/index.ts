@@ -46,7 +46,7 @@ export default async function handler(
         })
       );
     } else if (method == "POST") {
-      const { projectId, databaseId, timerValue, startTime, endTime } =
+      const { projectId, databaseId, timerValue, startTime, endTime, accessToken } =
         req.body;
       if (
         projectId &&
@@ -54,6 +54,10 @@ export default async function handler(
         (timerValue != null || timerValue != undefined) &&
         startTime
       ) {
+        // Optional: Validate accessToken if integration with Notion is required in future
+        if (accessToken) {
+          // No-op validation for now, but ready for future use
+        }
         res.status(200).json({
           message: "Timesheet created",
           id: await insertTimesheet({
