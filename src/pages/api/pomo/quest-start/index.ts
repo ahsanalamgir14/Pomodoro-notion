@@ -19,10 +19,10 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       accessToken?: string;
     };
 
-    if (!userId || !questPageId) {
+    if ((!userId && !accessToken) || !questPageId) {
       return res.status(400).json({
         error: "Missing required fields",
-        required: ["userId", "questPageId"],
+        required: ["userId or accessToken", "questPageId"],
       });
     }
 

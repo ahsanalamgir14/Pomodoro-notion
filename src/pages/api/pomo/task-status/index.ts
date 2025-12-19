@@ -14,8 +14,8 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     }
 
     const { userId, pageId, status, accessToken } = req.body as { userId?: string; pageId?: string; status?: string; accessToken?: string };
-    if (!userId || !pageId || !status) {
-      return res.status(400).json({ error: "Missing required fields", required: ["userId", "pageId", "status"] });
+    if ((!userId && !accessToken) || !pageId || !status) {
+      return res.status(400).json({ error: "Missing required fields", required: ["userId or accessToken", "pageId", "status"] });
     }
 
     const session = await getServerSession(req as any, res as any, authOptions).catch(() => null);
