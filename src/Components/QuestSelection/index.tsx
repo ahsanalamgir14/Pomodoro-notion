@@ -108,7 +108,9 @@ export default function QuestSelection({ disabled = false, projectId, relationNa
     if (!userIdentifier) return [];
     if (overrideOptions && overrideOptions.length > 0) return overrideOptions;
     try {
-      const qs = new URLSearchParams({ userId: userIdentifier, pageId: projectId, relationName });
+      const params: any = { userId: userIdentifier, pageId: projectId, relationName };
+      if (accessToken) params.accessToken = accessToken;
+      const qs = new URLSearchParams(params);
       const resp = await fetch(`/api/notion/page-relations?${qs.toString()}`);
       if (!resp.ok) return [];
       const data = await resp.json();

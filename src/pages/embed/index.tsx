@@ -821,6 +821,7 @@ export default function CreateEmbedPage() {
                       theme={theme}
                       relationName={previewQuestsRelProp}
                       width={inputWidth}
+                      accessToken={accessToken}
                       onChange={(opts: any[]) => {
                         const arr = (opts || []) as Array<{ label: string; value: string }>;
                         setPreviewSelectedQuests(arr);
