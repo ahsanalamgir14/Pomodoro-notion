@@ -37,23 +37,21 @@ export default function CreateEmbedPage() {
   const [selectedSessionDbId, setSelectedSessionDbId] = useState<string>("");
 
   // Databases and tasks for selections - use consistent user identifier
-  const userIdentifier = useMemo(() => {
-    // Prefer resolvedUserId (from server), but exclude "notion-user" fallback
+  const [userIdentifier, setUserIdentifier] = useState<string>("");
+
+  useEffect(() => {
+    let id = "";
     if (resolvedUserId && resolvedUserId !== "notion-user") {
-      return resolvedUserId;
+      id = resolvedUserId;
+    } else if (sessionEmail) {
+      id = sessionEmail;
+    } else {
+      try {
+        const cached = NotionCache.getUserData();
+        if (cached?.email) id = cached.email;
+      } catch {}
     }
-    // Then use sessionEmail
-    if (sessionEmail) {
-      return sessionEmail;
-    }
-    // Finally fall back to cache
-    if (typeof window !== "undefined") {
-      const cached = NotionCache.getUserData();
-      if (cached?.email) {
-        return cached.email;
-      }
-    }
-    return "";
+    setUserIdentifier(id);
   }, [resolvedUserId, sessionEmail]);
 
   // Single unified check for connection status and user identifier (consolidates session + identifier)
