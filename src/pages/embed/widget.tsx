@@ -584,7 +584,7 @@ export default function EmbedWidget() {
                         const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
                         if (taskPageId) {
                           try {
-                            await updateTaskStatus({ userId, pageId: taskPageId, status: "Completed" });
+                            await updateTaskStatus({ userId, pageId: taskPageId, status: "Completed", accessToken });
                           } catch (e) {
                             console.warn("Failed to set task status Completed", e);
                           }

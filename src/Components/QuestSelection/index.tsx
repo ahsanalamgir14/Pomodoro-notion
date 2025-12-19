@@ -19,6 +19,7 @@ type Props = {
   theme?: "light" | "dark";
   width?: number | string;
   overrideOptions?: Option[];
+  accessToken?: string;
 };
 
 const colourStyles = ({
@@ -76,7 +77,7 @@ const colourStyles = ({
   };
 };
 
-export default function QuestSelection({ disabled = false, projectId, relationName = "Quests", values, onChange, theme = "light", width, overrideOptions }: Props) {
+export default function QuestSelection({ disabled = false, projectId, relationName = "Quests", values, onChange, theme = "light", width, overrideOptions, accessToken }: Props) {
   const [userIdentifier, setUserIdentifier] = React.useState<string>(() => {
     if (typeof window !== 'undefined') {
       try { return (window as any).NotionCache ? (window as any).NotionCache.getUserData()?.email || '' : ''; } catch { return ''; }
