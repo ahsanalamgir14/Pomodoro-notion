@@ -122,6 +122,11 @@ export default function EmbedWidget() {
     }
     try {
       const url = new URL(window.location.href);
+      const tokenParam = url.searchParams.get("at") || url.searchParams.get("token") || url.searchParams.get("accessToken");
+      if (tokenParam) {
+        // Prioritize URL parameter token as it is likely an explicit override or fix for iframe issues
+        setAccessToken(String(tokenParam));
+      }
       const overrideUser = url.searchParams.get("u") || url.searchParams.get("userId");
       if (overrideUser) {
         setUserIdentifier(String(overrideUser));
@@ -270,10 +275,11 @@ export default function EmbedWidget() {
   useEffect(() => {
     const populateQuests = async () => {
         if (!selectedTaskId) return;
-        if (!userIdentifier) return;
+        if (!userIdentifier && !accessToken) return;
         if (selectedQuests && selectedQuests.length > 0) return;
         try {
-          const params: any = { userId: userIdentifier, pageId: selectedTaskId, relationName: "Quests" };
+          const params: any = { pageId: selectedTaskId, relationName: "Quests" };
+          if (userIdentifier) params.userId = userIdentifier;
           if (accessToken) params.accessToken = accessToken;
           const qs = new URLSearchParams(params);
           const resp = await fetch(`/api/notion/page-relations?${qs.toString()}`);

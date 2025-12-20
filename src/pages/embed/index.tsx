@@ -703,7 +703,8 @@ export default function CreateEmbedPage() {
                       const base64 = typeof window !== "undefined" ? window.btoa(json) : Buffer.from(json).toString("base64");
                       const origin = typeof window !== "undefined" ? window.location.origin : "";
                       const uParam = settings.userId ? `&u=${encodeURIComponent(String(settings.userId))}` : "";
-                      const link = `${origin}/embed/widget?c=${encodeURIComponent(base64)}${uParam}`;
+                      const atParam = settings.accessToken ? `&at=${encodeURIComponent(String(settings.accessToken))}` : "";
+                      const link = `${origin}/embed/widget?c=${encodeURIComponent(base64)}${uParam}${atParam}`;
                       setEmbedLink(link);
                       setSaveMsg("Settings saved. Embed link generated.");
                     } catch (e) {
