@@ -227,11 +227,11 @@ export default function CreateEmbedPage() {
 
 
   const { data: dbs } = trpc.private.getDatabases.useQuery(
-    { email: userIdentifier, accessToken },
+    { email: userIdentifier || undefined, accessToken },
     { 
       refetchOnWindowFocus: false, 
       retry: false, 
-      enabled: !!userIdentifier && isConnected 
+      enabled: (!!userIdentifier || !!accessToken) && isConnected 
     }
   );
   useEffect(() => {
@@ -252,9 +252,9 @@ export default function CreateEmbedPage() {
   // Only fetch database details when needed (for preview) - lazy load
   // Fetch task database detail when task database is selected
   const { data: taskDbDetail } = trpc.private.getDatabaseDetail.useQuery(
-    { databaseId: selectedTaskDbId, email: userIdentifier, accessToken },
+    { databaseId: selectedTaskDbId, email: userIdentifier || undefined, accessToken },
     { 
-      enabled: !!selectedTaskDbId && !!userIdentifier && isConnected, 
+      enabled: !!selectedTaskDbId && (!!userIdentifier || !!accessToken) && isConnected, 
       refetchOnWindowFocus: false, 
       retry: false 
     }
@@ -262,9 +262,9 @@ export default function CreateEmbedPage() {
   
   // Only fetch session detail if it's different from task database (reuse taskDbDetail if same)
   const { data: sessionDbDetail } = trpc.private.getDatabaseDetail.useQuery(
-    { databaseId: selectedSessionDbId, email: userIdentifier, accessToken },
+    { databaseId: selectedSessionDbId, email: userIdentifier || undefined, accessToken },
     { 
-      enabled: !!selectedSessionDbId && !!userIdentifier && isConnected && selectedSessionDbId !== selectedTaskDbId, 
+      enabled: !!selectedSessionDbId && (!!userIdentifier || !!accessToken) && isConnected && selectedSessionDbId !== selectedTaskDbId, 
       refetchOnWindowFocus: false, 
       retry: false 
     }
@@ -277,7 +277,7 @@ export default function CreateEmbedPage() {
   const { data: taskDbQuery } = trpc.private.queryDatabase.useQuery(
     { databaseId: selectedTaskDbId, email: userIdentifier || undefined, accessToken },
     { 
-      enabled: !!selectedTaskDbId && (!!userIdentifier || !!accessToken) && isConnected, 
+      enabled: !!selectedTaskDbId && (!!userIdentifier || !!accessToken), 
       refetchOnWindowFocus: false, 
       retry: false 
     }
@@ -527,6 +527,7 @@ export default function CreateEmbedPage() {
         sessionDatabaseId: selectedSessionDbId,
         hideDbSelectors: true,
         userId: sessionEmail || resolvedUserId || (typeof window !== 'undefined' ? (NotionCache.getUserData()?.email || '') : ''),
+        accessToken: accessToken || (typeof window !== 'undefined' ? (NotionCache.getUserData()?.accessToken || '') : ''),
       };
       // Task selection is handled within the embedded UI; omit taskId/taskTitle
       const res = await fetch('/api/embeds', {
@@ -690,6 +691,7 @@ export default function CreateEmbedPage() {
                         sessionDatabaseId: selectedSessionDbId,
                         hideDbSelectors: true,
                         userId: sessionEmail || resolvedUserId || (typeof window !== 'undefined' ? (NotionCache.getUserData()?.email || '') : ''),
+                        accessToken: accessToken || (typeof window !== 'undefined' ? (NotionCache.getUserData()?.accessToken || '') : ''),
                       };
                       // Task selection happens in the embedded UI; do not include taskId/taskTitle in link
                       if (typeof window !== "undefined") {
@@ -701,7 +703,8 @@ export default function CreateEmbedPage() {
                       const base64 = typeof window !== "undefined" ? window.btoa(json) : Buffer.from(json).toString("base64");
                       const origin = typeof window !== "undefined" ? window.location.origin : "";
                       const uParam = settings.userId ? `&u=${encodeURIComponent(String(settings.userId))}` : "";
-                      const link = `${origin}/embed/widget?c=${encodeURIComponent(base64)}${uParam}`;
+                      const atParam = settings.accessToken ? `&at=${encodeURIComponent(String(settings.accessToken))}` : "";
+                      const link = `${origin}/embed/widget?c=${encodeURIComponent(base64)}${uParam}${atParam}`;
                       setEmbedLink(link);
                       setSaveMsg("Settings saved. Embed link generated.");
                     } catch (e) {
