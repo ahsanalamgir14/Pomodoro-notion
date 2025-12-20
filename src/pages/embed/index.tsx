@@ -85,7 +85,12 @@ export default function CreateEmbedPage() {
       
       // Update connection status based on server response
       if (typeof data?.hasToken === 'boolean') {
-        setIsConnected(!!data.hasToken);
+        // Only set to false if we don't have a local access token
+        if (data.hasToken) {
+           setIsConnected(true);
+        } else if (!cachedUserData?.accessToken && !accessToken) {
+           setIsConnected(false);
+        }
       } else if (cachedUserData?.accessToken) {
         // If server check failed but we have cache, keep connection
         setIsConnected(true);
@@ -231,7 +236,7 @@ export default function CreateEmbedPage() {
     { 
       refetchOnWindowFocus: false, 
       retry: false, 
-      enabled: (!!userIdentifier || !!accessToken) && isConnected 
+      enabled: (!!userIdentifier || !!accessToken)
     }
   );
   useEffect(() => {
@@ -254,7 +259,7 @@ export default function CreateEmbedPage() {
   const { data: taskDbDetail } = trpc.private.getDatabaseDetail.useQuery(
     { databaseId: selectedTaskDbId, email: userIdentifier || undefined, accessToken },
     { 
-      enabled: !!selectedTaskDbId && (!!userIdentifier || !!accessToken) && isConnected, 
+      enabled: !!selectedTaskDbId && (!!userIdentifier || !!accessToken), 
       refetchOnWindowFocus: false, 
       retry: false 
     }
@@ -264,7 +269,7 @@ export default function CreateEmbedPage() {
   const { data: sessionDbDetail } = trpc.private.getDatabaseDetail.useQuery(
     { databaseId: selectedSessionDbId, email: userIdentifier || undefined, accessToken },
     { 
-      enabled: !!selectedSessionDbId && (!!userIdentifier || !!accessToken) && isConnected && selectedSessionDbId !== selectedTaskDbId, 
+      enabled: !!selectedSessionDbId && (!!userIdentifier || !!accessToken) && selectedSessionDbId !== selectedTaskDbId, 
       refetchOnWindowFocus: false, 
       retry: false 
     }
@@ -592,14 +597,6 @@ export default function CreateEmbedPage() {
                   <option key={p.id} value={p.id}>{p.title}</option>
                 ))}
               </select>
-              {!isConnected && (
-                <div className="mt-2 flex items-center gap-2">
-                  <span className="text-xs text-red-600">Not connected to Notion.</span>
-                  <Link href="/">
-                    <span className="text-xs rounded bg-blue-600 px-2 py-1 text-white hover:bg-blue-500">Connect Notion</span>
-                  </Link>
-                </div>
-              )}
 
               {/* Theme */}
               <div className="mt-4">
