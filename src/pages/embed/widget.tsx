@@ -276,14 +276,20 @@ export default function EmbedWidget() {
     const populateQuests = async () => {
         if (!selectedTaskId) return;
         if (!userIdentifier && !accessToken) return;
-        if (selectedQuests && selectedQuests.length > 0) return;
+        
+        console.log("populateQuests: fetching relations for task", selectedTaskId);
         try {
           const params: any = { pageId: selectedTaskId, relationName: "Quests" };
           if (userIdentifier) params.userId = userIdentifier;
           if (accessToken) params.accessToken = accessToken;
           const qs = new URLSearchParams(params);
           const resp = await fetch(`/api/notion/page-relations?${qs.toString()}`);
-          if (!resp.ok) return;
+          if (!resp.ok) {
+             console.error("populateQuests: fetch failed", resp.status);
+             setSelectedQuests([]);
+             setLinkedQuestIds([]);
+             return;
+          }
           const data = await resp.json();
           const items: Array<{ id: string; title: string }> = data?.items || [];
           const values = items.map(i => ({ label: i.title, value: i.id }));
@@ -291,6 +297,9 @@ export default function EmbedWidget() {
           setLinkedQuestIds(values.map(v => v.value));
           setQuestOptions(values);
         } catch (e) {
+          console.error("populateQuests: error", e);
+          setSelectedQuests([]);
+          setLinkedQuestIds([]);
         }
       };
       populateQuests();
@@ -433,6 +442,9 @@ export default function EmbedWidget() {
                       onChange={(e) => {
                         const id = e.target.value;
                         setSelectedTaskId(id);
+                        setSelectedQuests([]); // Clear previous selection to ensure freshness
+                        setLinkedQuestIds([]);
+                        setQuestOptions([]);
                         const found = taskItems.find((t) => t.id === id);
                         setSelectedTaskTitle(found?.title || "");
                       }}
