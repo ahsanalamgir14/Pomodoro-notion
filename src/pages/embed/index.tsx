@@ -275,9 +275,9 @@ export default function CreateEmbedPage() {
 
   // Only fetch task query when task database is selected (for preview items)
   const { data: taskDbQuery } = trpc.private.queryDatabase.useQuery(
-    { databaseId: selectedTaskDbId, email: userIdentifier, accessToken },
+    { databaseId: selectedTaskDbId, email: userIdentifier || undefined, accessToken },
     { 
-      enabled: !!selectedTaskDbId && !!userIdentifier && isConnected, 
+      enabled: !!selectedTaskDbId && (!!userIdentifier || !!accessToken) && isConnected, 
       refetchOnWindowFocus: false, 
       retry: false 
     }
