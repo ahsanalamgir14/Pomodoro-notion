@@ -23,6 +23,7 @@ type EmbedSettings = {
   hideSelectors?: boolean;
   hideDbSelectors?: boolean;
   userId?: string;
+  accessToken?: string;
 };
 
 function decodeConfigParam() {
@@ -191,13 +192,13 @@ export default function EmbedWidget() {
 
   // Fetch tasks (pages) for selected database
   const { data: dbQueryData, error: queryError } = trpc.private.queryDatabase.useQuery(
-    { email: userIdentifier, databaseId: selectedDbId, accessToken },
+    { email: userIdentifier || undefined, databaseId: selectedDbId, accessToken },
     { enabled: !!selectedDbId && (!!accessToken || !!userIdentifier), refetchOnWindowFocus: false, retry: false }
   );
 
   // Fetch database detail to get schema (e.g., Tags options)
   const { data: dbDetailData, error: detailError } = trpc.private.getDatabaseDetail.useQuery(
-    { email: userIdentifier, databaseId: selectedDbId, accessToken },
+    { email: userIdentifier || undefined, databaseId: selectedDbId, accessToken },
     { enabled: !!selectedDbId && (!!accessToken || !!userIdentifier), refetchOnWindowFocus: false, retry: false }
   );
 
