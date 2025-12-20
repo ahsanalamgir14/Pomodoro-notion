@@ -117,6 +117,9 @@ export default function EmbedWidget() {
     if (cfg?.userId) {
        setUserIdentifier((prev) => prev || String(cfg.userId));
     }
+    if (cfg?.accessToken) {
+       setAccessToken((prev) => prev || String(cfg.accessToken));
+    }
     try {
       const url = new URL(window.location.href);
       const overrideUser = url.searchParams.get("u") || url.searchParams.get("userId");
@@ -173,8 +176,8 @@ export default function EmbedWidget() {
 
   // Fetch databases via tRPC (same as home page style)
   const { data: dbData, error: dbError } = trpc.private.getDatabases.useQuery(
-    { email: userIdentifier, accessToken },
-    { refetchOnWindowFocus: false, retry: false, enabled: !!userIdentifier && (!!accessToken || !!userIdentifier) }
+    { email: userIdentifier || undefined, accessToken },
+    { refetchOnWindowFocus: false, retry: false, enabled: (!!accessToken || !!userIdentifier) }
   );
 
   useEffect(() => {
