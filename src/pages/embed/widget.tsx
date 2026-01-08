@@ -333,30 +333,30 @@ export default function EmbedWidget() {
   }, [dbQueryData, selectedTaskId]);
 
   const previewCardStyle: React.CSSProperties = useMemo(() => ({
-    backgroundColor: (config?.widgetBgColor ?? config?.widgetBg) || (config?.theme === "dark" ? "#111827" : "#ffffff"),
-    color: (config?.widgetTextColor ?? config?.widgetColor) || (config?.theme === "dark" ? "#f9fafb" : "#111827"),
-    border: `1px solid ${config?.theme === "dark" ? "#374151" : ((config?.inputBorderColor ?? config?.inputBorder) || "#d1d5db")}`,
+    backgroundColor: (config?.widgetBgColor ?? config?.widgetBg) || (config?.theme === "dark" ? "#000000" : "#FFFFFF"),
+    color: (config?.widgetTextColor ?? config?.widgetColor) || (config?.theme === "dark" ? "#FFFFFF" : "#000000"),
+    border: `1px solid ${config?.inputBorderColor ?? config?.inputBorder ?? "#808080"}`,
     borderRadius: 12,
     padding: 16,
     paddingRight: 32,
-    width: Math.max(380, ((config?.inputWidth ?? 0) as number) + 64),
+    width: "100%",
     maxWidth: "100%",
     overflowX: "auto",
     boxSizing: "border-box",
   }), [config]);
 
   const inputStyle: React.CSSProperties = useMemo(() => ({
-    width: (config?.inputWidth ?? 0) > 0 ? (config!.inputWidth as number) : "100%",
-    border: `1px solid ${((config?.inputBorderColor ?? config?.inputBorder) || (config?.theme === "dark" ? "#374151" : "#d1d5db"))}`,
+    width: "100%",
+    border: `1px solid ${config?.inputBorderColor ?? config?.inputBorder ?? "#808080"}`,
     padding: "8px 10px",
     borderRadius: 8,
-    backgroundColor: config?.theme === "dark" ? "#111827" : "#ffffff",
-    color: (config?.widgetTextColor ?? config?.widgetColor) || (config?.theme === "dark" ? "#f9fafb" : "#111827"),
+    backgroundColor: config?.theme === "dark" ? "#000000" : "#FFFFFF",
+    color: (config?.widgetTextColor ?? config?.widgetColor) || (config?.theme === "dark" ? "#FFFFFF" : "#000000"),
     outline: "none",
   }), [config]);
 
   const timerStyle: React.CSSProperties = useMemo(() => ({
-    color: config?.timerColor || (config?.theme === "dark" ? "#93c5fd" : "#2563eb"),
+    color: config?.timerColor || (config?.theme === "dark" ? "#FFFFFF" : "#000000"),
     fontSize: config?.timerFontSize || 48,
     fontWeight: 700,
     fontVariantNumeric: "tabular-nums",
@@ -365,24 +365,15 @@ export default function EmbedWidget() {
   const previewTitleStyle: React.CSSProperties = useMemo(() => ({
     fontSize: 12,
     fontWeight: 500,
-    color: config?.theme === "dark" ? "#9ca3af" : "#6b7280",
+    color: config?.theme === "dark" ? "#FFFFFF" : "#000000",
     marginBottom: 4,
-  }), [config]);
-
-  const secondaryButtonStyle: React.CSSProperties = useMemo(() => ({
-    backgroundColor: config?.theme === "dark" ? "#374151" : "#e5e7eb",
-    color: config?.theme === "dark" ? "#f9fafb" : "#111827",
-    border: `1px solid ${config?.theme === "dark" ? "#4b5563" : "#d1d5db"}`,
-    borderRadius: 8,
-    padding: "8px 12px",
-    fontWeight: 500,
   }), [config]);
 
   const containerClasses = useMemo(() => {
     const theme = config?.theme || "system";
-    if (theme === "dark") return "bg-neutral-900 text-white";
-    if (theme === "light") return "bg-white text-neutral-900";
-    return "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white";
+    if (theme === "dark") return "bg-black text-white";
+    if (theme === "light") return "bg-white text-black";
+    return "bg-white dark:bg-black text-black dark:text-white";
   }, [config]);
 
   const effectiveTheme = useMemo(() => {
@@ -392,14 +383,17 @@ export default function EmbedWidget() {
     return "light";
   }, [config?.theme, isSystemDark]);
 
-  const cardWidth = useMemo(() => Math.max(380, ((config?.inputWidth ?? 0) as number) + 64), [config?.inputWidth]);
+  const cardWidth = useMemo(() => {
+    const desired = ((config?.inputWidth ?? 0) as number) + 64;
+    return desired > 0 ? desired : "100%";
+  }, [config?.inputWidth]);
 
   return (
     <div className={`min-h-screen ${containerClasses} ${(config?.theme === 'dark' || (config?.theme === 'system' && isSystemDark)) ? 'dark' : ''}`}> 
       <Head>
         <title>Pomodoro Embed Widget</title>
       </Head>
-      <div className="mx-auto px-4 py-6" style={{ maxWidth: cardWidth }}>
+      <div className="mx-auto px-4 py-6" style={{ maxWidth: cardWidth, width: "100%" }}>
         {!config && (
           <div className="rounded-lg border border-neutral-200 p-4 text-sm opacity-75 dark:border-neutral-800">
             No config provided. Pass base64 config via query param `c`.
@@ -461,7 +455,6 @@ export default function EmbedWidget() {
                       projectId={selectedTaskId || null}
                       values={selectedQuests}
                       theme={effectiveTheme as any}
-                      width={(config?.inputWidth ?? 0) > 0 ? (config!.inputWidth as number) : undefined}
                       overrideOptions={questOptions}
                       accessToken={accessToken}
                       onChange={(opts: any[]) => {
@@ -478,7 +471,6 @@ export default function EmbedWidget() {
                       disabled={!selectedDbId}
                       selectedOptions={selectedTags}
                       theme={effectiveTheme as any}
-                      width={(config?.inputWidth ?? 0) > 0 ? (config!.inputWidth as number) : undefined}
                       handleSelect={(vals: Array<{ label: string; value: string; color: string }>) => {
                         setSelectedTags(vals || []);
                       }}
@@ -542,7 +534,7 @@ export default function EmbedWidget() {
                 <div style={timerStyle}>{new Date(elapsedMs).toISOString().substr(14, 5)}</div>
                 <div className="mt-3 flex items-center gap-3">
                   <button
-                    style={secondaryButtonStyle}
+                    className="rounded-md border border-neutral-400 px-4 py-2 text-sm font-medium bg-neutral-200 text-black hover:bg-neutral-300 dark:border-neutral-600 dark:bg-neutral-700 dark:text-white dark:hover:bg-neutral-600"
                     onClick={() => {
                       setRunning(false);
                       if (intervalRef.current) window.clearInterval(intervalRef.current);

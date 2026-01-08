@@ -40,6 +40,17 @@ export default function CreateEmbedPage() {
   const [userIdentifier, setUserIdentifier] = useState<string>("");
 
   useEffect(() => {
+    if (theme === "dark") {
+      setWidgetBg("#000000");
+      setWidgetColor("#FFFFFF");
+    } else {
+      setWidgetBg("#FFFFFF");
+      setWidgetColor("#000000");
+    }
+    setInputBorder("#808080");
+  }, [theme]);
+
+  useEffect(() => {
     let id = "";
     if (resolvedUserId && resolvedUserId !== "notion-user") {
       id = resolvedUserId;
@@ -451,7 +462,7 @@ export default function CreateEmbedPage() {
     return found;
   }, [sessionDbDetail]);
 
-  const cardWidth = Math.max(380, (inputWidth || 0) + 64);
+  const cardWidth = (inputWidth || 0) + 64;
 
   const previewCardStyleStart: React.CSSProperties = {
     backgroundColor: widgetBg || (theme === "dark" ? "#111827" : "#ffffff"),
@@ -460,8 +471,8 @@ export default function CreateEmbedPage() {
     borderRadius: 12,
     padding: 16,
     paddingRight: 32,
-    width: cardWidth,
-    maxWidth: "100%",
+    width: "100%",
+    maxWidth: cardWidth,
     overflowX: "auto",
     boxSizing: "border-box",
   };
@@ -473,8 +484,8 @@ export default function CreateEmbedPage() {
     borderRadius: 12,
     padding: 16,
     paddingRight: 32,
-    width: cardWidth,
-    maxWidth: "100%",
+    width: "100%",
+    maxWidth: cardWidth,
     overflowX: "auto",
     boxSizing: "border-box",
   };
@@ -494,22 +505,15 @@ export default function CreateEmbedPage() {
   };
 
   const inputStyle: React.CSSProperties = {
-    width: inputWidth,
-    border: `1px solid ${inputBorder || (theme === "dark" ? "#374151" : "#d1d5db")}`,
+    width: "100%",
+    border: `1px solid #808080`,
     borderRadius: 8,
-    padding: "8px 12px",
-    backgroundColor: theme === "dark" ? "#0a0a0a" : "#ffffff",
-    color: theme === "dark" ? "#f5f5f5" : "#111827",
+    padding: "8px 10px",
+    backgroundColor: theme === "dark" ? "#000000" : "#FFFFFF",
+    color: theme === "dark" ? "#FFFFFF" : "#000000",
+    outline: "none",
   };
 
-  const secondaryButtonStyle: React.CSSProperties = {
-    backgroundColor: theme === "dark" ? "#374151" : "#e5e7eb",
-    color: theme === "dark" ? "#f9fafb" : "#111827",
-    border: `1px solid ${theme === "dark" ? "#4b5563" : "#d1d5db"}`,
-    borderRadius: 8,
-    padding: "8px 12px",
-    fontWeight: 500,
-  };
   // Save current embedLink to account via API
   const saveToAccount = async () => {
     try {
@@ -818,7 +822,6 @@ export default function CreateEmbedPage() {
                       values={previewSelectedQuests}
                       theme={theme}
                       relationName={previewQuestsRelProp}
-                      width={inputWidth}
                       accessToken={accessToken}
                       onChange={(opts: any[]) => {
                         const arr = (opts || []) as Array<{ label: string; value: string }>;
@@ -833,7 +836,6 @@ export default function CreateEmbedPage() {
                       disabled={!selectedTaskDbId}
                       selectedOptions={previewSelectedTags}
                       theme={theme}
-                      width={inputWidth}
                       handleSelect={(vals: Array<{ label: string; value: string; color: string }>) => {
                         setPreviewSelectedTags(vals || []);
                       }}
@@ -876,7 +878,7 @@ export default function CreateEmbedPage() {
                 <div style={previewTitleStyle}>Timer Running</div>
                 <div style={timerStyle}>24:37</div>
                 <div className="mt-3 flex items-center gap-3">
-                  <button style={secondaryButtonStyle}>Pause</button>
+                  <button className="rounded-md border border-neutral-400 px-4 py-2 text-sm font-medium bg-neutral-200 text-black hover:bg-neutral-300 dark:border-neutral-600 dark:bg-neutral-700 dark:text-white dark:hover:bg-neutral-600">Pause</button>
                   <button className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500">Complete</button>
                 </div>
               </div>
