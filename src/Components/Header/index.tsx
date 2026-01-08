@@ -52,6 +52,14 @@ export default function Header({ imgSrc }: { imgSrc?: string }) {
         },
       },
       {
+        label: "Terms and Conditions",
+        value: "terms",
+        component: {
+          type: "link",
+          href: "/terms",
+        },
+      },
+      {
         style: "text-red-600",
         label: "Sign out",
         value: "signout",
