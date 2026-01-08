@@ -1,20 +1,16 @@
-import { GITHUB_URL, PORTFOLIO_URL } from "@/utils/constants";
+import { GITHUB_URL } from "@/utils/constants";
 import { getAppVersion } from "@/utils/utils";
 import { useAuth } from "../../utils/Context/AuthContext/Context";
 import Image from "next/image";
 import Link from "next/link";
 import { useMemo, useState } from "react";
 import ContentLoader from "react-content-loader";
-import { toast } from "react-toastify";
-import useNotification from "../../hooks/useNotification";
 import Dropdown, { MenuType } from "../Dropdown";
 import NotionConnectModal from "../NotionModifyModal";
 
 export default function Header({ imgSrc }: { imgSrc?: string }) {
   const { user, logout, isLoading } = useAuth();
   const [showModal, setModal] = useState(false);
-
-  const [notify] = useNotification();
 
   const menuList: MenuType[] = useMemo(
     (): MenuType[] => [
@@ -38,78 +34,7 @@ export default function Header({ imgSrc }: { imgSrc?: string }) {
           },
         },
       },
-      {
-        label: "Test Desktop Notification",
-        value: "testdesktopnotification",
-        component: {
-          type: "button",
-          onClick() {
-            notify("Desktop Notification Works!", "Test").then(
-              (b) =>
-                b != true &&
-                toast.warn(
-                  "Please allow Desktop notification If you want to see Desktop notifications!" // desktop notification not allowed
-                )
-            );
-          },
-        },
-      },
-      {
-        label: "How to ? (coming soon)",
-        value: "how to",
-        component: {
-          type: "button",
-          onClick() {
-            // dummy onClick
-          },
-        },
-      },
-      {
-        label: "Import Data (coming soon)",
-        value: "importdata",
-        component: {
-          type: "button",
-          onClick() {
-            // dummy onClick
-          },
-        },
-      },
-      {
-        label: "Export data (coming soon)", //data will be mailed modal open
-        value: "exportdata",
-        component: {
-          type: "button",
-          onClick() {
-            // dummy onClick
-          },
-        },
-      },
-      {
-        label: "Export data as (coming soon)", //export modal will open and we can export as csv , text or excel. this will not be backup data and data will be mailed modal open
-        value: "exportasexcel",
-        component: {
-          type: "button",
-          onClick() {
-            // dummy onClick
-          },
-        },
-      },
-      {
-        label: "About app",
-        value: "aboutapp",
-        component: {
-          type: "link",
-          href: "/about",
-        },
-      },
-      {
-        label: "About me",
-        value: "aboutme",
-        component: {
-          type: "link",
-          href: PORTFOLIO_URL,
-        },
-      },
+
       {
         label: "Github",
         value: "github",
