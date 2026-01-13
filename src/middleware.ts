@@ -6,6 +6,8 @@ const anonymousRoutes = [
   "/signup",
   "/auth/error",
   "/auth/verify-request",
+  "/forgot-password",
+  "/reset-password",
 ]; // Routes accessible without authentication
 
 //https://stackoverflow.com/a/73845472/4919370
