@@ -83,63 +83,66 @@ export default function Header({ imgSrc }: { imgSrc?: string }) {
   );
 
   return (
-    <div className="flex flex-row gap-10 sm:flex-row sm:justify-center">
-      <h1 className="text-3xl font-extrabold leading-normal text-gray-700 md:text-[4rem]">
+    <div className="relative flex w-full items-center justify-center px-4 py-2 min-h-[80px]">
+      <h1 className="text-3xl font-extrabold leading-normal text-gray-700 md:text-4xl text-center">
         <Link href="/">
           <a>
-            Pomodoro <span className="text-purple-300">Databases</span> Notion
+            Pomodoro <span className="text-purple-300">Databases</span>
           </a>
         </Link>
       </h1>
-      {/* show dropdown if user logged in */}
-      {isLoading ? (
-        <div>
-          <div className="hidden flex-col items-center justify-center sm:flex ">
+      
+      <div className="absolute right-4 top-1/2 -translate-y-1/2">
+        {/* show dropdown if user logged in */}
+        {isLoading ? (
+          <div className="flex items-center gap-4">
+            <div className="hidden flex-col items-end justify-center sm:flex">
+              <ContentLoader
+                height={20}
+                width={100}
+                viewBox="0 0 100 20"
+                backgroundColor="#f3f3f3"
+                foregroundColor="#ecebeb"
+              >
+                <rect x="0" y="0" rx="4" ry="4" width="100" height="20" />
+              </ContentLoader>
+            </div>
             <ContentLoader
-              className="bg-red-50"
-              height={20}
-              width={89}
-              viewBox="0 0 89 20"
+              height={48}
+              width={48}
+              viewBox="0 0 48 48"
+              backgroundColor="#f3f3f3"
+              foregroundColor="#ecebeb"
             >
-              <rect x="0" y="0" width={89} height={20} />
+              <circle cx="24" cy="24" r="24" />
             </ContentLoader>
           </div>
-          <ContentLoader
-            className="mt-2"
-            height={50}
-            width={50}
-            viewBox="0 0 50 50"
-          >
-            <rect x="0" y="0" rx="5" ry="5" width="50" height="50" />
-          </ContentLoader>
-          <ContentLoader
-            className="mt-2"
-            height={30}
-            width={30}
-            viewBox="0 0 30 30"
-          >
-            <rect x="0" y="0" rx="100" ry="100" width="30" height="30" />
-          </ContentLoader>
-        </div>
-      ) : (
-        user && (
-          <div>
-            <div className="hidden flex-col items-center justify-center sm:flex ">
-              {user && user?.username} <br />
+        ) : (
+          user && (
+            <div className="flex items-center gap-3">
+              <div className="flex items-center gap-3 rounded-full bg-white p-1 pl-4 pr-1 shadow-sm border border-gray-100 dark:bg-gray-800 dark:border-gray-700">
+                 <div className="hidden flex-col items-end justify-center sm:flex">
+                  <span className="text-sm font-medium text-gray-700 dark:text-gray-200">
+                    {user?.username || "User"}
+                  </span>
+                </div>
+                <div className="relative h-10 w-10 overflow-hidden rounded-full border-2 border-white shadow-sm dark:border-gray-700">
+                  <Image
+                    loading="lazy"
+                    src={imgSrc ?? "https://picsum.photos/50"}
+                    alt="Profile picture"
+                    layout="fill"
+                    objectFit="cover"
+                  />
+                </div>
+                <div className="ml-1">
+                  <Dropdown menuList={menuList} />
+                </div>
+              </div>
             </div>
-            <Image
-              loading="lazy"
-              src={imgSrc ?? "https://picsum.photos/50"}
-              alt="pic"
-              width={50}
-              height={50}
-            />
-            <div>
-              <Dropdown menuList={menuList} />
-            </div>
-          </div>
-        )
-      )}
+          )
+        )}
+      </div>
 
       {showModal && <NotionConnectModal setModal={setModal} />}
     </div>

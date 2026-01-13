@@ -8,10 +8,12 @@ import DatabaseCard from "../Components/DatabaseCard";
 import Footer from "../Components/Footer";
 import Header from "../Components/Header";
 import NotionConnectModal from "../Components/NotionConnectModal";
+import DisconnectConfirmModal from "../Components/DisconnectConfirmModal";
 import { NotionCache } from "../utils/notionCache";
 
 function Home() {
   const [showModal, setModal] = useState(false);
+  const [showDisconnectModal, setShowDisconnectModal] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isConnected, setIsConnected] = useState(false);
   const [accessToken, setAccessToken] = useState<string | undefined>(undefined);
@@ -180,7 +182,7 @@ function Home() {
   return (
     <div className="container mx-auto flex min-h-screen flex-col items-center p-4">
       {shouldShowDatabases ? (
-        <div>
+        <div className="w-full">
           <Header imgSrc={displayData?.workspace?.workspace_icon ?? null} />
           {isLoadingDatabases && (
             <div className="mt-8 text-center">
@@ -212,32 +214,38 @@ function Home() {
                 Create Embed
               </Link>
                 <button
-                  onClick={async () => {
-                    try {
-                      setDisconnectMsg(null);
-                      const payloadEmail = (resolvedUserId && resolvedUserId !== 'notion-user') ? resolvedUserId : (sessionEmail || null);
-                      const resp = await fetch('/api/notion/disconnect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: payloadEmail }) });
-                      if (!resp.ok) {
-                        const json = await resp.json().catch(() => ({}));
-                        setDisconnectMsg(json?.error || 'Failed to disconnect');
-                        return;
-                      }
-                    NotionCache.clearUserData();
-                    NotionCache.clearDatabaseCache();
-                    setIsConnected(false);
-                    setDisconnectMsg('Disconnected');
-                  } catch {
-                    setDisconnectMsg('Failed to disconnect');
-                  }
-                }}
-                className="text-sm text-red-600 hover:text-red-800 underline"
-              >
-                Disconnect
-              </button>
+                  onClick={() => setShowDisconnectModal(true)}
+                  className="text-sm text-red-600 hover:text-red-800 underline"
+                >
+                  Disconnect
+                </button>
             </div>
           )}
           {disconnectMsg && (
             <div className="mt-2 text-sm text-gray-700 text-center">{disconnectMsg}</div>
+          )}
+          {showDisconnectModal && (
+            <DisconnectConfirmModal
+              setModal={setShowDisconnectModal}
+              onConfirm={async () => {
+                try {
+                  setDisconnectMsg(null);
+                  const payloadEmail = (resolvedUserId && resolvedUserId !== 'notion-user') ? resolvedUserId : (sessionEmail || null);
+                  const resp = await fetch('/api/notion/disconnect', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ userId: payloadEmail }) });
+                  if (!resp.ok) {
+                    const json = await resp.json().catch(() => ({}));
+                    setDisconnectMsg(json?.error || 'Failed to disconnect');
+                    return;
+                  }
+                  NotionCache.clearUserData();
+                  NotionCache.clearDatabaseCache();
+                  setIsConnected(false);
+                  setDisconnectMsg('Disconnected');
+                } catch {
+                  setDisconnectMsg('Failed to disconnect');
+                }
+              }}
+            />
           )}
           {displayData?.databases?.results && displayData?.databases.results.length > 0 ? (
             <div className="mt-3 grid gap-3 pt-3 text-center md:grid-cols-3 lg:w-2/3 mx-auto">
