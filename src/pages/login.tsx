@@ -135,7 +135,7 @@ export default function Login({ disableGoogle = false }: { disableGoogle?: boole
               />
               Remember me
             </label>
-            <Link href="#">
+            <Link href="/forgot-password">
               <a className="text-sm text-indigo-600 hover:text-indigo-700">Forgot password?</a>
             </Link>
           </div>

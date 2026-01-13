@@ -70,6 +70,11 @@ export function sqliteCreateUserRecord(db: DB, record: { email: string; password
   stmt.run(record.email, record.passwordHash, record.salt, record.createdAt);
 }
 
+export function sqliteUpdateUserPassword(db: DB, email: string, passwordHash: string, salt: string) {
+  const stmt = db.prepare("UPDATE users SET passwordHash = ?, salt = ? WHERE email = ?");
+  stmt.run(passwordHash, salt, email);
+}
+
 export function sqliteUpsertNotionUser(db: DB, payload: { email: string; accessToken: string; workspace: any }) {
   const cfg = payload.workspace ? JSON.stringify(payload.workspace) : null;
   const now = Date.now();
