@@ -7,9 +7,11 @@ import Footer from "../Components/Footer";
 import GoogleButton from "../Components/GoogleButton";
 import { useRouter } from "next/router";
 import { signIn } from "next-auth/react";
+import { useAuth } from "../utils/Context/AuthContext/Context";
 
 export default function Login({ disableGoogle = false }: { disableGoogle?: boolean }) {
   const router = useRouter();
+  const { checkSession } = useAuth();
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [remember, setRemember] = useState(false);
@@ -42,6 +44,7 @@ export default function Login({ disableGoogle = false }: { disableGoogle?: boole
         }
       }
       setSuccess('Signed in successfully');
+      await checkSession();
       const redirectTarget = (router.query.redirect as string) || '/';
       router.replace(redirectTarget);
     } catch (err) {
@@ -84,7 +87,7 @@ export default function Login({ disableGoogle = false }: { disableGoogle?: boole
         <p className="mt-2 text-center text-sm text-gray-600">
           Sign in to your Pomodoro account. This is not your Notion account.
         </p>
-        <div className="mt-3 rounded-md bg-yellow-50 p-3 text-xs text-yellow-900">
+        {/* <div className="mt-3 rounded-md bg-yellow-50 p-3 text-xs text-yellow-900">
           <p>
             We never ask for your Notion password. Connecting Notion uses official OAuth at
             <span className="mx-1 font-semibold">api.notion.com</span> and you can revoke access anytime.
@@ -93,7 +96,7 @@ export default function Login({ disableGoogle = false }: { disableGoogle?: boole
           <p className="mt-2">
             Pomodoro for Notion is an independent tool and is not affiliated with Notion.
           </p>
-        </div>
+        </div> */}
         <form className="mt-6 space-y-4" onSubmit={onSubmit}>
           <div>
             <label htmlFor="email" className="sr-only">

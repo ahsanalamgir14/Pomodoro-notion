@@ -12,6 +12,7 @@ interface AuthContextType {
   login: (username: string, password: string) => Promise<boolean>;
   logout: () => void;
   isLoading: boolean;
+  checkSession: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
@@ -27,23 +28,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [user, setUser] = useState<User | null>(null);
   const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    fetch('/api/session')
-      .then(r => r.json())
-      .then(data => {
-        if (data?.isAuthenticated && data?.email) {
-          const email = String(data.email);
-          const username = email.split('@')[0];
-          setUser({ username, email });
-        } else {
-          setUser(null);
-        }
-        setIsLoading(false);
-      })
-      .catch(() => {
+  const checkSession = async () => {
+    try {
+      const r = await fetch('/api/session');
+      const data = await r.json();
+      if (data?.isAuthenticated && data?.email) {
+        const email = String(data.email);
+        const username = email.split('@')[0];
+        setUser({ username, email });
+      } else {
         setUser(null);
-        setIsLoading(false);
-      });
+      }
+    } catch {
+      setUser(null);
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    checkSession();
   }, []);
 
   const login = async (username: string, password: string): Promise<boolean> => {
@@ -77,7 +81,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, login, logout, isLoading }}>
+    <AuthContext.Provider value={{ user, login, logout, isLoading, checkSession }}>
       {children}
     </AuthContext.Provider>
   );
