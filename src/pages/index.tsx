@@ -1,3 +1,4 @@
+import { ArrowPathIcon, CodeBracketSquareIcon, PowerIcon } from "@heroicons/react/24/outline";
 import React from "react";
 import { trpc } from "../utils/trpc";
 import { useRouter } from "next/router";
@@ -198,27 +199,31 @@ function Home() {
             </div>
           )}
           {displayData && (
-            <div className="mt-4 flex items-center justify-center gap-4">
+            <div className="mt-8 flex flex-wrap items-center justify-center gap-4">
               <button
                 onClick={() => {
                   refetch();
                 }}
-                className="text-sm text-blue-600 hover:text-blue-800 underline"
+                className="flex items-center gap-2 rounded-lg border border-gray-200 bg-white px-4 py-2 text-sm font-medium text-gray-700 shadow-sm hover:bg-gray-50 hover:text-gray-900 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2"
               >
+                <ArrowPathIcon className="h-4 w-4" />
                 Refresh databases
               </button>
-              <Link
-                href="/embed"
-                className="text-sm rounded bg-indigo-600 px-3 py-1 font-medium text-white hover:bg-indigo-500"
-              >
-                Create Embed
+              
+              <Link href="/embed">
+                <a className="flex items-center gap-2 rounded-lg bg-indigo-600 px-4 py-2 text-sm font-medium text-white shadow-sm hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2">
+                  <CodeBracketSquareIcon className="h-4 w-4" />
+                  Create Embed
+                </a>
               </Link>
-                <button
-                  onClick={() => setShowDisconnectModal(true)}
-                  className="text-sm text-red-600 hover:text-red-800 underline"
-                >
-                  Disconnect
-                </button>
+              
+              <button
+                onClick={() => setShowDisconnectModal(true)}
+                className="flex items-center gap-2 rounded-lg border border-red-200 bg-white px-4 py-2 text-sm font-medium text-red-600 shadow-sm hover:bg-red-50 hover:text-red-700 focus:outline-none focus:ring-2 focus:ring-red-500 focus:ring-offset-2"
+              >
+                <PowerIcon className="h-4 w-4" />
+                Disconnect
+              </button>
             </div>
           )}
           {disconnectMsg && (
