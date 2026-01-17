@@ -70,14 +70,6 @@ export default function Header({ imgSrc }: { imgSrc?: string }) {
           },
         },
       },
-      {
-        label: `version: ${getAppVersion()}`,
-        style: "text-slate-500",
-        value: "appversion",
-        component: {
-          type: "text",
-        },
-      },
     ],
     [user?.email]
   );
