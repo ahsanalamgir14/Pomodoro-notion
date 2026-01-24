@@ -75,16 +75,35 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
       sort: { direction: "descending", timestamp: "last_edited_time" },
     });
 
+    // Filter out database items (pages that are children of a database)
     const pages = (searchResp?.results || [])
-      .filter((r: any) => r?.object === "page")
+      .filter((r: any) => r?.object === "page" && r?.parent?.type !== "database_id")
       .slice(0, 50);
 
     // Attempt to derive a human-readable title
     const items = pages.map((p: any) => {
-      // Some pages may not expose title directly; try several fallbacks
-      const titleFromProperties = p?.properties?.title?.title?.[0]?.plain_text;
+      // Find the property of type "title"
+      const titleProp = Object.values(p.properties || {}).find((prop: any) => prop.type === "title");
+      const titleFromProperties = (titleProp as any)?.title?.[0]?.plain_text;
+
       const titleFromIcon = p?.icon?.emoji ? `Page ${p.icon.emoji}` : undefined;
-      const fallbackFromUrl = (p?.url || "").split("/").pop()?.replace(/-/g, " ");
+      
+      // Fallback: extract from URL and try to remove the ID
+      let fallbackFromUrl = undefined;
+      if (p?.url) {
+        const slug = p.url.split("/").pop() || "";
+        // Notion slugs usually end with the 32-char ID. 
+        // We split by hyphen. If the last part is a 32-char hex string, we drop it.
+        const parts = slug.split("-");
+        const lastPart = parts[parts.length - 1];
+        if (lastPart && lastPart.length === 32 && /^[0-9a-fA-F]+$/.test(lastPart)) {
+          parts.pop();
+        }
+        if (parts.length > 0) {
+          fallbackFromUrl = parts.join(" ");
+        }
+      }
+
       const title = titleFromProperties || titleFromIcon || fallbackFromUrl || "Untitled Page";
       return {
         id: p?.id,
