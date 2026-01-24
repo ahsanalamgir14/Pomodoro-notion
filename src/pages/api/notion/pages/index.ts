@@ -76,8 +76,17 @@ export default async function handler(req: NextApiRequest, res: NextApiResponse)
     });
 
     // Filter out database items (pages that are children of a database)
+    // Also exclude archived pages
     const pages = (searchResp?.results || [])
-      .filter((r: any) => r?.object === "page" && r?.parent?.type !== "database_id")
+      .filter((r: any) => {
+        const isPage = r?.object === "page";
+        // Strictly exclude database items
+        const isDatabaseItem = r?.parent?.type === "database_id";
+        // Exclude archived items if the property exists (search usually handles this but being safe)
+        const isArchived = r?.archived === true;
+        
+        return isPage && !isDatabaseItem && !isArchived;
+      })
       .slice(0, 50);
 
     // Attempt to derive a human-readable title
