@@ -95,6 +95,7 @@ export default function EmbedWidget() {
 
   // Timer state
   const [running, setRunning] = useState<boolean>(false);
+  const [paused, setPaused] = useState<boolean>(false);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [elapsedMs, setElapsedMs] = useState<number>(0);
   const intervalRef = useRef<number | null>(null);
@@ -402,7 +403,7 @@ export default function EmbedWidget() {
         {config && (
           <div>
             {/* Controls / Timer Card */}
-            {!running ? (
+            {!running && !paused ? (
               <div style={{ ...previewCardStyle, marginBottom: 16 }}>
                 
                 <label className="block mb-1">Session Title</label>
@@ -487,6 +488,7 @@ export default function EmbedWidget() {
                       setErrorMsg("");
                       const now = Date.now();
                       setRunning(true);
+                      setPaused(false);
                       setStartTime(now);
                       setElapsedMs(0);
                       if (intervalRef.current) window.clearInterval(intervalRef.current);
@@ -530,39 +532,76 @@ export default function EmbedWidget() {
               </div>
             ) : (
               <div style={previewCardStyle}>
-                <div style={previewTitleStyle}>Timer Running</div>
+                <div style={previewTitleStyle}>{paused ? "Timer Paused" : "Timer Running"}</div>
                 <div style={timerStyle}>{new Date(elapsedMs).toISOString().substr(14, 5)}</div>
                 <div className="mt-3 flex items-center gap-3">
-                  <button
-                    className="rounded-md border border-neutral-400 px-4 py-2 text-sm font-medium bg-neutral-200 text-black hover:bg-neutral-300 dark:border-neutral-600 dark:bg-neutral-700 dark:text-white dark:hover:bg-neutral-600"
-                    onClick={() => {
-                      setRunning(false);
-                      if (intervalRef.current) window.clearInterval(intervalRef.current);
-                      const userId = userIdentifier;
-                      const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
-                      if (taskPageId) {
-                        updateTaskStatus({ userId, pageId: taskPageId, status: "Paused", accessToken }).catch((e) => {
-                          console.warn("Failed to set task status Paused", e);
+                  {!paused ? (
+                    <button
+                      className="rounded-md border border-neutral-400 px-4 py-2 text-sm font-medium bg-neutral-200 text-black hover:bg-neutral-300 dark:border-neutral-600 dark:bg-neutral-700 dark:text-white dark:hover:bg-neutral-600"
+                      onClick={() => {
+                        setRunning(false);
+                        setPaused(true);
+                        if (intervalRef.current) window.clearInterval(intervalRef.current);
+                        const userId = userIdentifier;
+                        const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
+                        if (taskPageId) {
+                          updateTaskStatus({ userId, pageId: taskPageId, status: "Paused", accessToken }).catch((e) => {
+                            console.warn("Failed to set task status Paused", e);
+                          });
+                        }
+                        const targets = linkedQuestIds.length > 0 ? linkedQuestIds : [];
+                        targets.forEach((qid) => {
+                          updateQuestStatus({
+                            userId,
+                            questPageId: qid,
+                            status: "Paused",
+                            targetDatabaseId: selectedDbId,
+                            adventurePageId: config?.pageId,
+                            accessToken,
+                          }).catch((err) => {
+                            console.error("Failed to pause quest", err);
+                            setErrorMsg("Failed to update task status on pause.");
+                          });
                         });
-                      }
-                      const targets = linkedQuestIds.length > 0 ? linkedQuestIds : [];
-                      targets.forEach((qid) => {
-                        updateQuestStatus({
-                          userId,
-                          questPageId: qid,
-                          status: "Paused",
-                          targetDatabaseId: selectedDbId,
-                          adventurePageId: config?.pageId,
-                          accessToken,
-                        }).catch((err) => {
-                          console.error("Failed to pause quest", err);
-                          setErrorMsg("Failed to update task status on pause.");
+                      }}
+                    >
+                      Pause
+                    </button>
+                  ) : (
+                    <button
+                      className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
+                      onClick={() => {
+                        setRunning(true);
+                        setPaused(false);
+                        if (intervalRef.current) window.clearInterval(intervalRef.current);
+                        intervalRef.current = window.setInterval(() => {
+                          setElapsedMs((prev) => prev + 1000);
+                        }, 1000);
+                        const userId = userIdentifier;
+                        const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
+                        if (taskPageId) {
+                          updateTaskStatus({ userId, pageId: taskPageId, status: "In Progress", accessToken }).catch((e) => {
+                            console.warn("Failed to set task status In Progress", e);
+                          });
+                        }
+                        const targets = linkedQuestIds.length > 0 ? linkedQuestIds : [];
+                        targets.forEach((qid) => {
+                          updateQuestStatus({
+                            userId,
+                            questPageId: qid,
+                            status: "In Progress",
+                            targetDatabaseId: selectedDbId,
+                            adventurePageId: config?.pageId,
+                            accessToken,
+                          }).catch((err) => {
+                            console.error("Failed to resume quest", err);
+                          });
                         });
-                      });
-                    }}
-                  >
-                    Pause
-                  </button>
+                      }}
+                    >
+                      Resume
+                    </button>
+                  )}
                   <button
                     className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
                     onClick={async () => {
@@ -570,6 +609,7 @@ export default function EmbedWidget() {
                         setSavingMsg("");
                         setErrorMsg("");
                         setRunning(false);
+                        setPaused(false);
                         if (intervalRef.current) window.clearInterval(intervalRef.current);
                         const endTimeMs = Date.now();
                         const userId = userIdentifier;
