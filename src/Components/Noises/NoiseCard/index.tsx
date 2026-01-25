@@ -92,7 +92,7 @@ export default function NoiseCard({
       className={`flex h-28 w-28 cursor-pointer flex-col items-center rounded-xl bg-gradient-to-r from-slate-50 via-slate-100
       to-slate-50
       p-3	
-    align-top text-slate-50 shadow-md 
+    align-top text-black dark:text-white shadow-md 
   
     `}
     >

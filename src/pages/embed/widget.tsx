@@ -95,9 +95,51 @@ export default function EmbedWidget() {
 
   // Timer state
   const [running, setRunning] = useState<boolean>(false);
+  const [paused, setPaused] = useState<boolean>(false);
   const [startTime, setStartTime] = useState<number | null>(null);
   const [elapsedMs, setElapsedMs] = useState<number>(0);
   const intervalRef = useRef<number | null>(null);
+
+  // New Timer Logic
+  const [timerMode, setTimerMode] = useState<'pomo' | 'short' | 'long'>('pomo');
+  const [initialDuration, setInitialDuration] = useState<number>(25 * 60);
+  const [remainingTime, setRemainingTime] = useState<number>(25 * 60);
+
+  useEffect(() => {
+    if (running && !paused && remainingTime > 0) {
+      intervalRef.current = window.setInterval(() => {
+        setRemainingTime((prev) => {
+          if (prev <= 1) {
+            setRunning(false);
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [running, paused, remainingTime]);
+
+  const handleModeChange = (mode: 'pomo' | 'short' | 'long') => {
+    setTimerMode(mode);
+    setRunning(false);
+    setPaused(false);
+    if (mode === 'pomo') {
+        setInitialDuration(25 * 60);
+        setRemainingTime(25 * 60);
+    } else if (mode === 'short') {
+        setInitialDuration(5 * 60);
+        setRemainingTime(5 * 60);
+    } else if (mode === 'long') {
+        setInitialDuration(15 * 60);
+        setRemainingTime(15 * 60);
+    }
+  };
 
   useEffect(() => {
     const cfg = decodeConfigParam();
@@ -333,30 +375,30 @@ export default function EmbedWidget() {
   }, [dbQueryData, selectedTaskId]);
 
   const previewCardStyle: React.CSSProperties = useMemo(() => ({
-    backgroundColor: (config?.widgetBgColor ?? config?.widgetBg) || (config?.theme === "dark" ? "#111827" : "#ffffff"),
-    color: (config?.widgetTextColor ?? config?.widgetColor) || (config?.theme === "dark" ? "#f9fafb" : "#111827"),
-    border: `1px solid ${config?.theme === "dark" ? "#374151" : ((config?.inputBorderColor ?? config?.inputBorder) || "#d1d5db")}`,
+    backgroundColor: (config?.widgetBgColor ?? config?.widgetBg) || (config?.theme === "dark" ? "#000000" : "#FFFFFF"),
+    color: (config?.widgetTextColor ?? config?.widgetColor) || (config?.theme === "dark" ? "#FFFFFF" : "#000000"),
+    border: `1px solid ${config?.inputBorderColor ?? config?.inputBorder ?? "#808080"}`,
     borderRadius: 12,
     padding: 16,
     paddingRight: 32,
-    width: Math.max(380, ((config?.inputWidth ?? 0) as number) + 64),
+    width: "100%",
     maxWidth: "100%",
     overflowX: "auto",
     boxSizing: "border-box",
   }), [config]);
 
   const inputStyle: React.CSSProperties = useMemo(() => ({
-    width: (config?.inputWidth ?? 0) > 0 ? (config!.inputWidth as number) : "100%",
-    border: `1px solid ${((config?.inputBorderColor ?? config?.inputBorder) || (config?.theme === "dark" ? "#374151" : "#d1d5db"))}`,
+    width: "100%",
+    border: `1px solid ${config?.inputBorderColor ?? config?.inputBorder ?? "#808080"}`,
     padding: "8px 10px",
     borderRadius: 8,
-    backgroundColor: config?.theme === "dark" ? "#111827" : "#ffffff",
-    color: (config?.widgetTextColor ?? config?.widgetColor) || (config?.theme === "dark" ? "#f9fafb" : "#111827"),
+    backgroundColor: config?.theme === "dark" ? "#000000" : "#FFFFFF",
+    color: (config?.widgetTextColor ?? config?.widgetColor) || (config?.theme === "dark" ? "#FFFFFF" : "#000000"),
     outline: "none",
   }), [config]);
 
   const timerStyle: React.CSSProperties = useMemo(() => ({
-    color: config?.timerColor || (config?.theme === "dark" ? "#93c5fd" : "#2563eb"),
+    color: config?.timerColor || (config?.theme === "dark" ? "#FFFFFF" : "#000000"),
     fontSize: config?.timerFontSize || 48,
     fontWeight: 700,
     fontVariantNumeric: "tabular-nums",
@@ -365,24 +407,15 @@ export default function EmbedWidget() {
   const previewTitleStyle: React.CSSProperties = useMemo(() => ({
     fontSize: 12,
     fontWeight: 500,
-    color: config?.theme === "dark" ? "#9ca3af" : "#6b7280",
+    color: config?.theme === "dark" ? "#FFFFFF" : "#000000",
     marginBottom: 4,
-  }), [config]);
-
-  const secondaryButtonStyle: React.CSSProperties = useMemo(() => ({
-    backgroundColor: config?.theme === "dark" ? "#374151" : "#e5e7eb",
-    color: config?.theme === "dark" ? "#f9fafb" : "#111827",
-    border: `1px solid ${config?.theme === "dark" ? "#4b5563" : "#d1d5db"}`,
-    borderRadius: 8,
-    padding: "8px 12px",
-    fontWeight: 500,
   }), [config]);
 
   const containerClasses = useMemo(() => {
     const theme = config?.theme || "system";
-    if (theme === "dark") return "bg-neutral-900 text-white";
-    if (theme === "light") return "bg-white text-neutral-900";
-    return "bg-white dark:bg-neutral-900 text-neutral-900 dark:text-white";
+    if (theme === "dark") return "bg-black text-white";
+    if (theme === "light") return "bg-white text-black";
+    return "bg-white dark:bg-black text-black dark:text-white";
   }, [config]);
 
   const effectiveTheme = useMemo(() => {
@@ -392,14 +425,23 @@ export default function EmbedWidget() {
     return "light";
   }, [config?.theme, isSystemDark]);
 
-  const cardWidth = useMemo(() => Math.max(380, ((config?.inputWidth ?? 0) as number) + 64), [config?.inputWidth]);
+  const cardWidth = useMemo(() => {
+    const desired = ((config?.inputWidth ?? 0) as number) + 64;
+    return desired > 0 ? desired : "100%";
+  }, [config?.inputWidth]);
+
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
 
   return (
     <div className={`min-h-screen ${containerClasses} ${(config?.theme === 'dark' || (config?.theme === 'system' && isSystemDark)) ? 'dark' : ''}`}> 
       <Head>
         <title>Pomodoro Embed Widget</title>
       </Head>
-      <div className="mx-auto px-4 py-6" style={{ maxWidth: cardWidth }}>
+      <div className="mx-auto px-4 py-6" style={{ maxWidth: cardWidth, width: "100%" }}>
         {!config && (
           <div className="rounded-lg border border-neutral-200 p-4 text-sm opacity-75 dark:border-neutral-800">
             No config provided. Pass base64 config via query param `c`.
@@ -408,9 +450,46 @@ export default function EmbedWidget() {
         {config && (
           <div>
             {/* Controls / Timer Card */}
-            {!running ? (
+            {!running && !paused ? (
               <div style={{ ...previewCardStyle, marginBottom: 16 }}>
                 
+                {/* Timer Mode Selectors */}
+                <div className="mb-4 flex justify-center gap-2">
+                    <button
+                        onClick={() => handleModeChange('pomo')}
+                        className={`rounded-full px-4 py-1 text-sm font-medium transition-colors ${timerMode === 'pomo' ? 'bg-opacity-100 text-white' : 'bg-opacity-20 hover:bg-opacity-40'}`}
+                        style={{ 
+                            backgroundColor: timerMode === 'pomo' ? (config?.timerColor || "#ef4444") : 'transparent',
+                            color: timerMode === 'pomo' ? '#fff' : (config?.theme === 'dark' ? '#fff' : '#000'),
+                            border: `1px solid ${config?.timerColor || "#ef4444"}`
+                        }}
+                    >
+                        Pomodoro (25m)
+                    </button>
+                    <button
+                        onClick={() => handleModeChange('short')}
+                        className={`rounded-full px-4 py-1 text-sm font-medium transition-colors ${timerMode === 'short' ? 'bg-opacity-100 text-white' : 'bg-opacity-20 hover:bg-opacity-40'}`}
+                        style={{ 
+                            backgroundColor: timerMode === 'short' ? (config?.timerColor || "#ef4444") : 'transparent',
+                            color: timerMode === 'short' ? '#fff' : (config?.theme === 'dark' ? '#fff' : '#000'),
+                            border: `1px solid ${config?.timerColor || "#ef4444"}`
+                        }}
+                    >
+                        Short Break (5m)
+                    </button>
+                    <button
+                        onClick={() => handleModeChange('long')}
+                        className={`rounded-full px-4 py-1 text-sm font-medium transition-colors ${timerMode === 'long' ? 'bg-opacity-100 text-white' : 'bg-opacity-20 hover:bg-opacity-40'}`}
+                        style={{ 
+                            backgroundColor: timerMode === 'long' ? (config?.timerColor || "#ef4444") : 'transparent',
+                            color: timerMode === 'long' ? '#fff' : (config?.theme === 'dark' ? '#fff' : '#000'),
+                            border: `1px solid ${config?.timerColor || "#ef4444"}`
+                        }}
+                    >
+                        Long Break (15m)
+                    </button>
+                </div>
+
                 <label className="block mb-1">Session Title</label>
                 <input style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} />
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -461,7 +540,6 @@ export default function EmbedWidget() {
                       projectId={selectedTaskId || null}
                       values={selectedQuests}
                       theme={effectiveTheme as any}
-                      width={(config?.inputWidth ?? 0) > 0 ? (config!.inputWidth as number) : undefined}
                       overrideOptions={questOptions}
                       accessToken={accessToken}
                       onChange={(opts: any[]) => {
@@ -478,7 +556,6 @@ export default function EmbedWidget() {
                       disabled={!selectedDbId}
                       selectedOptions={selectedTags}
                       theme={effectiveTheme as any}
-                      width={(config?.inputWidth ?? 0) > 0 ? (config!.inputWidth as number) : undefined}
                       handleSelect={(vals: Array<{ label: string; value: string; color: string }>) => {
                         setSelectedTags(vals || []);
                       }}
@@ -494,13 +571,14 @@ export default function EmbedWidget() {
                       setSavingMsg("");
                       setErrorMsg("");
                       const now = Date.now();
+                      if (remainingTime <= 0) {
+                        setRemainingTime(initialDuration);
+                      }
                       setRunning(true);
+                      setPaused(false);
                       setStartTime(now);
-                      setElapsedMs(0);
-                      if (intervalRef.current) window.clearInterval(intervalRef.current);
-                      intervalRef.current = window.setInterval(() => {
-                        setElapsedMs((prev) => prev + 1000);
-                      }, 1000);
+                      // interval handled by useEffect
+                      
                       const userId = userIdentifier;
                       const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
                       const targets = (selectedQuests?.map(q => q.value) || []).length > 0
@@ -538,39 +616,73 @@ export default function EmbedWidget() {
               </div>
             ) : (
               <div style={previewCardStyle}>
-                <div style={previewTitleStyle}>Timer Running</div>
-                <div style={timerStyle}>{new Date(elapsedMs).toISOString().substr(14, 5)}</div>
+                <div style={previewTitleStyle}>{paused ? "Timer Paused" : "Timer Running"}</div>
+                <div style={timerStyle}>{formatTime(remainingTime)}</div>
                 <div className="mt-3 flex items-center gap-3">
-                  <button
-                    style={secondaryButtonStyle}
-                    onClick={() => {
-                      setRunning(false);
-                      if (intervalRef.current) window.clearInterval(intervalRef.current);
-                      const userId = userIdentifier;
-                      const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
-                      if (taskPageId) {
-                        updateTaskStatus({ userId, pageId: taskPageId, status: "Paused", accessToken }).catch((e) => {
-                          console.warn("Failed to set task status Paused", e);
+                  {!paused ? (
+                    <button
+                      className="rounded-md border border-neutral-400 px-4 py-2 text-sm font-medium bg-neutral-200 text-black hover:bg-neutral-300 dark:border-neutral-600 dark:bg-neutral-700 dark:text-white dark:hover:bg-neutral-600"
+                      onClick={() => {
+                        setRunning(false);
+                        setPaused(true);
+                        // interval cleared by useEffect
+                        const userId = userIdentifier;
+                        const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
+                        if (taskPageId) {
+                          updateTaskStatus({ userId, pageId: taskPageId, status: "Paused", accessToken }).catch((e) => {
+                            console.warn("Failed to set task status Paused", e);
+                          });
+                        }
+                        const targets = linkedQuestIds.length > 0 ? linkedQuestIds : [];
+                        targets.forEach((qid) => {
+                          updateQuestStatus({
+                            userId,
+                            questPageId: qid,
+                            status: "Paused",
+                            targetDatabaseId: selectedDbId,
+                            adventurePageId: config?.pageId,
+                            accessToken,
+                          }).catch((err) => {
+                            console.error("Failed to pause quest", err);
+                            setErrorMsg("Failed to update task status on pause.");
+                          });
                         });
-                      }
-                      const targets = linkedQuestIds.length > 0 ? linkedQuestIds : [];
-                      targets.forEach((qid) => {
-                        updateQuestStatus({
-                          userId,
-                          questPageId: qid,
-                          status: "Paused",
-                          targetDatabaseId: selectedDbId,
-                          adventurePageId: config?.pageId,
-                          accessToken,
-                        }).catch((err) => {
-                          console.error("Failed to pause quest", err);
-                          setErrorMsg("Failed to update task status on pause.");
+                      }}
+                    >
+                      Pause
+                    </button>
+                  ) : (
+                    <button
+                      className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
+                      onClick={() => {
+                        setRunning(true);
+                        setPaused(false);
+                        // interval handled by useEffect
+                        const userId = userIdentifier;
+                        const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
+                        if (taskPageId) {
+                          updateTaskStatus({ userId, pageId: taskPageId, status: "In Progress", accessToken }).catch((e) => {
+                            console.warn("Failed to set task status In Progress", e);
+                          });
+                        }
+                        const targets = linkedQuestIds.length > 0 ? linkedQuestIds : [];
+                        targets.forEach((qid) => {
+                          updateQuestStatus({
+                            userId,
+                            questPageId: qid,
+                            status: "In Progress",
+                            targetDatabaseId: selectedDbId,
+                            adventurePageId: config?.pageId,
+                            accessToken,
+                          }).catch((err) => {
+                            console.error("Failed to resume quest", err);
+                          });
                         });
-                      });
-                    }}
-                  >
-                    Pause
-                  </button>
+                      }}
+                    >
+                      Resume
+                    </button>
+                  )}
                   <button
                     className="rounded-md bg-indigo-600 px-4 py-2 text-sm font-medium text-white hover:bg-indigo-500"
                     onClick={async () => {
@@ -578,6 +690,7 @@ export default function EmbedWidget() {
                         setSavingMsg("");
                         setErrorMsg("");
                         setRunning(false);
+                        setPaused(false);
                         if (intervalRef.current) window.clearInterval(intervalRef.current);
                         const endTimeMs = Date.now();
                         const userId = userIdentifier;
@@ -586,7 +699,8 @@ export default function EmbedWidget() {
                           setErrorMsg("Please select a Time Tracking database.");
                           return;
                         }
-                        const timerSeconds = Math.max(60, Math.floor(elapsedMs / 1000));
+                        // Use initialDuration as the timer value (minutes converted to seconds if needed, but initialDuration is in seconds)
+                        const timerSeconds = initialDuration;
                         const startSeconds = Math.floor((startTime ?? endTimeMs) / 1000);
                         const endSeconds = Math.floor(endTimeMs / 1000);
                         await savePomoSessionToNotion({
@@ -627,7 +741,8 @@ export default function EmbedWidget() {
                           });
                         }
                         setSavingMsg("Time Tracking entry saved and status updated.");
-                        setElapsedMs(0);
+                        // Reset timer to initial duration of current mode
+                        setRemainingTime(initialDuration);
                         setStartTime(null);
                       } catch (err) {
                         console.error("Widget completion error", err);

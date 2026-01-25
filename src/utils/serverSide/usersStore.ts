@@ -91,3 +91,23 @@ export function validatePassword(email: string, password: string): boolean {
   const hash = hashPassword(password, user.salt);
   return hash === user.passwordHash;
 }
+
+export function updateUserPassword(email: string, password: string) {
+  const key = normalizeEmail(email);
+  const db = getDb();
+  const salt = crypto.randomBytes(16).toString("hex");
+  const passwordHash = hashPassword(password, salt);
+
+  if (db) {
+    sqliteUpdateUserPassword(db, key, passwordHash, salt);
+    return;
+  }
+
+  const users = loadUsers();
+  if (!users[key]) {
+    throw new Error("User not found");
+  }
+  users[key].passwordHash = passwordHash;
+  users[key].salt = salt;
+  saveUsers(users);
+}

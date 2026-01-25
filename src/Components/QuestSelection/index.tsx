@@ -24,6 +24,7 @@ type Props = {
 
 const colourStyles = ({
   backgroundColor = "white",
+  color = "black",
   margin = "unset",
   padding = "12px 16px 12px, 16px",
   border = `1px solid #DAE6EF`,
@@ -49,6 +50,7 @@ const colourStyles = ({
         margin,
         padding,
         backgroundColor,
+        color,
         border: border,
         
         "&:hover": {
@@ -72,7 +74,11 @@ const colourStyles = ({
       ...styles,
       padding: "0px",
       borderRadius,
+      backgroundColor,
     }),
+    singleValue: (styles: any) => ({ ...styles, color }),
+    input: (styles: any) => ({ ...styles, color }),
+    placeholder: (styles: any) => ({ ...styles, color }),
     indicatorSeparator: (styles: any) => ({ ...styles, display: "none" }),
   };
 };
@@ -126,9 +132,10 @@ export default function QuestSelection({ disabled = false, projectId, relationNa
       onChange={(opts: any) => onChange(opts || [])}
       placeholder="Select Quest(s) (relation)"
       styles={colourStyles({
-        backgroundColor: theme === "dark" ? "#111827" : "white",
-        whiteBackground: theme === "dark" ? "#0a0a0a" : "white",
-        border: theme === "dark" ? "1px solid #4b5563" : "1px solid #DAE6EF",
+        backgroundColor: theme === "dark" ? "#000000" : "white",
+        color: theme === "dark" ? "#FFFFFF" : "#000000",
+        whiteBackground: theme === "dark" ? "#000000" : "white",
+        border: "1px solid #808080",
         borderRadius: "8px",
         minHeight: "40px",
         controlWidth: width,

@@ -20,12 +20,12 @@ const colourStyles = (theme: "light" | "dark" = "light", controlWidth?: number |
       boxShadow: "unset",
       cursor: "pointer",
       margin: "unset",
-      backgroundColor: theme === "dark" ? "#111827" : "white",
-      color: theme === "dark" ? "#f9fafb" : "#111827",
-      border: theme === "dark" ? `1px solid #4b5563` : `1px solid #DAE6EF`,
+      backgroundColor: theme === "dark" ? "#000000" : "white",
+      color: theme === "dark" ? "#FFFFFF" : "#000000",
+      border: "1px solid #808080",
       "&:hover": {
         fontWeight: 0,
-        backgroundColor: theme === "dark" ? "#0a0a0a" : "white",
+        backgroundColor: theme === "dark" ? "#000000" : "white",
       },
       borderRadius: "6px",
       minHeight: "48px",
@@ -49,7 +49,7 @@ const colourStyles = (theme: "light" | "dark" = "light", controlWidth?: number |
         : isFocused
         ? color.alpha(0.6).darken(0.6).css()
         : color.darken(0.8).alpha(0.7).css(),
-      color: chroma.contrast(color, "white") > 2 ? "white" : (theme === "dark" ? "#111827" : "black"),
+      color: chroma.contrast(color, "white") > 2 ? "white" : "black",
       margin: "2px 0px",
       borderRadius: "2px",
       padding: "10px 25px",
@@ -75,11 +75,11 @@ const colourStyles = (theme: "light" | "dark" = "light", controlWidth?: number |
   },
   multiValueLabel: (styles, { data }) => ({
     ...styles,
-    color: chroma.contrast(data.color, "white") > 2 ? "white" : (theme === "dark" ? "#111827" : "black"),
+    color: chroma.contrast(data.color, "white") > 2 ? "white" : "black",
   }),
   multiValueRemove: (styles, { data }) => ({
     ...styles,
-    color: chroma.contrast(data.color, "white") > 2 ? "white" : (theme === "dark" ? "#111827" : "black"),
+    color: chroma.contrast(data.color, "white") > 2 ? "white" : "black",
     ":hover": {
       backgroundColor: data.color,
       color: "white",
@@ -88,13 +88,13 @@ const colourStyles = (theme: "light" | "dark" = "light", controlWidth?: number |
   menu: (styles) => ({
     ...styles,
     width: "100%",
-    boxShadow: `0px 2px 24px ${theme === "dark" ? "#111827" : "#DAE6EF"}`,
+    boxShadow: `0px 2px 24px ${theme === "dark" ? "#000000" : "#DAE6EF"}`,
     zIndex: 99999, //fix so that it can overlap over other components
   }),
   menuList: (styles) => ({
     ...styles,
     borderRadius: "6px",
-    backgroundColor: theme === "dark" ? "#0a0a0a" : "white",
+    backgroundColor: theme === "dark" ? "#000000" : "white",
   }),
   menuPortal: (base) => {
     const { ...rest } = base;
@@ -103,15 +103,15 @@ const colourStyles = (theme: "light" | "dark" = "light", controlWidth?: number |
   indicatorSeparator: (styles) => ({ ...styles, display: "none" }),
   placeholder: (styles) => ({
     ...styles,
-    color: theme === "dark" ? "#9ca3af" : "#6b7280",
+    color: theme === "dark" ? "#FFFFFF" : "#000000",
   }),
   input: (styles) => ({
     ...styles,
-    color: theme === "dark" ? "#f9fafb" : "#111827",
+    color: theme === "dark" ? "#FFFFFF" : "#000000",
   }),
   singleValue: (styles) => ({
     ...styles,
-    color: theme === "dark" ? "#f9fafb" : "#111827",
+    color: theme === "dark" ? "#FFFFFF" : "#000000",
   }),
 });
 
