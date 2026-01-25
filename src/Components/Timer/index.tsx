@@ -318,7 +318,6 @@ export default function Timer({
           setNote(null);
         }, 5000);
       } catch (error) {
-        setNote("error");
         // Wake lock was not allowed.
         // log for development only
         if (process.env.NODE_ENV == "development") console.error(error);

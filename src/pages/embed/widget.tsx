@@ -100,6 +100,47 @@ export default function EmbedWidget() {
   const [elapsedMs, setElapsedMs] = useState<number>(0);
   const intervalRef = useRef<number | null>(null);
 
+  // New Timer Logic
+  const [timerMode, setTimerMode] = useState<'pomo' | 'short' | 'long'>('pomo');
+  const [initialDuration, setInitialDuration] = useState<number>(25 * 60);
+  const [remainingTime, setRemainingTime] = useState<number>(25 * 60);
+
+  useEffect(() => {
+    if (running && !paused && remainingTime > 0) {
+      intervalRef.current = window.setInterval(() => {
+        setRemainingTime((prev) => {
+          if (prev <= 1) {
+            setRunning(false);
+            if (intervalRef.current) clearInterval(intervalRef.current);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    } else {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    }
+    return () => {
+      if (intervalRef.current) clearInterval(intervalRef.current);
+    };
+  }, [running, paused, remainingTime]);
+
+  const handleModeChange = (mode: 'pomo' | 'short' | 'long') => {
+    setTimerMode(mode);
+    setRunning(false);
+    setPaused(false);
+    if (mode === 'pomo') {
+        setInitialDuration(25 * 60);
+        setRemainingTime(25 * 60);
+    } else if (mode === 'short') {
+        setInitialDuration(5 * 60);
+        setRemainingTime(5 * 60);
+    } else if (mode === 'long') {
+        setInitialDuration(15 * 60);
+        setRemainingTime(15 * 60);
+    }
+  };
+
   useEffect(() => {
     const cfg = decodeConfigParam();
     setConfig(cfg);
@@ -389,6 +430,12 @@ export default function EmbedWidget() {
     return desired > 0 ? desired : "100%";
   }, [config?.inputWidth]);
 
+  const formatTime = (seconds: number) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${m.toString().padStart(2, '0')}:${s.toString().padStart(2, '0')}`;
+  };
+
   return (
     <div className={`min-h-screen ${containerClasses} ${(config?.theme === 'dark' || (config?.theme === 'system' && isSystemDark)) ? 'dark' : ''}`}> 
       <Head>
@@ -406,6 +453,43 @@ export default function EmbedWidget() {
             {!running && !paused ? (
               <div style={{ ...previewCardStyle, marginBottom: 16 }}>
                 
+                {/* Timer Mode Selectors */}
+                <div className="mb-4 flex justify-center gap-2">
+                    <button
+                        onClick={() => handleModeChange('pomo')}
+                        className={`rounded-full px-4 py-1 text-sm font-medium transition-colors ${timerMode === 'pomo' ? 'bg-opacity-100 text-white' : 'bg-opacity-20 hover:bg-opacity-40'}`}
+                        style={{ 
+                            backgroundColor: timerMode === 'pomo' ? (config?.timerColor || "#ef4444") : 'transparent',
+                            color: timerMode === 'pomo' ? '#fff' : (config?.theme === 'dark' ? '#fff' : '#000'),
+                            border: `1px solid ${config?.timerColor || "#ef4444"}`
+                        }}
+                    >
+                        Pomodoro (25m)
+                    </button>
+                    <button
+                        onClick={() => handleModeChange('short')}
+                        className={`rounded-full px-4 py-1 text-sm font-medium transition-colors ${timerMode === 'short' ? 'bg-opacity-100 text-white' : 'bg-opacity-20 hover:bg-opacity-40'}`}
+                        style={{ 
+                            backgroundColor: timerMode === 'short' ? (config?.timerColor || "#ef4444") : 'transparent',
+                            color: timerMode === 'short' ? '#fff' : (config?.theme === 'dark' ? '#fff' : '#000'),
+                            border: `1px solid ${config?.timerColor || "#ef4444"}`
+                        }}
+                    >
+                        Short Break (5m)
+                    </button>
+                    <button
+                        onClick={() => handleModeChange('long')}
+                        className={`rounded-full px-4 py-1 text-sm font-medium transition-colors ${timerMode === 'long' ? 'bg-opacity-100 text-white' : 'bg-opacity-20 hover:bg-opacity-40'}`}
+                        style={{ 
+                            backgroundColor: timerMode === 'long' ? (config?.timerColor || "#ef4444") : 'transparent',
+                            color: timerMode === 'long' ? '#fff' : (config?.theme === 'dark' ? '#fff' : '#000'),
+                            border: `1px solid ${config?.timerColor || "#ef4444"}`
+                        }}
+                    >
+                        Long Break (15m)
+                    </button>
+                </div>
+
                 <label className="block mb-1">Session Title</label>
                 <input style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} />
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
@@ -487,14 +571,14 @@ export default function EmbedWidget() {
                       setSavingMsg("");
                       setErrorMsg("");
                       const now = Date.now();
+                      if (remainingTime <= 0) {
+                        setRemainingTime(initialDuration);
+                      }
                       setRunning(true);
                       setPaused(false);
                       setStartTime(now);
-                      setElapsedMs(0);
-                      if (intervalRef.current) window.clearInterval(intervalRef.current);
-                      intervalRef.current = window.setInterval(() => {
-                        setElapsedMs((prev) => prev + 1000);
-                      }, 1000);
+                      // interval handled by useEffect
+                      
                       const userId = userIdentifier;
                       const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
                       const targets = (selectedQuests?.map(q => q.value) || []).length > 0
@@ -533,7 +617,7 @@ export default function EmbedWidget() {
             ) : (
               <div style={previewCardStyle}>
                 <div style={previewTitleStyle}>{paused ? "Timer Paused" : "Timer Running"}</div>
-                <div style={timerStyle}>{new Date(elapsedMs).toISOString().substr(14, 5)}</div>
+                <div style={timerStyle}>{formatTime(remainingTime)}</div>
                 <div className="mt-3 flex items-center gap-3">
                   {!paused ? (
                     <button
@@ -541,7 +625,7 @@ export default function EmbedWidget() {
                       onClick={() => {
                         setRunning(false);
                         setPaused(true);
-                        if (intervalRef.current) window.clearInterval(intervalRef.current);
+                        // interval cleared by useEffect
                         const userId = userIdentifier;
                         const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
                         if (taskPageId) {
@@ -573,10 +657,7 @@ export default function EmbedWidget() {
                       onClick={() => {
                         setRunning(true);
                         setPaused(false);
-                        if (intervalRef.current) window.clearInterval(intervalRef.current);
-                        intervalRef.current = window.setInterval(() => {
-                          setElapsedMs((prev) => prev + 1000);
-                        }, 1000);
+                        // interval handled by useEffect
                         const userId = userIdentifier;
                         const taskPageId = selectedTaskId || config?.taskId || config?.pageId;
                         if (taskPageId) {
@@ -618,7 +699,8 @@ export default function EmbedWidget() {
                           setErrorMsg("Please select a Time Tracking database.");
                           return;
                         }
-                        const timerSeconds = Math.max(60, Math.floor(elapsedMs / 1000));
+                        // Use initialDuration as the timer value (minutes converted to seconds if needed, but initialDuration is in seconds)
+                        const timerSeconds = initialDuration;
                         const startSeconds = Math.floor((startTime ?? endTimeMs) / 1000);
                         const endSeconds = Math.floor(endTimeMs / 1000);
                         await savePomoSessionToNotion({
@@ -659,7 +741,8 @@ export default function EmbedWidget() {
                           });
                         }
                         setSavingMsg("Time Tracking entry saved and status updated.");
-                        setElapsedMs(0);
+                        // Reset timer to initial duration of current mode
+                        setRemainingTime(initialDuration);
                         setStartTime(null);
                       } catch (err) {
                         console.error("Widget completion error", err);
