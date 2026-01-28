@@ -495,7 +495,8 @@ export default function EmbedWidget() {
                 </div>
 
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-                  {!(config?.hideDbSelectors ?? config?.hideSelectors) && (
+                  {/* Database selectors hidden on frontend per request */}
+                  {/* {!(config?.hideDbSelectors ?? config?.hideSelectors) && (
                     <>
                       <div>
                         <label className="block mb-1">Selected Table</label>
@@ -514,7 +515,7 @@ export default function EmbedWidget() {
                         </select>
                       </div>
                     </>
-                  )}
+                  )} */}
                   <div className="sm:col-span-2">
                     <label className="block mb-1">Task</label>
                     <select
