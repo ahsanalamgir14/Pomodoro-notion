@@ -35,6 +35,10 @@ export default function CreateEmbedPage() {
   // Data selections
   const [selectedTaskDbId, setSelectedTaskDbId] = useState<string>("");
   const [selectedSessionDbId, setSelectedSessionDbId] = useState<string>("");
+  // Visibility options (default hidden)
+  const [showTags, setShowTags] = useState<boolean>(false);
+  const [showNotes, setShowNotes] = useState<boolean>(false);
+  const [showSchema, setShowSchema] = useState<boolean>(false);
 
   // Databases and tasks for selections - use consistent user identifier
   const [userIdentifier, setUserIdentifier] = useState<string>("");
@@ -534,6 +538,8 @@ export default function CreateEmbedPage() {
         timerFontSize,
         taskDatabaseId: selectedTaskDbId,
         sessionDatabaseId: selectedSessionDbId,
+        showTags,
+        showNotes,
         hideDbSelectors: false,
         userId: sessionEmail || resolvedUserId || (typeof window !== 'undefined' ? (NotionCache.getUserData()?.email || '') : ''),
         accessToken: accessToken || (typeof window !== 'undefined' ? (NotionCache.getUserData()?.accessToken || '') : ''),
@@ -645,6 +651,24 @@ export default function CreateEmbedPage() {
                 </div>
               </div>
 
+              <div className="mt-4">
+                <h3 className="mb-2 text-sm font-medium">Visibility Options</h3>
+                <div className="flex flex-col gap-2">
+                  <label className="flex items-center gap-2">
+                    <input type="checkbox" checked={showTags} onChange={(e) => setShowTags(e.target.checked)} className="rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500" />
+                    <span className="text-sm">Show Tags</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input type="checkbox" checked={showNotes} onChange={(e) => setShowNotes(e.target.checked)} className="rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500" />
+                    <span className="text-sm">Show Notes</span>
+                  </label>
+                  <label className="flex items-center gap-2">
+                    <input type="checkbox" checked={showSchema} onChange={(e) => setShowSchema(e.target.checked)} className="rounded border-neutral-300 text-indigo-600 focus:ring-indigo-500" />
+                    <span className="text-sm">Show Tracking Schema (Preview only)</span>
+                  </label>
+                </div>
+              </div>
+
               {/* Colors and sizes */}
               <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
                 <div>
@@ -690,6 +714,8 @@ export default function CreateEmbedPage() {
                         timerFontSize,
                         taskDatabaseId: selectedTaskDbId,
                         sessionDatabaseId: selectedSessionDbId,
+                        showTags,
+                        showNotes,
                         hideDbSelectors: false,
                         userId: sessionEmail || resolvedUserId || (typeof window !== 'undefined' ? (NotionCache.getUserData()?.email || '') : ''),
                         accessToken: accessToken || (typeof window !== 'undefined' ? (NotionCache.getUserData()?.accessToken || '') : ''),
@@ -827,43 +853,51 @@ export default function CreateEmbedPage() {
                       }}
                     />
                   </div>
-                  <div className="sm:col-span-2">
-                    <label className="block mb-1 text-sm">Tags</label>
-                    <NotionTags
-                      options={availableTagsPreview}
-                      disabled={!selectedTaskDbId}
-                      selectedOptions={previewSelectedTags}
-                      theme={theme}
-                      handleSelect={(vals: Array<{ label: string; value: string; color: string }>) => {
-                        setPreviewSelectedTags(vals || []);
-                      }}
-                    />
-                  </div>
-                  
-                  <div className="sm:col-span-2">
-                    <label className="block mb-1 text-sm">Tracking Schema</label>
-                    <div className="rounded-md border border-neutral-300 p-2 text-xs dark:border-neutral-700 dark:bg-neutral-800">
-                      {trackingStatusPropName ? (
-                        <span className="mr-2 inline-flex rounded bg-neutral-200 px-2 py-1 dark:bg-neutral-700 dark:text-white">Status: {trackingStatusPropName}</span>
-                      ) : (
-                        <span className="mr-2 opacity-60">Status: not found</span>
-                      )}
-                      {trackingDurationPropName ? (
-                        <span className="mr-2 inline-flex rounded bg-neutral-200 px-2 py-1 dark:bg-neutral-700 dark:text-white">Duration: {trackingDurationPropName}</span>
-                      ) : (
-                        <span className="mr-2 opacity-60">Duration: not found</span>
-                      )}
-                      {trackingStartPropName && (
-                        <span className="mr-2 inline-flex rounded bg-neutral-200 px-2 py-1 dark:bg-neutral-700 dark:text-white">Start: {trackingStartPropName}</span>
-                      )}
-                      {trackingEndPropName && (
-                        <span className="mr-2 inline-flex rounded bg-neutral-200 px-2 py-1 dark:bg-neutral-700 dark:text-white">End: {trackingEndPropName}</span>
-                      )}
+                  {showTags && (
+                    <div className="sm:col-span-2">
+                      <label className="block mb-1 text-sm">Tags</label>
+                      <NotionTags
+                        options={availableTagsPreview}
+                        disabled={!selectedTaskDbId}
+                        selectedOptions={previewSelectedTags}
+                        theme={theme}
+                        handleSelect={(vals: Array<{ label: string; value: string; color: string }>) => {
+                          setPreviewSelectedTags(vals || []);
+                        }}
+                      />
                     </div>
-                  </div>
+                  )}
+                  
+                  {showSchema && (
+                    <div className="sm:col-span-2">
+                      <label className="block mb-1 text-sm">Tracking Schema</label>
+                      <div className="rounded-md border border-neutral-300 p-2 text-xs dark:border-neutral-700 dark:bg-neutral-800">
+                        {trackingStatusPropName ? (
+                          <span className="mr-2 inline-flex rounded bg-neutral-200 px-2 py-1 dark:bg-neutral-700 dark:text-white">Status: {trackingStatusPropName}</span>
+                        ) : (
+                          <span className="mr-2 opacity-60">Status: not found</span>
+                        )}
+                        {trackingDurationPropName ? (
+                          <span className="mr-2 inline-flex rounded bg-neutral-200 px-2 py-1 dark:bg-neutral-700 dark:text-white">Duration: {trackingDurationPropName}</span>
+                        ) : (
+                          <span className="mr-2 opacity-60">Duration: not found</span>
+                        )}
+                        {trackingStartPropName && (
+                          <span className="mr-2 inline-flex rounded bg-neutral-200 px-2 py-1 dark:bg-neutral-700 dark:text-white">Start: {trackingStartPropName}</span>
+                        )}
+                        {trackingEndPropName && (
+                          <span className="mr-2 inline-flex rounded bg-neutral-200 px-2 py-1 dark:bg-neutral-700 dark:text-white">End: {trackingEndPropName}</span>
+                        )}
+                      </div>
+                    </div>
+                  )}
                 </div>
-                <label className="mt-3 block mb-1 text-sm">Notes</label>
-                <textarea style={{ ...inputStyle, height: 64 }} rows={2} placeholder="Notes" />
+                {showNotes && (
+                  <>
+                    <label className="mt-3 block mb-1 text-sm">Notes</label>
+                    <textarea style={{ ...inputStyle, height: 64 }} rows={2} placeholder="Notes" />
+                  </>
+                )}
                 <div className="mt-3">
                   <button className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500">Start</button>
                 </div>
