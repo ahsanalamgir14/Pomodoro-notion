@@ -534,7 +534,7 @@ export default function CreateEmbedPage() {
         timerFontSize,
         taskDatabaseId: selectedTaskDbId,
         sessionDatabaseId: selectedSessionDbId,
-        hideDbSelectors: true,
+        hideDbSelectors: false,
         userId: sessionEmail || resolvedUserId || (typeof window !== 'undefined' ? (NotionCache.getUserData()?.email || '') : ''),
         accessToken: accessToken || (typeof window !== 'undefined' ? (NotionCache.getUserData()?.accessToken || '') : ''),
       };
@@ -690,7 +690,7 @@ export default function CreateEmbedPage() {
                         timerFontSize,
                         taskDatabaseId: selectedTaskDbId,
                         sessionDatabaseId: selectedSessionDbId,
-                        hideDbSelectors: true,
+                        hideDbSelectors: false,
                         userId: sessionEmail || resolvedUserId || (typeof window !== 'undefined' ? (NotionCache.getUserData()?.email || '') : ''),
                         accessToken: accessToken || (typeof window !== 'undefined' ? (NotionCache.getUserData()?.accessToken || '') : ''),
                       };

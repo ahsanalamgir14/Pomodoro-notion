@@ -282,13 +282,16 @@ export default function EmbedWidget() {
 
   useEffect(() => {
     if (taskItems.length > 0) {
-      setSelectedTaskId((prev) => prev || taskItems[0].id);
-      setSelectedTaskTitle((prev) => prev || taskItems[0].title);
+      const exists = taskItems.find((t) => t.id === selectedTaskId);
+      if (!exists) {
+        setSelectedTaskId(taskItems[0].id);
+        setSelectedTaskTitle(taskItems[0].title);
+      }
     } else {
       setSelectedTaskId("");
       setSelectedTaskTitle("");
     }
-  }, [taskItems]);
+  }, [taskItems, selectedTaskId]);
 
   // Derive linked quest IDs from the selected tracker entry via its relation property (Quest/Quests)
   useEffect(() => {
