@@ -81,7 +81,6 @@ export default function EmbedWidget() {
   const [isSystemDark, setIsSystemDark] = useState<boolean>(false);
   const [selectedDbId, setSelectedDbId] = useState<string>("");
   const [trackingDbId, setTrackingDbId] = useState<string>("");
-  const [title, setTitle] = useState<string>("Widget Session");
   const [notes, setNotes] = useState<string>("");
   const [tagsStr, setTagsStr] = useState<string>("");
   const [savingMsg, setSavingMsg] = useState<string>("");
@@ -493,8 +492,6 @@ export default function EmbedWidget() {
                     </button>
                 </div>
 
-                <label className="block mb-1">Session Title</label>
-                <input style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} />
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {!(config?.hideDbSelectors ?? config?.hideSelectors) && (
                     <>
@@ -595,7 +592,7 @@ export default function EmbedWidget() {
                         ops.push(startQuestWork({
                           userId,
                           questPageId: qid,
-                          projectTitle: selectedTaskTitle || title || "Task",
+                          projectTitle: selectedTaskTitle || "Task",
                           adventurePageId: config?.pageId,
                           accessToken,
                         }));
@@ -709,8 +706,8 @@ export default function EmbedWidget() {
                         await savePomoSessionToNotion({
                           userId,
                           projectId: selectedTaskId || config?.pageId || "widget",
-                          projectTitle: selectedTaskTitle || title || "Widget Session",
-                          sessionTitle: title || "",
+                          projectTitle: selectedTaskTitle || "Widget Session",
+                          sessionTitle: selectedTaskTitle || "Widget Session",
                           databaseId: selectedDbId,
                           targetDatabaseId: trackingDbId,
                           timerValue: timerSeconds,

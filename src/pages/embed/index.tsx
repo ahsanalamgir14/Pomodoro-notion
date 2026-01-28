@@ -791,8 +791,6 @@ export default function CreateEmbedPage() {
               <h2 className="mb-3 text-lg font-medium">Start State</h2>
               <div style={previewCardStyleStart}>
                 
-                <label className="block mb-1 text-sm">Session Title</label>
-                <input style={inputStyle} placeholder="Widget Session" />
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   
                   <div className="sm:col-span-2">

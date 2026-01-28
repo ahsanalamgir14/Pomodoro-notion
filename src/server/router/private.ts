@@ -88,7 +88,7 @@ export const privateRouter = router({
     )
     .query(async ({ input: { databaseId, email, accessToken } }) => {
       const userData = email ? await fetchNotionUser(email) : null;
-      const token = userData?.accessToken || (email === "notion-user" ? process.env.NOTION_TOKEN : undefined);
+      const token = accessToken || userData?.accessToken || (email === "notion-user" ? process.env.NOTION_TOKEN : undefined);
       if (!token) {
         throw new Error("User not found or not connected to Notion");
       }
