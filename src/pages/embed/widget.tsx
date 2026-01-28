@@ -513,7 +513,7 @@ export default function EmbedWidget() {
                       </div>
                     </>
                   )}
-                  <div>
+                  <div className="sm:col-span-2">
                     <label className="block mb-1">Task</label>
                     <select
                       style={inputStyle as React.CSSProperties}
@@ -549,7 +549,7 @@ export default function EmbedWidget() {
         }}
       />
                   </div>
-                  <div>
+                  <div className="sm:col-span-2">
                     <label className="block mb-1">Tags</label>
                     <NotionTags
                       options={availableTags}
