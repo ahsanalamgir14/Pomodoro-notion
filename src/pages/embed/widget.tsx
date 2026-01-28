@@ -146,16 +146,16 @@ export default function EmbedWidget() {
     const cfg = decodeConfigParam();
     setConfig(cfg);
     if (cfg?.taskDatabaseId) {
-      setSelectedDbId((prev) => prev || cfg.taskDatabaseId);
+      setSelectedDbId(cfg.taskDatabaseId);
     }
     if (cfg?.sessionDatabaseId) {
-      setTrackingDbId((prev) => prev || cfg.sessionDatabaseId);
+      setTrackingDbId(cfg.sessionDatabaseId);
     }
     if (cfg?.taskId) {
-      setSelectedTaskId((prev) => prev || cfg.taskId);
+      setSelectedTaskId(cfg.taskId);
     }
     if (cfg?.taskTitle) {
-      setSelectedTaskTitle((prev) => prev || cfg.taskTitle);
+      setSelectedTaskTitle(cfg.taskTitle);
     }
     if (cfg?.userId) {
        setUserIdentifier((prev) => prev || String(cfg.userId));
