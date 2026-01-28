@@ -22,6 +22,8 @@ type EmbedSettings = {
   // Back-compat: hideSelectors from earlier version; new flag hides only DB selectors
   hideSelectors?: boolean;
   hideDbSelectors?: boolean;
+  showTags?: boolean;
+  showNotes?: boolean;
   userId?: string;
   accessToken?: string;
 };
@@ -81,7 +83,6 @@ export default function EmbedWidget() {
   const [isSystemDark, setIsSystemDark] = useState<boolean>(false);
   const [selectedDbId, setSelectedDbId] = useState<string>("");
   const [trackingDbId, setTrackingDbId] = useState<string>("");
-  const [title, setTitle] = useState<string>("Widget Session");
   const [notes, setNotes] = useState<string>("");
   const [tagsStr, setTagsStr] = useState<string>("");
   const [savingMsg, setSavingMsg] = useState<string>("");
@@ -493,8 +494,6 @@ export default function EmbedWidget() {
                     </button>
                 </div>
 
-                <label className="block mb-1">Session Title</label>
-                <input style={inputStyle} value={title} onChange={(e) => setTitle(e.target.value)} />
                 <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
                   {!(config?.hideDbSelectors ?? config?.hideSelectors) && (
                     <>
@@ -516,7 +515,7 @@ export default function EmbedWidget() {
                       </div>
                     </>
                   )}
-                  <div>
+                  <div className="sm:col-span-2">
                     <label className="block mb-1">Task</label>
                     <select
                       style={inputStyle as React.CSSProperties}
@@ -552,21 +551,27 @@ export default function EmbedWidget() {
         }}
       />
                   </div>
-                  <div>
-                    <label className="block mb-1">Tags</label>
-                    <NotionTags
-                      options={availableTags}
-                      disabled={!selectedDbId}
-                      selectedOptions={selectedTags}
-                      theme={effectiveTheme as any}
-                      handleSelect={(vals: Array<{ label: string; value: string; color: string }>) => {
-                        setSelectedTags(vals || []);
-                      }}
-                    />
-                  </div>
+                  {(config?.showTags ?? true) && (
+                    <div className="sm:col-span-2">
+                      <label className="block mb-1">Tags</label>
+                      <NotionTags
+                        options={availableTags}
+                        disabled={!selectedDbId}
+                        selectedOptions={selectedTags}
+                        theme={effectiveTheme as any}
+                        handleSelect={(vals: Array<{ label: string; value: string; color: string }>) => {
+                          setSelectedTags(vals || []);
+                        }}
+                      />
+                    </div>
+                  )}
                 </div>
-                <label className="mt-3 block mb-1">Notes</label>
-                <textarea style={{ ...inputStyle, height: 64 }} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+                {(config?.showNotes ?? true) && (
+                  <>
+                    <label className="mt-3 block mb-1">Notes</label>
+                    <textarea style={{ ...inputStyle, height: 64 }} rows={2} value={notes} onChange={(e) => setNotes(e.target.value)} />
+                  </>
+                )}
                 <div className="mt-3 flex items-center gap-3">
                   <button
                     className="rounded-md bg-emerald-600 px-4 py-2 text-sm font-medium text-white hover:bg-emerald-500"
@@ -595,7 +600,7 @@ export default function EmbedWidget() {
                         ops.push(startQuestWork({
                           userId,
                           questPageId: qid,
-                          projectTitle: selectedTaskTitle || title || "Task",
+                          projectTitle: selectedTaskTitle || "Task",
                           adventurePageId: config?.pageId,
                           accessToken,
                         }));
@@ -697,7 +702,7 @@ export default function EmbedWidget() {
                         if (intervalRef.current) window.clearInterval(intervalRef.current);
                         const endTimeMs = Date.now();
                         const userId = userIdentifier;
-                        const tags = (selectedTags || []).map(t => t.label).filter(Boolean);
+                        const tags = (config?.showTags ?? true) ? (selectedTags || []).map(t => t.label).filter(Boolean) : [];
                         if (!trackingDbId) {
                           setErrorMsg("Please select a Time Tracking database.");
                           return;
@@ -709,15 +714,15 @@ export default function EmbedWidget() {
                         await savePomoSessionToNotion({
                           userId,
                           projectId: selectedTaskId || config?.pageId || "widget",
-                          projectTitle: selectedTaskTitle || title || "Widget Session",
-                          sessionTitle: title || "",
+                          projectTitle: selectedTaskTitle || "Widget Session",
+                          sessionTitle: selectedTaskTitle || "Widget Session",
                           databaseId: selectedDbId,
                           targetDatabaseId: trackingDbId,
                           timerValue: timerSeconds,
                           startTime: startSeconds,
                           endTime: endSeconds,
                           status: "Completed",
-                          notes,
+                          notes: (config?.showNotes ?? true) ? notes : "",
                           tags,
                           questPageIds: (selectedQuests || []).map(q => q.value),
                           accessToken,
